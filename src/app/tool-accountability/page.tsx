@@ -29,7 +29,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle } from "lucide-react";
+import { MoreHorizontal, PlusCircle, ChevronsUpDown, Check } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -39,6 +39,9 @@ import { recallTool, assignToolForAccountability } from "@/services/data-service
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 
 const conditionVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
   Good: "default",
@@ -66,9 +69,14 @@ export default function ToolAccountabilityPage() {
   const [isRecallDialogOpen, setIsRecallDialogOpen] = useState(false);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [recallingTool, setRecallingTool] = useState<Tool | null>(null);
+  const [toolPopoverOpen, setToolPopoverOpen] = useState(false);
+  const [userPopoverOpen, setUserPopoverOpen] = useState(false);
+
 
   const recallForm = useForm<RecallFormValues>();
-  const assignForm = useForm<AssignFormValues>();
+  const assignForm = useForm<AssignFormValues>({
+    resolver: zodResolver(assignSchema),
+  });
 
   React.useEffect(() => { 
     if (recallingTool) {
@@ -150,14 +158,37 @@ export default function ToolAccountabilityPage() {
                         name="toolId"
                         control={assignForm.control}
                         render={({ field }) => (
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <SelectTrigger><SelectValue placeholder="Select a tool..." /></SelectTrigger>
-                                <SelectContent>
-                                    {availableTools.map(tool => (
-                                        <SelectItem key={tool.id} value={tool.id}>{tool.name} ({tool.serialNumber})</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                           <Popover open={toolPopoverOpen} onOpenChange={setToolPopoverOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value && "text-muted-foreground")}>
+                                        {field.value ? availableTools.find(t => t.id === field.value)?.name : "Select a tool..."}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                    <Command>
+                                        <CommandInput placeholder="Search tool..." />
+                                        <CommandEmpty>No tool found.</CommandEmpty>
+                                        <CommandList>
+                                            <CommandGroup>
+                                                {availableTools.map(tool => (
+                                                    <CommandItem
+                                                        key={tool.id}
+                                                        value={tool.name}
+                                                        onSelect={() => {
+                                                            field.onChange(tool.id)
+                                                            setToolPopoverOpen(false)
+                                                        }}
+                                                    >
+                                                        <Check className={cn("mr-2 h-4 w-4", field.value === tool.id ? "opacity-100" : "opacity-0")} />
+                                                        {tool.name} ({tool.serialNumber})
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        </CommandList>
+                                    </Command>
+                                </PopoverContent>
+                           </Popover>
                         )}
                     />
                     {assignForm.formState.errors.toolId && <p className="text-sm text-destructive">{assignForm.formState.errors.toolId.message}</p>}
@@ -168,14 +199,37 @@ export default function ToolAccountabilityPage() {
                         name="assignedTo"
                         control={assignForm.control}
                         render={({ field }) => (
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <SelectTrigger><SelectValue placeholder="Select a user..." /></SelectTrigger>
-                                <SelectContent>
-                                    {users.map(user => (
-                                        <SelectItem key={user.uid} value={user.uid}>{user.firstName} {user.lastName}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <Popover open={userPopoverOpen} onOpenChange={setUserPopoverOpen}>
+                                <PopoverTrigger asChild>
+                                     <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value && "text-muted-foreground")}>
+                                        {field.value ? users.find(u => u.uid === field.value)?.firstName + ' ' + users.find(u => u.uid === field.value)?.lastName : "Select a user..."}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                    <Command>
+                                        <CommandInput placeholder="Search user..." />
+                                        <CommandEmpty>No user found.</CommandEmpty>
+                                        <CommandList>
+                                            <CommandGroup>
+                                                {users.map(user => (
+                                                    <CommandItem
+                                                        key={user.uid}
+                                                        value={`${user.firstName} ${user.lastName}`}
+                                                        onSelect={() => {
+                                                            field.onChange(user.uid)
+                                                            setUserPopoverOpen(false)
+                                                        }}
+                                                    >
+                                                         <Check className={cn("mr-2 h-4 w-4", field.value === user.uid ? "opacity-100" : "opacity-0")} />
+                                                        {user.firstName} {user.lastName}
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        </CommandList>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
                         )}
                     />
                     {assignForm.formState.errors.assignedTo && <p className="text-sm text-destructive">{assignForm.formState.errors.assignedTo.message}</p>}
