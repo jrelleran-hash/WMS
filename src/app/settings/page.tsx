@@ -85,14 +85,11 @@ const allPermissions: { group: string; permissions: { value: PagePermission; lab
     { group: "Warehouse", permissions: [
         { value: "/inventory", label: "Warehouse Inventory" },
         { value: "/issuance", label: "Issuance" },
-        { value: "/tools", label: "Tool Management" },
-        { value: "/tool-booking", label: "Tool Booking" },
         { value: "/warehouse", label: "Warehouse Map" },
     ]},
     { group: "Assurance", permissions: [
         { value: "/returns", label: "Returns" },
         { value: "/quality-control", label: "Quality Control" },
-        { value: "/tool-maintenance", label: "Tool Maintenance" },
         { value: "/waste-management", label: "Waste Management" },
     ]},
     { group: "Settings", permissions: [
@@ -247,7 +244,7 @@ function UserManagementTable({ isAdmin }: { isAdmin: boolean }) {
                                                     <DropdownMenuSub>
                                                         <DropdownMenuSubTrigger>Change Role</DropdownMenuSubTrigger>
                                                         <DropdownMenuSubContent>
-                                                            {(["Admin", "Manager", "Staff"] as UserRole[]).map(role => (
+                                                            {(["Admin", "Manager", "Staff", "Worker", "Approver"] as UserRole[]).map(role => (
                                                                 <DropdownMenuItem 
                                                                     key={role}
                                                                     disabled={u.role === role}
