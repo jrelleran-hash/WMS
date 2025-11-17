@@ -398,12 +398,7 @@ export default function ToolManagementPage() {
                     </div>
                      <div className="space-y-4 rounded-md border p-4">
                         <Label className="text-base">Default Settings</Label>
-                        <div className="grid grid-cols-2 gap-4">
-                             <div className="space-y-2">
-                                <Label htmlFor="borrowDuration">Borrow Duration (Days)</Label>
-                                <Input id="borrowDuration" type="number" {...form.register("borrowDuration")} />
-                                {form.formState.errors.borrowDuration && <p className="text-sm text-destructive">{form.formState.errors.borrowDuration.message}</p>}
-                            </div>
+                        <div className="grid grid-cols-1 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="condition">Condition</Label>
                                 <Controller
@@ -716,12 +711,7 @@ export default function ToolManagementPage() {
                     </div>
                     <div className="space-y-4 rounded-md border p-4">
                         <Label className="text-base">Default Settings</Label>
-                        <div className="grid grid-cols-2 gap-4">
-                             <div className="space-y-2">
-                                <Label htmlFor="edit-borrowDuration">Borrow Duration (Days)</Label>
-                                <Input id="edit-borrowDuration" type="number" {...form.register("borrowDuration")} />
-                                {form.formState.errors.borrowDuration && <p className="text-sm text-destructive">{form.formState.errors.borrowDuration.message}</p>}
-                            </div>
+                        <div className="grid grid-cols-1 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="edit-condition">Condition</Label>
                                 <Controller

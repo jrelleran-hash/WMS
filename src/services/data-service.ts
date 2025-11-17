@@ -1888,7 +1888,7 @@ export async function getTools(): Promise<Tool[]> {
     }
 }
 
-export async function addTool(tool: Partial<Omit<Tool, 'id' | 'status' | 'currentBorrowRecord' | 'assignedToUserId' | 'assignedToUserName' | 'createdAt'>>): Promise<DocumentReference> {
+export async function addTool(tool: Partial<Omit<Tool, 'id' | 'status' | 'currentBorrowRecord' | 'assignedToUserId' | 'assignedToUserName' | 'createdAt' | 'borrowDuration'>>): Promise<DocumentReference> {
   try {
     const toolWithDefaults = {
       name: tool.name || "Unnamed Tool",
@@ -1897,7 +1897,6 @@ export async function addTool(tool: Partial<Omit<Tool, 'id' | 'status' | 'curren
       condition: tool.condition || "Good",
       purchaseDate: tool.purchaseDate || null,
       purchaseCost: typeof tool.purchaseCost === 'number' && !isNaN(tool.purchaseCost) ? tool.purchaseCost : 0,
-      borrowDuration: tool.borrowDuration || 7,
       location: tool.location || {},
       status: 'Available' as const,
       createdAt: Timestamp.now(),
@@ -1932,6 +1931,7 @@ export async function deleteTool(toolId: string): Promise<void> {
 export async function borrowTool(toolId: string, borrowedBy: string, releasedBy: string, notes?: string): Promise<void> {
     const toolRef = doc(db, "tools", toolId);
     const userRef = doc(db, "users", borrowedBy);
+    const defaultBorrowDuration = 7; // Default duration in days
 
     await runTransaction(db, async (transaction) => {
         const toolDoc = await transaction.get(toolRef);
@@ -1945,7 +1945,7 @@ export async function borrowTool(toolId: string, borrowedBy: string, releasedBy:
 
         const userData = userDoc.data() as UserProfile;
         const dateBorrowed = new Date();
-        const dueDate = toolData.borrowDuration ? addDays(dateBorrowed, toolData.borrowDuration) : undefined;
+        const dueDate = addDays(dateBorrowed, toolData.borrowDuration || defaultBorrowDuration);
         
         const newBorrowRecord = {
             toolId: toolId,
@@ -1953,7 +1953,7 @@ export async function borrowTool(toolId: string, borrowedBy: string, releasedBy:
             borrowedByName: `${userData.firstName} ${userData.lastName}`,
             releasedBy,
             dateBorrowed: Timestamp.fromDate(dateBorrowed),
-            dueDate: dueDate ? Timestamp.fromDate(dueDate) : null,
+            dueDate: Timestamp.fromDate(dueDate),
             dateReturned: null,
             notes: notes || "",
         };

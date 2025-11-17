@@ -73,7 +73,6 @@ export const toolSchema = z.object({
   category: z.string().min(1, "Category is required."),
   purchaseDate: z.date().optional(),
   purchaseCost: z.coerce.number().nonnegative("Cost must be a positive number.").optional(),
-  borrowDuration: z.coerce.number().int().positive("Duration must be a positive number.").optional(),
   condition: z.enum(["Good", "Needs Repair", "Damaged"]),
   location: locationSchema,
 });
