@@ -75,6 +75,7 @@ export const toolSchema = z.object({
   purchaseCost: z.coerce.number().nonnegative("Cost must be a positive number.").optional(),
   condition: z.enum(["Good", "Needs Repair", "Damaged"]),
   location: locationSchema,
+  borrowDuration: z.coerce.number().int().min(1, "Duration must be at least 1 day.").optional(),
 });
 
 export type ToolFormValues = z.infer<typeof toolSchema>;

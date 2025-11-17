@@ -1888,7 +1888,7 @@ export async function getTools(): Promise<Tool[]> {
     }
 }
 
-export async function addTool(tool: Partial<Omit<Tool, 'id' | 'status' | 'currentBorrowRecord' | 'assignedToUserId' | 'assignedToUserName' | 'createdAt' | 'borrowDuration'>>): Promise<DocumentReference> {
+export async function addTool(tool: Partial<Omit<Tool, 'id' | 'status' | 'currentBorrowRecord' | 'assignedToUserId' | 'assignedToUserName' | 'createdAt'>>): Promise<DocumentReference> {
   try {
     const toolWithDefaults = {
       name: tool.name || "Unnamed Tool",
@@ -1898,6 +1898,7 @@ export async function addTool(tool: Partial<Omit<Tool, 'id' | 'status' | 'curren
       purchaseDate: tool.purchaseDate || null,
       purchaseCost: typeof tool.purchaseCost === 'number' && !isNaN(tool.purchaseCost) ? tool.purchaseCost : 0,
       location: tool.location || {},
+      borrowDuration: tool.borrowDuration || 7, // Default to 7 days
       status: 'Available' as const,
       createdAt: Timestamp.now(),
     };

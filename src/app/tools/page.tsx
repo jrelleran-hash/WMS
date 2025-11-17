@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
@@ -81,7 +82,7 @@ const assignSchema = z.object({
     notes: z.string().optional(),
 });
 
-type AssignFormValues = z_infer<typeof assignSchema>;
+type AssignFormValues = z.infer<typeof assignSchema>;
 
 const recallSchema = z.object({
     condition: z.enum(["Good", "Needs Repair", "Damaged"]),
@@ -150,7 +151,7 @@ export default function ToolManagementPage() {
   const pendingRequests = useMemo(() => toolBookingRequests.filter(r => r.status === 'Pending'), [toolBookingRequests]);
 
   useEffect(() => { if (isAddDialogOpen) form.reset({ condition: "Good" }); }, [isAddDialogOpen, form]);
-  useEffect(() => { if (editingTool) { form.reset({ ...editingTool, purchaseDate: editingTool.purchaseDate ? new Date(editingTool.purchaseDate) : undefined }); setIsEditDialogOpen(true); } else { setIsEditDialogOpen(false); } }, [editingTool, form]);
+  useEffect(() => { if (editingTool) { form.reset({ ...editingTool, purchaseDate: editingTool.purchaseDate ? new Date(editingTool.purchaseDate) : undefined, borrowDuration: editingTool.borrowDuration || 7 }); setIsEditDialogOpen(true); } else { setIsEditDialogOpen(false); } }, [editingTool, form]);
   useEffect(() => { if (borrowingTool) { borrowForm.reset(); setIsBorrowDialogOpen(true); } else { setIsBorrowDialogOpen(false); } }, [borrowingTool, borrowForm]);
   useEffect(() => { if (returningTool) { returnForm.reset({ condition: returningTool.condition }); setIsReturnDialogOpen(true); } else { setIsReturnDialogOpen(false); } }, [returningTool, returnForm]);
   useEffect(() => { if (assigningTool) { assignForm.reset(); setIsAssignDialogOpen(true); } else { setIsAssignDialogOpen(false); } }, [assigningTool, assignForm]);
@@ -398,7 +399,7 @@ export default function ToolManagementPage() {
                     </div>
                      <div className="space-y-4 rounded-md border p-4">
                         <Label className="text-base">Default Settings</Label>
-                        <div className="grid grid-cols-1 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="condition">Condition</Label>
                                 <Controller
@@ -415,6 +416,11 @@ export default function ToolManagementPage() {
                                         </Select>
                                     )}
                                 />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="borrowDuration">Borrow Duration (Days)</Label>
+                                <Input id="borrowDuration" type="number" {...form.register("borrowDuration")} />
+                                {form.formState.errors.borrowDuration && <p className="text-sm text-destructive">{form.formState.errors.borrowDuration.message}</p>}
                             </div>
                         </div>
                     </div>
@@ -711,7 +717,7 @@ export default function ToolManagementPage() {
                     </div>
                     <div className="space-y-4 rounded-md border p-4">
                         <Label className="text-base">Default Settings</Label>
-                        <div className="grid grid-cols-1 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="edit-condition">Condition</Label>
                                 <Controller
@@ -728,6 +734,11 @@ export default function ToolManagementPage() {
                                         </Select>
                                     )}
                                 />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-borrowDuration">Borrow Duration (Days)</Label>
+                                <Input id="edit-borrowDuration" type="number" {...form.register("borrowDuration")} />
+                                {form.formState.errors.borrowDuration && <p className="text-sm text-destructive">{form.formState.errors.borrowDuration.message}</p>}
                             </div>
                         </div>
                     </div>
