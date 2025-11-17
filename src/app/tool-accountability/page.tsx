@@ -24,19 +24,18 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, PlusCircle } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
 import type { Tool } from "@/types";
-import { recallTool } from "@/services/data-service";
+import { recallTool, assignToolForAccountability } from "@/services/data-service";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -53,15 +52,23 @@ const recallSchema = z.object({
 });
 type RecallFormValues = z.infer<typeof recallSchema>;
 
+const assignSchema = z.object({
+    toolId: z.string().min(1, "Please select a tool."),
+    assignedTo: z.string().min(1, "Please select a user."),
+});
+type AssignFormValues = z.infer<typeof assignSchema>;
+
 
 export default function ToolAccountabilityPage() {
-  const { tools, loading, refetchData } = useData();
+  const { tools, users, loading, refetchData } = useData();
   const { toast } = useToast();
 
   const [isRecallDialogOpen, setIsRecallDialogOpen] = useState(false);
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [recallingTool, setRecallingTool] = useState<Tool | null>(null);
 
   const recallForm = useForm<RecallFormValues>();
+  const assignForm = useForm<AssignFormValues>();
 
   React.useEffect(() => { 
     if (recallingTool) {
@@ -71,6 +78,12 @@ export default function ToolAccountabilityPage() {
       setIsRecallDialogOpen(false);
     }
   }, [recallingTool, recallForm]);
+  
+  React.useEffect(() => {
+    if(!isAssignDialogOpen) {
+      assignForm.reset();
+    }
+  }, [isAssignDialogOpen, assignForm]);
 
   const onRecallSubmit = async (data: RecallFormValues) => {
     if (!recallingTool) return;
@@ -85,21 +98,95 @@ export default function ToolAccountabilityPage() {
     }
   };
 
+  const onAssignSubmit = async (data: AssignFormValues) => {
+    try {
+      await assignToolForAccountability(data.toolId, data.assignedTo);
+      toast({ title: "Success", description: "Tool assigned for accountability." });
+      setIsAssignDialogOpen(false);
+      await refetchData();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to assign tool.";
+      toast({ variant: "destructive", title: "Error", description: errorMessage });
+    }
+  };
+
 
   const accountableTools = useMemo(() => {
     return tools.filter(t => t.status === "Assigned");
   }, [tools]);
 
+  const availableTools = useMemo(() => {
+    return tools.filter(t => t.status === "Available");
+  }, [tools]);
+
   return (
     <>
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold font-headline tracking-tight">
-          Tool Accountability
-        </h1>
-        <p className="text-muted-foreground">
-          A list of all tools assigned to specific users for long-term accountability.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+            <h1 className="text-2xl font-bold font-headline tracking-tight">
+            Tool Accountability
+            </h1>
+            <p className="text-muted-foreground">
+            A list of all tools assigned to specific users for long-term accountability.
+            </p>
+        </div>
+        <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+          <DialogTrigger asChild>
+             <Button>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              New Accountability
+            </Button>
+          </DialogTrigger>
+           <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Assign New Accountability</DialogTitle>
+                <DialogDescription>Select an available tool and assign it to a user.</DialogDescription>
+            </DialogHeader>
+            <form onSubmit={assignForm.handleSubmit(onAssignSubmit)} className="space-y-4">
+                <div className="space-y-2">
+                    <Label htmlFor="toolId">Available Tool</Label>
+                    <Controller
+                        name="toolId"
+                        control={assignForm.control}
+                        render={({ field }) => (
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <SelectTrigger><SelectValue placeholder="Select a tool..." /></SelectTrigger>
+                                <SelectContent>
+                                    {availableTools.map(tool => (
+                                        <SelectItem key={tool.id} value={tool.id}>{tool.name} ({tool.serialNumber})</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        )}
+                    />
+                    {assignForm.formState.errors.toolId && <p className="text-sm text-destructive">{assignForm.formState.errors.toolId.message}</p>}
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="assignedTo">Assign To</Label>
+                    <Controller
+                        name="assignedTo"
+                        control={assignForm.control}
+                        render={({ field }) => (
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <SelectTrigger><SelectValue placeholder="Select a user..." /></SelectTrigger>
+                                <SelectContent>
+                                    {users.map(user => (
+                                        <SelectItem key={user.uid} value={user.uid}>{user.firstName} {user.lastName}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        )}
+                    />
+                    {assignForm.formState.errors.assignedTo && <p className="text-sm text-destructive">{assignForm.formState.errors.assignedTo.message}</p>}
+                </div>
+                 <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setIsAssignDialogOpen(false)}>Cancel</Button>
+                    <Button type="submit" disabled={assignForm.formState.isSubmitting}>Confirm Assignment</Button>
+                </DialogFooter>
+            </form>
+        </DialogContent>
+        </Dialog>
       </div>
       <Card>
         <CardHeader>
