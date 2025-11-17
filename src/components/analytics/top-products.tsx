@@ -36,7 +36,7 @@ export function TopProducts({ orders, loading }: TopProductsProps) {
       <CardHeader>
         <CardTitle>Top Products</CardTitle>
         <CardDescription>
-          Your frequently requested items by quantity.
+          Frequently requested items by quantity.
         </CardDescription>
       </CardHeader>
       <CardContent>
