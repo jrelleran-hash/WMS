@@ -2,12 +2,14 @@
 
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useMemo } from "react";
 import { format, addDays } from "date-fns";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import dynamic from 'next/dynamic';
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -30,9 +32,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type SignatureCanvas from "react-signature-canvas";
-
-const DynamicSignatureCanvas = dynamic(() => import('react-signature-canvas'), { ssr: false });
 
 
 const outboudStatusVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
@@ -70,14 +69,6 @@ const createShipmentSchema = z.object({
 
 type ShipmentFormValues = z.infer<typeof createShipmentSchema>;
 
-const deliveryConfirmationSchema = z.object({
-  recipientSignature: z.any().refine(val => val, { message: "Signature is required."}),
-  deliveryProof: typeof window !== 'undefined' ? z.instanceof(FileList).refine(files => files.length > 0, "A photo is required.") : z.any(),
-});
-
-type DeliveryConfirmationFormValues = z.infer<typeof deliveryConfirmationSchema>;
-
-
 type ShipmentStatusFilter = "all" | Shipment['status'];
 type POReturnStatusFilter = "all" | PurchaseOrder['status'];
 type OutboundReturnStatusFilter = "all" | OutboundReturn['status'];
@@ -86,10 +77,10 @@ type ViewMode = "list" | "calendar";
 
 export default function LogisticsPage() {
     const { shipments, purchaseOrders, unshippedIssuances, returns, outboundReturns, loading, refetchData } = useData();
+    const router = useRouter();
     const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
     const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null);
     const [selectedOutboundReturn, setSelectedOutboundReturn] = useState<OutboundReturn | null>(null);
-    const [confirmingDelivery, setConfirmingDelivery] = useState<Shipment | null>(null);
     
     // Filter states
     const [shipmentStatusFilter, setShipmentStatusFilter] = useState<ShipmentStatusFilter>("all");
@@ -101,7 +92,6 @@ export default function LogisticsPage() {
     const [isCreateShipmentOpen, setIsCreateShipmentOpen] = useState(false);
     const [activeTab, setActiveTab] = useState("outbound");
     const { toast } = useToast();
-    const sigPadRef = useRef<SignatureCanvas>(null);
 
      const shipmentForm = useForm<ShipmentFormValues>({
         resolver: zodResolver(createShipmentSchema),
@@ -113,17 +103,16 @@ export default function LogisticsPage() {
         },
     });
 
-    const deliveryConfirmationForm = useForm<DeliveryConfirmationFormValues>();
 
-    useEffect(() => {
+    useState(() => {
         if (!isCreateShipmentOpen) {
             shipmentForm.reset();
         }
-    }, [isCreateShipmentOpen, shipmentForm]);
+    });
 
-    const handleStatusChange = async (shipmentId: string, status: Shipment['status'], deliveryProof?: {photoUrl: string, signatureUrl: string}) => {
+    const handleStatusChange = async (shipmentId: string, status: Shipment['status']) => {
         try {
-            await updateShipmentStatus(shipmentId, status, deliveryProof);
+            await updateShipmentStatus(shipmentId, status);
             toast({ title: "Success", description: `Shipment marked as ${status}.` });
             await refetchData();
         } catch (error) {
@@ -135,24 +124,6 @@ export default function LogisticsPage() {
         }
     };
     
-    const onConfirmDeliverySubmit = async (data: DeliveryConfirmationFormValues) => {
-        if (!confirmingDelivery || !sigPadRef.current) return;
-        
-        if (sigPadRef.current.isEmpty()) {
-            deliveryConfirmationForm.setError("recipientSignature", { type: "custom", message: "Signature cannot be empty." });
-            return;
-        }
-
-        // TODO: Handle photo upload to Firebase Storage and get URL
-        const photoUrl = "https://via.placeholder.com/300";
-        const signatureUrl = sigPadRef.current.toDataURL();
-
-        await handleStatusChange(confirmingDelivery.id, 'Delivered', { photoUrl, signatureUrl });
-        setConfirmingDelivery(null);
-        deliveryConfirmationForm.reset();
-        sigPadRef.current.clear();
-    };
-
     const handlePOStatusChange = async (poId: string, status: PurchaseOrder['status']) => {
         try {
           await updatePurchaseOrderStatus(poId, status);
@@ -472,7 +443,9 @@ export default function LogisticsPage() {
                                                                         <DropdownMenuItem onClick={() => setSelectedShipment(shipment)}>View Details</DropdownMenuItem>
                                                                         <DropdownMenuSeparator />
                                                                         <DropdownMenuItem onClick={() => handleStatusChange(shipment.id, 'In Transit')} disabled={shipment.status === 'In Transit'}>Mark In Transit</DropdownMenuItem>
-                                                                        <DropdownMenuItem onClick={() => setConfirmingDelivery(shipment)} disabled={shipment.status === 'Delivered'}>Mark Delivered</DropdownMenuItem>
+                                                                        <DropdownMenuItem asChild disabled={shipment.status === 'Delivered'}>
+                                                                            <Link href={`/logistics/confirm-delivery/${shipment.id}`}>Mark Delivered</Link>
+                                                                        </DropdownMenuItem>
                                                                         <DropdownMenuItem onClick={() => handleStatusChange(shipment.id, 'Delayed')} disabled={shipment.status === 'Delayed'}>Mark Delayed</DropdownMenuItem>
                                                                         <DropdownMenuItem onClick={() => handleStatusChange(shipment.id, 'Cancelled')} className="text-destructive">Cancel Shipment</DropdownMenuItem>
                                                                     </DropdownMenuContent>
@@ -823,36 +796,7 @@ export default function LogisticsPage() {
                 </DialogContent>
                 </Dialog>
             )}
-
-            <Dialog open={!!confirmingDelivery} onOpenChange={(open) => !open && setConfirmingDelivery(null)}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Confirm Delivery: {confirmingDelivery?.shipmentNumber}</DialogTitle>
-                        <DialogDescription>Please provide proof of delivery.</DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={deliveryConfirmationForm.handleSubmit(onConfirmDeliverySubmit)} className="space-y-4">
-                        <div className="space-y-2">
-                            <Label>Recipient Signature</Label>
-                            <div className="w-full h-48 border rounded-md">
-                                <DynamicSignatureCanvas
-                                    ref={sigPadRef}
-                                    canvasProps={{ className: 'w-full h-full' }}
-                                />
-                            </div>
-                             {deliveryConfirmationForm.formState.errors.recipientSignature && <p className="text-sm text-destructive">{deliveryConfirmationForm.formState.errors.recipientSignature.message}</p>}
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="deliveryProof">Proof of Delivery (Photo)</Label>
-                            <Input id="deliveryProof" type="file" accept="image/*" capture="environment" {...deliveryConfirmationForm.register("deliveryProof")} />
-                             {deliveryConfirmationForm.formState.errors.deliveryProof && <p className="text-sm text-destructive">{deliveryConfirmationForm.formState.errors.deliveryProof.message}</p>}
-                        </div>
-                        <DialogFooter>
-                            <Button type="button" variant="outline" onClick={() => setConfirmingDelivery(null)}>Cancel</Button>
-                            <Button type="submit">Confirm</Button>
-                        </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
         </div>
     );
 }
+
