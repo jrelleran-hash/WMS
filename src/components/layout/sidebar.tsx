@@ -37,7 +37,7 @@ import type { PagePermission } from "@/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
 type NavItem = { href: PagePermission; label: string; icon: LucideIcon };
-type SubNavSection = { title: string; items: NavItem[] };
+type SubNavSection = { title: string; items: NavSectionItem[] };
 type NavSectionItem = NavItem | SubNavSection;
 
 
@@ -50,7 +50,6 @@ const navItems: NavItem[] = [
 const logisticsNavItems: NavItem[] = [
     { href: "/logistics", label: "Logistics & Shipment", icon: Truck },
     { href: "/logistics-booking", label: "Logistics Booking", icon: Book },
-    { href: "/vehicles", label: "Vehicle Management", icon: Truck },
 ];
 
 const procurementNavItems: NavItem[] = [
@@ -62,7 +61,7 @@ const procurementNavItems: NavItem[] = [
 const warehouseNavItems: NavSectionItem[] = [
     { href: "/inventory", label: "Warehouse Inventory", icon: Package },
     { href: "/issuance", label: "Issuance", icon: FileText },
-    { href: "/warehouse", label: "Warehouse Map", icon: Map },
+    { href: "/warehouse", label: "Warehouse Mapping", icon: Map },
     { 
         title: "Assurance", 
         items: [
