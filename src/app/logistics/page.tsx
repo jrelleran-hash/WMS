@@ -7,6 +7,7 @@ import { format, addDays } from "date-fns";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import dynamic from 'next/dynamic';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -29,7 +30,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import SignatureCanvas from 'react-signature-canvas';
+import type SignatureCanvas from "react-signature-canvas";
+
+const DynamicSignatureCanvas = dynamic(() => import('react-signature-canvas'), { ssr: false });
 
 
 const outboudStatusVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
@@ -831,7 +834,7 @@ export default function LogisticsPage() {
                         <div className="space-y-2">
                             <Label>Recipient Signature</Label>
                             <div className="w-full h-48 border rounded-md">
-                                <SignatureCanvas
+                                <DynamicSignatureCanvas
                                     ref={sigPadRef}
                                     canvasProps={{ className: 'w-full h-full' }}
                                 />
