@@ -6,25 +6,18 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+  apiKey: "AIzaSyBCU1XKyOh-jv5x754U1lu2FPmM7m1U9dg",
+  authDomain: "coreflow-k1qy1.firebaseapp.com",
+  projectId: "coreflow-k1qy1",
+  storageBucket: "coreflow-k1qy1.appspot.com", // use appspot.com
+  messagingSenderId: "313160709001",
+  appId: "1:313160709001:web:0df3793635a5f3e77a2758",
+  // measurementId optional
 };
 
-// Initialize Firebase
-let app;
-if (!getApps().length) {
-  app = initializeApp(firebaseConfig);
-} else {
-  app = getApp();
-}
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
-
-export { app, auth, db, storage };
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+export const storage = getStorage(app);
+export { app };
