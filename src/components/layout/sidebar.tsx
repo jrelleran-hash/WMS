@@ -56,24 +56,24 @@ const procurementNavItems = [
 const warehouseNavItems = [
     { href: "/inventory", label: "Warehouse Inventory", icon: Package },
     { href: "/issuance", label: "Issuance", icon: FileText },
-    { href: "/tools", label: "Tool Management", icon: Wrench },
-    { href: "/tool-booking", label: "Tool Booking", icon: Book },
     { href: "/warehouse", label: "Warehouse Map", icon: Map },
-];
-
-const assuranceNavItems = [
     { href: "/returns", label: "Returns", icon: RefreshCcw },
     { href: "/quality-control", label: "Quality Control", icon: ClipboardCheck },
-    { href: "/tool-maintenance", label: "Tool Maintenance", icon: Wrench },
     { href: "/waste-management", label: "Waste Management", icon: Trash2 },
 ];
+
+const toolsNavItems = [
+    { href: "/tools", label: "Tool Management", icon: Wrench },
+    { href: "/tool-booking", label: "Tool Booking", icon: Book },
+    { href: "/tool-maintenance", label: "Tool Maintenance", icon: Wrench },
+]
 
 export const navItemsPermissions = [
   ...navItems,
   ...logisticsNavItems,
   ...procurementNavItems,
   ...warehouseNavItems,
-  ...assuranceNavItems,
+  ...toolsNavItems,
   { href: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
@@ -224,7 +224,7 @@ export function Sidebar({ className, inSheet, isCollapsed, setIsCollapsed }: Sid
             <NavSection title="Logistics" items={logisticsNavItems as any} pathname={pathname} inSheet={inSheet} userPermissions={userPermissions} isCollapsed={isCollapsed} />
             <NavSection title="Procurement" items={procurementNavItems as any} pathname={pathname} inSheet={inSheet} userPermissions={userPermissions} isCollapsed={isCollapsed} />
             <NavSection title="Warehouse" items={warehouseNavItems as any} pathname={pathname} inSheet={inSheet} userPermissions={userPermissions} isCollapsed={isCollapsed} />
-            <NavSection title="Assurance" items={assuranceNavItems as any} pathname={pathname} inSheet={inSheet} userPermissions={userPermissions} isCollapsed={isCollapsed} />
+            <NavSection title="Tools" items={toolsNavItems as any} pathname={pathname} inSheet={inSheet} userPermissions={userPermissions} isCollapsed={isCollapsed} />
             
           </nav>
         </div>
