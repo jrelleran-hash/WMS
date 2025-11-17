@@ -24,6 +24,7 @@ import {
   Wrench,
   Trash2,
   Book,
+  UserCheck,
 } from "lucide-react";
 import { CoreFlowLogo } from "@/components/icons";
 import { cn } from "@/lib/utils";
@@ -74,6 +75,7 @@ const warehouseNavItems: NavSectionItem[] = [
 
 const toolsNavItems: NavItem[] = [
     { href: "/tools", label: "Tool Management", icon: Wrench },
+    { href: "/tool-accountability", label: "Tool Accountability", icon: UserCheck },
     { href: "/tool-booking", label: "Tool Booking", icon: Book },
     { href: "/tool-maintenance", label: "Tool Maintenance", icon: Wrench },
 ]
