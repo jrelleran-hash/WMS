@@ -35,34 +35,44 @@ import { useAuth } from "@/hooks/use-auth";
 import type { PagePermission } from "@/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
-const navItems = [
+type NavItem = { href: PagePermission; label: string; icon: LucideIcon };
+type SubNavSection = { title: string; items: NavItem[] };
+type NavSectionItem = NavItem | SubNavSection;
+
+
+const navItems: NavItem[] = [
   { href: "/", label: "Dashboard", icon: Home },
   { href: "/clients", label: "Clients", icon: Users },
   { href: "/analytics", label: "Analytics", icon: BarChart },
 ];
 
-const logisticsNavItems = [
+const logisticsNavItems: NavItem[] = [
     { href: "/logistics", label: "Logistics & Shipment", icon: Truck },
     { href: "/logistics-booking", label: "Logistics Booking", icon: Book },
     { href: "/vehicles", label: "Vehicle Management", icon: Truck },
 ];
 
-const procurementNavItems = [
+const procurementNavItems: NavItem[] = [
     { href: "/orders", label: "Orders", icon: ShoppingCart },
     { href: "/purchase-orders", label: "Purchase Orders", icon: Receipt },
     { href: "/suppliers", label: "Suppliers", icon: Building },
 ];
 
-const warehouseNavItems = [
+const warehouseNavItems: NavSectionItem[] = [
     { href: "/inventory", label: "Warehouse Inventory", icon: Package },
     { href: "/issuance", label: "Issuance", icon: FileText },
     { href: "/warehouse", label: "Warehouse Map", icon: Map },
-    { href: "/returns", label: "Returns", icon: RefreshCcw },
-    { href: "/quality-control", label: "Quality Control", icon: ClipboardCheck },
-    { href: "/waste-management", label: "Waste Management", icon: Trash2 },
+    { 
+        title: "Assurance", 
+        items: [
+            { href: "/returns", label: "Returns", icon: RefreshCcw },
+            { href: "/quality-control", label: "Quality Control", icon: ClipboardCheck },
+            { href: "/waste-management", label: "Waste Management", icon: Trash2 },
+        ]
+    },
 ];
 
-const toolsNavItems = [
+const toolsNavItems: NavItem[] = [
     { href: "/tools", label: "Tool Management", icon: Wrench },
     { href: "/tool-booking", label: "Tool Booking", icon: Book },
     { href: "/tool-maintenance", label: "Tool Maintenance", icon: Wrench },
@@ -72,7 +82,7 @@ export const navItemsPermissions = [
   ...navItems,
   ...logisticsNavItems,
   ...procurementNavItems,
-  ...warehouseNavItems,
+  ...warehouseNavItems.flatMap(item => 'items' in item ? item.items : [item]),
   ...toolsNavItems,
   { href: "/settings", label: "Settings", icon: Settings },
 ] as const;
@@ -123,7 +133,7 @@ function SidebarLink({ href, label, icon: Icon, pathname, inSheet, isCollapsed }
 
 interface NavSectionProps {
     title: string;
-    items: { href: PagePermission; label: string; icon: LucideIcon }[];
+    items: NavSectionItem[];
     pathname: string;
     inSheet?: boolean;
     userPermissions: PagePermission[];
@@ -131,16 +141,24 @@ interface NavSectionProps {
 }
 
 function NavSection({ title, items, pathname, inSheet, userPermissions, isCollapsed }: NavSectionProps) {
-    const isActiveSection = items.some(item => pathname.startsWith(item.href) && item.href !== '/');
+    const isActiveSection = items.some(item => 'href' in item ? pathname.startsWith(item.href) && item.href !== '/' : item.items.some(subItem => pathname.startsWith(subItem.href)));
     const [isOpen, setIsOpen] = useState(isActiveSection);
-    const visibleItems = items.filter(item => userPermissions.includes(item.href));
+    
+    const visibleItems = useMemo(() => items.map(item => {
+        if ('items' in item) { // It's a SubNavSection
+            const visibleSubItems = item.items.filter(subItem => userPermissions.includes(subItem.href));
+            return visibleSubItems.length > 0 ? { ...item, items: visibleSubItems } : null;
+        }
+        // It's a NavItem
+        return userPermissions.includes(item.href) ? item : null;
+    }).filter(Boolean) as NavSectionItem[], [items, userPermissions]);
 
     if (visibleItems.length === 0) return null;
     
     if (isCollapsed) {
         return (
             <div className="mt-2 space-y-1 border-t border-border/50 pt-2">
-                {visibleItems.map((item) => (
+                {visibleItems.flatMap(item => 'items' in item ? item.items : [item]).map((item) => (
                     <SidebarLink key={item.href} {...item} pathname={pathname} inSheet={inSheet} isCollapsed={isCollapsed} />
                 ))}
             </div>
@@ -155,11 +173,15 @@ function NavSection({ title, items, pathname, inSheet, userPermissions, isCollap
                     <ChevronDown className={cn("h-4 w-4 text-muted-foreground/70 transition-transform", isOpen && "rotate-180")} />
                 </Button>
             </CollapsibleTrigger>
-            <CollapsibleContent className="data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden">
+            <CollapsibleContent className="data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden pl-2">
                  <div className="grid items-start text-sm font-medium">
-                    {visibleItems.map((item) => (
-                        <SidebarLink key={item.href} {...item} pathname={pathname} inSheet={inSheet} isCollapsed={isCollapsed}/>
-                    ))}
+                    {visibleItems.map((item) => {
+                        if ('items' in item) { // SubNavSection
+                            return <NavSection key={item.title} {...{title: item.title, items: item.items, pathname, inSheet, userPermissions, isCollapsed}} />;
+                        }
+                        // NavItem
+                        return <SidebarLink key={item.href} {...item} pathname={pathname} inSheet={inSheet} isCollapsed={isCollapsed}/>
+                    })}
                  </div>
             </CollapsibleContent>
         </Collapsible>
