@@ -1317,11 +1317,10 @@ export async function addShipment(shipmentData: NewShipmentData): Promise<Docume
     });
 }
 
-export async function updateShipmentStatus(shipmentId: string, status: Shipment['status']): Promise<void> {
+export async function updateShipmentStatus(shipmentId: string, status: Shipment['status'], deliveryProof?: { photoUrl: string; signatureUrl: string }): Promise<void> {
     const shipmentRef = doc(db, "shipments", shipmentId);
 
     await runTransaction(db, async (transaction) => {
-        // --- 1. READS ---
         const shipmentDoc = await transaction.get(shipmentRef);
         if (!shipmentDoc.exists()) {
             throw new Error("Shipment not found.");
@@ -1338,13 +1337,14 @@ export async function updateShipmentStatus(shipmentId: string, status: Shipment[
              orderDoc = await transaction.get(orderRef);
         }
         
-        // --- 2. WRITES ---
         const payload: any = { status };
         if (status === 'Delivered') {
             payload.actualDeliveryDate = Timestamp.now();
+            if (deliveryProof) {
+                payload.deliveryProof = deliveryProof;
+            }
             if (orderRef && orderDoc && orderDoc.exists()) {
                  const orderData = orderDoc.data();
-                 // Only update order status if it's 'Shipped' to avoid overwriting other states
                  if(orderData?.status === 'Shipped') {
                     transaction.update(orderRef, { status: "Completed" });
                  }

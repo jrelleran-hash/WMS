@@ -153,6 +153,10 @@ export interface Shipment {
     estimatedDeliveryDate?: Date;
     actualDeliveryDate?: Date;
     createdAt: Date;
+    deliveryProof?: {
+        photoUrl: string;
+        signatureUrl: string;
+    }
 }
 
 export interface ReturnItem {
