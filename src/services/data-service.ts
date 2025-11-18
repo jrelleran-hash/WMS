@@ -3,6 +3,7 @@
 import { db, storage, auth } from "@/lib/firebase";
 import { collection, getDocs, getDoc, doc, orderBy, query, limit, Timestamp, where, DocumentReference, addDoc, updateDoc, deleteDoc, arrayUnion, runTransaction, writeBatch, setDoc } from "firebase/firestore";
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, createUserWithEmailAndPassword } from "firebase/auth";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import type { Activity, Notification, Order, Product, Client, Issuance, Supplier, PurchaseOrder, Shipment, Return, ReturnItem, OutboundReturn, OutboundReturnItem, UserProfile, OrderItem, PurchaseOrderItem, IssuanceItem, Backorder, UserRole, PagePermission, ProductCategory, ProductLocation, Tool, ToolBorrowRecord, SalvagedPart, DisposalRecord, ToolMaintenanceRecord, ToolBookingRequest, Vehicle } from "@/types";
 import { format, subDays, addDays } from 'date-fns';
 
@@ -249,7 +250,7 @@ export async function addProduct(product: Partial<Omit<Product, 'id' | 'lastUpda
       maxStockLevel: product.maxStockLevel || 100,
       location: product.location || {},
       supplier: product.supplier || "",
-      imageUrl: product.imageUrl || `https://picsum.photos/seed/${docRef.id}/400/400`,
+      imageUrl: product.imageUrl || "",
       lastUpdated: now,
       history: [],
     };
@@ -2488,4 +2489,16 @@ export async function addVehicle(vehicle: Omit<Vehicle, 'id' | 'createdAt' | 'st
     console.error("Error adding vehicle:", error);
     throw new Error("Failed to add vehicle.");
   }
+}
+
+export async function uploadImage(file: File, path: string): Promise<string> {
+    try {
+        const storageRef = ref(storage, path);
+        const snapshot = await uploadBytes(storageRef, file);
+        const downloadURL = await getDownloadURL(snapshot.ref);
+        return downloadURL;
+    } catch (error) {
+        console.error("Error uploading image:", error);
+        throw new Error("Failed to upload image.");
+    }
 }

@@ -6,7 +6,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { PlusCircle, MoreHorizontal, Package, ChevronsUpDown, Check, Printer, FileDown, SlidersHorizontal, User, Search, History, View } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Package, ChevronsUpDown, Check, Printer, FileDown, SlidersHorizontal, User, Search, History, View, Camera, Upload } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -47,7 +47,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { addProduct, updateProduct, deleteProduct, addSupplier, adjustStock } from "@/services/data-service";
+import { addProduct, updateProduct, deleteProduct, addSupplier, adjustStock, uploadImage } from "@/services/data-service";
 import type { Product, Supplier, ProductCategory, ProductLocation, ProductHistory } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -88,7 +88,8 @@ const createProductSchema = (isSkuAuto: boolean) => z.object({
   maxStockLevel: z.coerce.number().int().nonnegative("Max stock must be a non-negative integer."),
   location: locationSchema,
   supplierId: z.string().optional(),
-  imageUrl: z.string().url("Must be a valid URL").optional().or(z.literal('')),
+  imageFile: z.any().optional(),
+  imageUrl: z.string().optional(),
 }).refine(data => isSkuAuto || (data.sku && data.sku.length > 0), {
     message: "SKU is required when not auto-generated.",
     path: ["sku"],
@@ -104,6 +105,7 @@ const editProductSchema = z.object({
   maxStockLevel: z.coerce.number().int().nonnegative("Max stock must be a non-negative integer."),
   location: locationSchema,
   supplierId: z.string().optional(),
+  imageFile: z.any().optional(),
   imageUrl: z.string().url("Must be a valid URL").optional().or(z.literal('')),
 });
 
@@ -122,15 +124,11 @@ const stockAdjustmentSchema = z.object({
 });
 
 type StockAdjustmentFormValues = z.infer<typeof stockAdjustmentSchema>;
-
 type SupplierFormValues = z.infer<typeof supplierSchema>;
-
-
 type ProductFormValues = z.infer<ReturnType<typeof createProductSchema>>;
 type EditProductFormValues = z.infer<typeof editProductSchema>;
 type StatusFilter = "all" | "in-stock" | "low-stock" | "out-of-stock";
 type CategoryFilter = "all" | ProductCategory;
-
 type LocationFilter = {
     zone?: string;
     aisle?: string;
@@ -153,7 +151,7 @@ export default function InventoryPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [productHistory, setProductHistory] = useState<ProductHistory[]>(null);
+  const [productHistory, setProductHistory] = useState<ProductHistory[] | null>(null);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -169,6 +167,11 @@ export default function InventoryPage() {
   const [isSupplierPopoverOpen, setIsSupplierPopoverOpen] = useState(false);
   const [isAddSupplierOpen, setIsAddSupplierOpen] = useState(false);
   const searchParams = useSearchParams();
+  
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+
 
   const canEditProduct = userProfile?.role === 'Admin' || userProfile?.role === 'Manager';
 
@@ -211,6 +214,7 @@ export default function InventoryPage() {
     if (isAddDialogOpen) {
       addForm.reset();
       setAutoGenerateSku(true);
+      setImagePreview(null);
     }
   }, [isAddDialogOpen, addForm]);
 
@@ -221,6 +225,7 @@ export default function InventoryPage() {
         supplierId: suppliers.find(s => s.name === editingProduct.supplier)?.id || '',
         imageUrl: editingProduct.imageUrl || ''
       });
+      setImagePreview(editingProduct.imageUrl || null);
     }
   }, [editingProduct, editForm, suppliers]);
 
@@ -250,6 +255,19 @@ export default function InventoryPage() {
     // You would fetch the full history here, for now we use what we have
     setProductHistory(product.history || []);
     setHistoryLoading(false);
+  };
+  
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+        addForm.setValue('imageFile', file);
+        editForm.setValue('imageFile', file);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
 
@@ -305,10 +323,15 @@ export default function InventoryPage() {
   
   const onAddSubmit = async (data: ProductFormValues) => {
     try {
-      const { supplierId, ...productData } = data;
+      let imageUrl = '';
+      if (data.imageFile) {
+        imageUrl = await uploadImage(data.imageFile, `products/${Date.now()}_${data.imageFile.name}`);
+      }
+
+      const { supplierId, imageFile, ...productData } = data;
       const supplierName = suppliers.find(s => s.id === supplierId)?.name || '';
       
-      const finalProductData: any = { ...productData, supplier: supplierName };
+      const finalProductData: any = { ...productData, supplier: supplierName, imageUrl };
 
       if (autoGenerateSku) {
         const namePart = data.name.substring(0, 3).toUpperCase();
@@ -334,10 +357,15 @@ export default function InventoryPage() {
   const onEditSubmit = async (data: EditProductFormValues) => {
     if (!editingProduct) return;
     try {
-      const { sku, supplierId, ...updateData } = data;
+        let imageUrl = data.imageUrl;
+        if (data.imageFile) {
+            imageUrl = await uploadImage(data.imageFile, `products/${Date.now()}_${data.imageFile.name}`);
+        }
+
+      const { sku, supplierId, imageFile, ...updateData } = data;
       const supplierName = suppliers.find(s => s.id === supplierId)?.name || '';
       
-      const payload: any = { ...updateData, supplier: supplierName };
+      const payload: any = { ...updateData, supplier: supplierName, imageUrl };
       
       await updateProduct(editingProduct.id, payload);
       toast({ title: "Success", description: "Product updated successfully." });
@@ -538,11 +566,41 @@ export default function InventoryPage() {
                       <DialogDescription>Fill in the details for the new product.</DialogDescription>
                       </DialogHeader>
                       <form onSubmit={addForm.handleSubmit(onAddSubmit)} className="space-y-4">
-                      <div className="space-y-2 sm:col-span-2">
-                          <Label htmlFor="imageUrl">Image URL</Label>
-                          <Input id="imageUrl" {...addForm.register("imageUrl")} placeholder="https://example.com/image.png" />
-                          {addForm.formState.errors.imageUrl && <p className="text-sm text-destructive">{addForm.formState.errors.imageUrl.message}</p>}
-                      </div>
+                       <div className="space-y-2 sm:col-span-2">
+                            <Label>Product Image</Label>
+                            <div className="flex items-center gap-4">
+                                <div className="w-24 h-24 rounded-md bg-muted flex items-center justify-center relative overflow-hidden">
+                                {imagePreview ? (
+                                    <Image src={imagePreview} alt="Product preview" layout="fill" objectFit="cover" />
+                                ) : (
+                                    <Package className="w-8 h-8 text-muted-foreground" />
+                                )}
+                                </div>
+                                <div className="flex-1 space-y-2">
+                                <Input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    ref={fileInputRef}
+                                    onChange={handleImageChange}
+                                />
+                                <Input
+                                    type="file"
+                                    accept="image/*"
+                                    capture="environment"
+                                    className="hidden"
+                                    ref={cameraInputRef}
+                                    onChange={handleImageChange}
+                                />
+                                <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full">
+                                    <Upload className="mr-2 h-4 w-4" /> Upload Image
+                                </Button>
+                                <Button type="button" variant="outline" onClick={() => cameraInputRef.current?.click()} className="w-full">
+                                    <Camera className="mr-2 h-4 w-4" /> Use Camera
+                                </Button>
+                                </div>
+                            </div>
+                        </div>
                       <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-2 sm:col-span-2">
                               <Label htmlFor="name">Product Name</Label>
@@ -871,20 +929,38 @@ export default function InventoryPage() {
             </DialogHeader>
             <div className="grid md:grid-cols-2 gap-8">
               <div className="space-y-4">
-                 {editForm.getValues('imageUrl') ? (
-                    <Image src={editForm.getValues('imageUrl')!} alt={editingProduct.name} width={400} height={400} className="w-full h-auto object-cover rounded-md" />
-                 ) : (
-                    <div className="w-full aspect-square bg-muted rounded-md flex items-center justify-center">
+                 <div className="w-full aspect-square bg-muted rounded-md flex items-center justify-center relative overflow-hidden">
+                    {imagePreview ? (
+                        <Image src={imagePreview} alt="Product preview" layout="fill" objectFit="cover" />
+                    ) : (
                         <Package className="w-16 h-16 text-muted-foreground" />
-                    </div>
-                 )}
+                    )}
+                </div>
+                <div className="flex gap-2">
+                     <Input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        ref={fileInputRef}
+                        onChange={handleImageChange}
+                    />
+                    <Input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="hidden"
+                        ref={cameraInputRef}
+                        onChange={handleImageChange}
+                    />
+                    <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} className="flex-1">
+                        <Upload className="mr-2 h-4 w-4" /> Upload
+                    </Button>
+                    <Button type="button" variant="outline" onClick={() => cameraInputRef.current?.click()} className="flex-1">
+                        <Camera className="mr-2 h-4 w-4" /> Camera
+                    </Button>
+                </div>
               </div>
               <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-imageUrl">Image URL</Label>
-                    <Input id="edit-imageUrl" {...editForm.register("imageUrl")} placeholder="https://example.com/image.png" />
-                    {editForm.formState.errors.imageUrl && <p className="text-sm text-destructive">{editForm.formState.errors.imageUrl.message}</p>}
-                </div>
                   <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2 sm:col-span-2">
                           <Label htmlFor="edit-name">Product Name</Label>
