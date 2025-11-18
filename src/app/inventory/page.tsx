@@ -1,11 +1,12 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { PlusCircle, MoreHorizontal, Package, ChevronsUpDown, Check, Printer, FileDown, SlidersHorizontal, User, Search } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Package, ChevronsUpDown, Check, Printer, FileDown, SlidersHorizontal, User, Search, History } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -47,7 +48,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { addProduct, updateProduct, deleteProduct, addSupplier, adjustStock } from "@/services/data-service";
-import type { Product, Supplier, ProductCategory, ProductLocation } from "@/types";
+import type { Product, Supplier, ProductCategory, ProductLocation, ProductHistory } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
@@ -65,6 +66,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { CoreFlowLogo } from "@/components/icons";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
+import { getProductByIdAction } from "./actions";
 
 const categories: ProductCategory[] = ["Tools", "Consumables", "Raw Materials", "Finished Goods", "Other"];
 
@@ -149,6 +151,8 @@ export default function InventoryPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [productHistory, setProductHistory] = useState<ProductHistory[] | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
   const [isAdjustmentOpen, setIsAdjustmentOpen] = useState(false);
@@ -212,6 +216,15 @@ export default function InventoryPage() {
         ...editingProduct,
         supplierId: suppliers.find(s => s.name === editingProduct.supplier)?.id || ''
       });
+      const fetchHistory = async () => {
+        setHistoryLoading(true);
+        const fullProduct = await getProductByIdAction(editingProduct.id);
+        setProductHistory(fullProduct?.history || []);
+        setHistoryLoading(false);
+      }
+      fetchHistory();
+    } else {
+      setProductHistory(null);
     }
   }, [editingProduct, editForm, suppliers]);
 
@@ -942,6 +955,52 @@ export default function InventoryPage() {
                 </Button>
               </DialogFooter>
             </form>
+             <div className="space-y-4">
+                <h3 className="font-semibold flex items-center gap-2"><History className="w-4 h-4" /> Transaction Ledger</h3>
+                <div className="border rounded-lg max-h-96 overflow-y-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Reason</TableHead>
+                        <TableHead className="text-right">Change</TableHead>
+                        <TableHead className="text-right">New Stock</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {historyLoading ? (
+                            Array.from({length: 4}).map((_, i) => (
+                                <TableRow key={i}>
+                                    <TableCell colSpan={4}><Skeleton className="h-6 w-full" /></TableCell>
+                                </TableRow>
+                            ))
+                        ) : productHistory && productHistory.length > 0 ? (
+                           [...productHistory].sort((a,b) => b.dateUpdated.toMillis() - a.dateUpdated.toMillis()).map((entry, index, array) => {
+                                const previousStock = index < array.length - 1 ? array[index+1].stock : 0;
+                                const change = entry.stock - previousStock;
+                                return (
+                                <TableRow key={index}>
+                                    <TableCell>{format(entry.dateUpdated.toDate(), 'PP p')}</TableCell>
+                                    <TableCell className="text-xs italic text-muted-foreground">{entry.changeReason || "N/A"}</TableCell>
+                                    <TableCell className={cn(
+                                        "text-right font-medium",
+                                        change > 0 ? "text-green-500" : "text-destructive"
+                                    )}>
+                                        {change > 0 ? `+${change}` : change}
+                                    </TableCell>
+                                    <TableCell className="text-right font-bold">{entry.stock}</TableCell>
+                                </TableRow>
+                                )
+                           })
+                        ) : (
+                            <TableRow>
+                                <TableCell colSpan={4} className="text-center h-24">No history for this product.</TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
