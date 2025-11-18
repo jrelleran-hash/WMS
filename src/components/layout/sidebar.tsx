@@ -48,6 +48,17 @@ const navItems: NavItem[] = [
   { href: "/analytics", label: "Analytics", icon: BarChart },
 ];
 
+const procurementNavItems: NavItem[] = [
+    { href: "/orders", label: "Orders", icon: ShoppingCart },
+    { href: "/purchase-orders", label: "Purchase Orders", icon: Receipt },
+    { href: "/suppliers", label: "Suppliers", icon: Building },
+];
+
+const logisticsNavItems: NavItem[] = [
+    { href: "/logistics", label: "Logistics & Shipment", icon: Truck },
+    { href: "/logistics-booking", label: "Logistics Booking", icon: Book },
+];
+
 const warehouseNavItems: NavSectionItem[] = [
     { href: "/inventory", label: "Warehouse Inventory", icon: Package },
     { href: "/issuance", label: "Issuance", icon: FileText },
@@ -71,11 +82,9 @@ const toolsNavItems: NavItem[] = [
 
 export const navItemsPermissions = [
   ...navItems,
-  { href: "/logistics", label: "Logistics & Shipment", icon: Truck },
-  { href: "/logistics-booking", label: "Logistics Booking", icon: Book },
-  { href: "/orders", label: "Orders", icon: ShoppingCart },
-  { href: "/purchase-orders", label: "Purchase Orders", icon: Receipt },
-  { href: "/suppliers", label: "Suppliers", icon: Building },
+  ...procurementNavItems,
+  ...logisticsNavItems,
+  { href: "/vehicles", label: "Vehicle Management", icon: Truck},
   ...warehouseNavItems.flatMap(item => 'items' in item ? item.items : [item]),
   ...toolsNavItems,
   { href: "/settings", label: "Settings", icon: Settings },
@@ -237,6 +246,8 @@ export function Sidebar({ className, inSheet, isCollapsed, setIsCollapsed }: Sid
               <SidebarLink key={item.href} {...item} pathname={pathname} inSheet={inSheet} isCollapsed={isCollapsed}/>
             ))}
             
+            <NavSection title="Procurement" items={procurementNavItems as any} pathname={pathname} inSheet={inSheet} userPermissions={userPermissions} isCollapsed={isCollapsed} />
+            <NavSection title="Logistics" items={logisticsNavItems as any} pathname={pathname} inSheet={inSheet} userPermissions={userPermissions} isCollapsed={isCollapsed} />
             <NavSection title="Warehouse" items={warehouseNavItems as any} pathname={pathname} inSheet={inSheet} userPermissions={userPermissions} isCollapsed={isCollapsed} />
             <NavSection title="Tools" items={toolsNavItems as any} pathname={pathname} inSheet={inSheet} userPermissions={userPermissions} isCollapsed={isCollapsed} />
             
