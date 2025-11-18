@@ -71,6 +71,7 @@ export interface Product {
     supplier?: string;
     history?: ProductHistory[];
     lastUpdated?: Timestamp;
+    imageUrl?: string;
 }
 
 export interface OrderItem {

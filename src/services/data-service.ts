@@ -249,6 +249,7 @@ export async function addProduct(product: Partial<Omit<Product, 'id' | 'lastUpda
       maxStockLevel: product.maxStockLevel || 100,
       location: product.location || {},
       supplier: product.supplier || "",
+      imageUrl: product.imageUrl || `https://picsum.photos/seed/${docRef.id}/400/400`,
       lastUpdated: now,
       history: [],
     };
