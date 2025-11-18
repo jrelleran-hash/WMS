@@ -44,7 +44,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { addIssuance, deleteIssuance, addShipment, initiateReturn, processReturn, updateOrderStatus, addClient } from "@/services/data-service";
+import { addIssuance, deleteIssuance, initiateReturn, processReturn, updateOrderStatus, addClient } from "@/services/data-service";
 import type { Issuance, Product, Order, Return, ReturnItem, Client } from "@/types";
 import { format, addDays } from "date-fns";
 import React from 'react';
@@ -279,11 +279,9 @@ export default function IssuancePage() {
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isAddClientOpen, setIsAddClientOpen] = useState(false);
-  const [isCreateShipmentOpen, setIsCreateShipmentOpen] = useState(false);
   const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
   
   const [selectedIssuance, setSelectedIssuance] = useState<Issuance | null>(null);
-  const [issuanceForShipment, setIssuanceForShipment] = useState<Issuance | null>(null);
   const [issuanceForReturn, setIssuanceForReturn] = useState<Issuance | null>(null);
 
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -316,15 +314,6 @@ export default function IssuancePage() {
 
   const clientForm = useForm<ClientFormValues>({
     resolver: zodResolver(clientSchema),
-  });
-
-  const shipmentForm = useForm<ShipmentFormValues>({
-    resolver: zodResolver(createShipmentSchema),
-    defaultValues: {
-      shippingProvider: "",
-      trackingNumber: "",
-      estimatedDeliveryDate: addDays(new Date(), 7),
-    },
   });
 
   const returnForm = useForm<ReturnFormValues>({
@@ -371,19 +360,6 @@ export default function IssuancePage() {
     }
   }, [isAddDialogOpen, form]);
   
-  useEffect(() => {
-    if(issuanceForShipment) {
-      shipmentForm.reset({
-        shippingProvider: "",
-        trackingNumber: "",
-        estimatedDeliveryDate: addDays(new Date(), 7),
-      });
-      setIsCreateShipmentOpen(true);
-    } else {
-        setIsCreateShipmentOpen(false);
-    }
-  }, [issuanceForShipment, shipmentForm]);
-
   useEffect(() => {
     if (issuanceForReturn) {
       returnForm.reset({
@@ -441,28 +417,6 @@ export default function IssuancePage() {
         title: "Error Creating Issuance",
         description: errorMessage,
       });
-    }
-  };
-  
-  const onShipmentSubmit = async (data: ShipmentFormValues) => {
-    if(!issuanceForShipment) return;
-    
-    try {
-      await addShipment({
-          ...data,
-          issuanceId: issuanceForShipment.id,
-      });
-      toast({ title: "Success", description: "New shipment created successfully." });
-      setIssuanceForShipment(null);
-      await refetchData();
-    } catch (error) {
-        console.error(error);
-        const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred.";
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: errorMessage,
-        });
     }
   };
 
@@ -794,7 +748,6 @@ export default function IssuancePage() {
                                                                             controllerField.onChange(currentValue === controllerField.value ? "" : currentValue)
                                                                             setProductPopovers(prev => ({...prev, [index]: false}))
                                                                         }}
-                                                                        disabled={p.stock === 0}
                                                                     >
                                                                         <div className="flex items-center justify-between w-full">
                                                                             <div className="flex items-center">
@@ -925,10 +878,6 @@ export default function IssuancePage() {
                           <Printer className="mr-2 h-4 w-4" />
                           <span>Print</span>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setIssuanceForShipment(issuance)}>
-                          <Truck className="mr-2 h-4 w-4" />
-                          <span>Create Shipment</span>
-                        </DropdownMenuItem>
                          <DropdownMenuItem onClick={() => setIssuanceForReturn(issuance)}>
                           <RefreshCcw className="mr-2 h-4 w-4" />
                           <span>Process Return</span>
@@ -1007,65 +956,6 @@ export default function IssuancePage() {
         </DialogContent>
       </Dialog>
     )}
-    
-    <Dialog open={isCreateShipmentOpen} onOpenChange={(isOpen) => { if (!isOpen) setIssuanceForShipment(null) }}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Create Shipment</DialogTitle>
-                <DialogDescription>
-                    Create a new shipment for Issuance #{issuanceForShipment?.issuanceNumber}.
-                </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={shipmentForm.handleSubmit(onShipmentSubmit)} className="space-y-4">
-                <div className="space-y-2">
-                    <Label htmlFor="shippingProvider">Shipping Provider</Label>
-                    <Input id="shippingProvider" {...shipmentForm.register("shippingProvider")} />
-                    {shipmentForm.formState.errors.shippingProvider && <p className="text-sm text-destructive">{shipmentForm.formState.errors.shippingProvider.message}</p>}
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="trackingNumber">Tracking Number (Optional)</Label>
-                    <Input id="trackingNumber" {...shipmentForm.register("trackingNumber")} />
-                </div>
-                <div className="space-y-2">
-                     <Label>Estimated Delivery Date</Label>
-                     <Controller
-                        control={shipmentForm.control}
-                        name="estimatedDeliveryDate"
-                        render={({ field }) => (
-                           <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                variant={"outline"}
-                                className={cn(
-                                    "w-full justify-start text-left font-normal",
-                                    !field.value && "text-muted-foreground"
-                                )}
-                                >
-                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                                <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                                initialFocus
-                                />
-                            </PopoverContent>
-                            </Popover>
-                        )}
-                     />
-                    {shipmentForm.formState.errors.estimatedDeliveryDate && <p className="text-sm text-destructive">{shipmentForm.formState.errors.estimatedDeliveryDate.message}</p>}
-                </div>
-                 <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setIssuanceForShipment(null)}>Cancel</Button>
-                    <Button type="submit" disabled={shipmentForm.formState.isSubmitting}>
-                        {shipmentForm.formState.isSubmitting ? "Creating..." : "Create Shipment"}
-                    </Button>
-                </DialogFooter>
-            </form>
-        </DialogContent>
-    </Dialog>
 
     <Dialog open={isReturnDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) setIssuanceForReturn(null) }}>
       <DialogContent className="sm:max-w-2xl">
