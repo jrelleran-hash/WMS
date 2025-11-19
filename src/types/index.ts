@@ -211,7 +211,7 @@ export interface OutboundReturn {
 }
 
 export type UserRole = "Admin" | "Manager" | "Staff" | "Worker" | "Approver";
-export type PagePermission = "/" | "/clients" | "/logistics" | "/analytics" | "/orders" | "/purchase-orders" | "/suppliers" | "/inventory" | "/issuance" | "/returns" | "/quality-control" | "/settings" | "/warehouse" | "/tools" | "/tool-maintenance" | "/waste-management" | "/logistics-booking" | "/tool-booking" | "/vehicles" | "/tool-accountability";
+export type PagePermission = "/" | "/clients" | "/logistics" | "/analytics" | "/orders" | "/purchase-orders" | "/suppliers" | "/inventory" | "/issuance" | "/returns" | "/quality-control" | "/settings" | "/warehouse" | "/tools" | "/tool-maintenance" | "/waste-management" | "/logistics-booking" | "/tool-booking" | "/vehicles" | "/tool-accountability" | "/tasks";
 
 export interface UserProfile {
     uid: string;
@@ -309,4 +309,16 @@ export interface Vehicle {
     weightLimit?: string;
     sizeLimit?: string;
     description?: string;
+}
+
+export interface Task {
+    id: string;
+    title: string;
+    description?: string;
+    assignedToId: string;
+    assignedToName: string;
+    status: 'To-Do' | 'In Progress' | 'Completed';
+    createdAt: Timestamp;
+    dueDate?: Timestamp;
+    completedAt?: Timestamp;
 }
