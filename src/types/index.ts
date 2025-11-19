@@ -313,13 +313,18 @@ export interface Vehicle {
 
 export interface Task {
     id: string;
+    taskId: string;
     title: string;
     description?: string;
+    priority: 'Critical' | 'High' | 'Medium' | 'Low';
     assignedToId: string;
     assignedToName: string;
-    status: 'To-Do' | 'In Progress' | 'Completed';
+    createdBy: string;
     createdAt: Timestamp;
-    startDate?: Timestamp;
     dueDate?: Timestamp;
+    status: 'Pending' | 'In Progress' | 'Completed' | 'Delayed';
+    progress: number;
+    attachments?: string;
+    supervisorNotes?: string;
     completedAt?: Timestamp;
 }

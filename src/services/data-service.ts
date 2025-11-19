@@ -2528,9 +2528,12 @@ export async function getTasks(): Promise<Task[]> {
 type NewTaskData = {
     title: string;
     description?: string;
+    priority: "Critical" | "High" | "Medium" | "Low";
     assignedToId: string;
-    startDate?: Date;
+    createdBy: string;
     dueDate?: Date;
+    attachments?: string;
+    supervisorNotes?: string;
 }
 export async function addTask(taskData: NewTaskData): Promise<void> {
     const userRef = doc(db, "users", taskData.assignedToId);
@@ -2541,24 +2544,41 @@ export async function addTask(taskData: NewTaskData): Promise<void> {
     }
     const userData = userDoc.data() as UserProfile;
 
-    const newTask = {
+    const date = new Date();
+    const taskId = `TSK-${format(date, 'yyyyMMdd')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+
+    const newTask: Omit<Task, 'id'> = {
         ...taskData,
+        taskId,
         assignedToName: `${userData.firstName} ${userData.lastName}`,
-        status: 'To-Do' as const,
+        status: 'Pending',
         createdAt: Timestamp.now(),
-        startDate: taskData.startDate ? Timestamp.fromDate(taskData.startDate) : null,
-        dueDate: taskData.dueDate ? Timestamp.fromDate(taskData.dueDate) : null,
+        dueDate: taskData.dueDate ? Timestamp.fromDate(taskData.dueDate) : undefined,
+        progress: 0,
     };
     await addDoc(collection(db, "tasks"), newTask);
 }
 
 
-export async function updateTaskStatus(taskId: string, status: Task['status']): Promise<void> {
+export async function updateTask(taskId: string, data: Partial<Task>): Promise<void> {
     const taskRef = doc(db, "tasks", taskId);
-    const payload: { status: Task['status'], completedAt?: Timestamp } = { status };
-    if (status === 'Completed') {
+    const payload: { [key: string]: any } = { ...data };
+    
+    if (data.status === 'Completed') {
         payload.completedAt = Timestamp.now();
+        payload.progress = 100;
+    } else if (data.status && data.status !== 'Completed') {
+        payload.completedAt = null;
     }
+    
+    if(data.dueDate) {
+        payload.dueDate = Timestamp.fromDate(data.dueDate as Date);
+    }
+
     await updateDoc(taskRef, payload);
 }
 
+export async function deleteTask(taskId: string): Promise<void> {
+    const taskRef = doc(db, "tasks", taskId);
+    await deleteDoc(taskRef);
+}
