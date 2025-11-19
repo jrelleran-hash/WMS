@@ -319,6 +319,7 @@ export interface Task {
     assignedToName: string;
     status: 'To-Do' | 'In Progress' | 'Completed';
     createdAt: Timestamp;
+    startDate?: Timestamp;
     dueDate?: Timestamp;
     completedAt?: Timestamp;
 }

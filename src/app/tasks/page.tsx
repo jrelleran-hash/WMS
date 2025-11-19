@@ -34,6 +34,7 @@ const taskSchema = z.object({
   title: z.string().min(1, "Task title is required."),
   description: z.string().optional(),
   assignedToId: z.string().min(1, "Please assign this task to a staff member."),
+  startDate: z.date().optional(),
   dueDate: z.date().optional(),
 });
 
@@ -67,7 +68,7 @@ function StaffKpiDashboard() {
             
             return {
                 userId: user.uid,
-                name: `${user.firstName} ${user.lastName}`,
+                name: `${'user.firstName'} ${'user.lastName'}`,
                 total: userTasks.length,
                 completed,
                 inProgress,
@@ -202,7 +203,7 @@ export default function TasksPage() {
                                     <Label htmlFor="description">Description (Optional)</Label>
                                     <Textarea id="description" {...form.register("description")} />
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                      <div className="space-y-2">
                                         <Label htmlFor="assignedToId">Assign To</Label>
                                         <Controller
@@ -222,10 +223,10 @@ export default function TasksPage() {
                                         {form.formState.errors.assignedToId && <p className="text-sm text-destructive">{form.formState.errors.assignedToId.message}</p>}
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>Due Date (Optional)</Label>
+                                        <Label>Start Date (Optional)</Label>
                                         <Controller
                                             control={form.control}
-                                            name="dueDate"
+                                            name="startDate"
                                             render={({ field }) => (
                                             <Popover>
                                                 <PopoverTrigger asChild>
@@ -239,6 +240,24 @@ export default function TasksPage() {
                                             )}
                                         />
                                     </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Due Date (Optional)</Label>
+                                    <Controller
+                                        control={form.control}
+                                        name="dueDate"
+                                        render={({ field }) => (
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
+                                        </Popover>
+                                        )}
+                                    />
                                 </div>
                                 <DialogFooter>
                                     <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
@@ -295,6 +314,7 @@ function TaskTable({ tasks, loading, onStatusChange }: { tasks: Task[], loading:
                             <TableHead>Task</TableHead>
                             <TableHead>Assigned To</TableHead>
                             <TableHead>Status</TableHead>
+                            <TableHead>Start Date</TableHead>
                             <TableHead>Due Date</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
@@ -303,7 +323,7 @@ function TaskTable({ tasks, loading, onStatusChange }: { tasks: Task[], loading:
                         {loading ? (
                              Array.from({ length: 5 }).map((_, i) => (
                                 <TableRow key={i}>
-                                    <TableCell colSpan={5}><Skeleton className="h-8 w-full" /></TableCell>
+                                    <TableCell colSpan={6}><Skeleton className="h-8 w-full" /></TableCell>
                                 </TableRow>
                             ))
                         ) : sortedTasks.length > 0 ? (
@@ -312,6 +332,7 @@ function TaskTable({ tasks, loading, onStatusChange }: { tasks: Task[], loading:
                                     <TableCell className="font-medium">{task.title}</TableCell>
                                     <TableCell>{task.assignedToName}</TableCell>
                                     <TableCell><Badge variant={statusVariant[task.status]}>{task.status}</Badge></TableCell>
+                                    <TableCell>{task.startDate ? format(task.startDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                                     <TableCell>{task.dueDate ? format(task.dueDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                                     <TableCell className="text-right">
                                         <DropdownMenu>
@@ -338,7 +359,7 @@ function TaskTable({ tasks, loading, onStatusChange }: { tasks: Task[], loading:
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={5} className="h-24 text-center">No tasks found.</TableCell>
+                                <TableCell colSpan={6} className="h-24 text-center">No tasks found.</TableCell>
                             </TableRow>
                         )}
                     </TableBody>

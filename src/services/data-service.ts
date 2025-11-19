@@ -449,8 +449,8 @@ export async function addClient(client: Omit<Client, 'id' | 'createdAt'>): Promi
     
     await createNotification({
         title: "New Client Added",
-        description: `${client.clientName} is now a client.`,
-        details: `A new client, ${client.clientName} for project "${client.projectName}", has been added to the database.`,
+        description: `${'client.clientName'} is now a client.`,
+        details: `A new client, ${'client.clientName'} for project "${'client.projectName'}", has been added to the database.`,
         href: "/clients",
         icon: "UserPlus",
     });
@@ -2514,6 +2514,7 @@ export async function getTasks(): Promise<Task[]> {
                 id: doc.id,
                 ...data,
                 createdAt: data.createdAt,
+                startDate: data.startDate,
                 dueDate: data.dueDate,
                 completedAt: data.completedAt,
             } as Task;
@@ -2528,6 +2529,7 @@ type NewTaskData = {
     title: string;
     description?: string;
     assignedToId: string;
+    startDate?: Date;
     dueDate?: Date;
 }
 export async function addTask(taskData: NewTaskData): Promise<void> {
@@ -2544,6 +2546,7 @@ export async function addTask(taskData: NewTaskData): Promise<void> {
         assignedToName: `${userData.firstName} ${userData.lastName}`,
         status: 'To-Do' as const,
         createdAt: Timestamp.now(),
+        startDate: taskData.startDate ? Timestamp.fromDate(taskData.startDate) : null,
         dueDate: taskData.dueDate ? Timestamp.fromDate(taskData.dueDate) : null,
     };
     await addDoc(collection(db, "tasks"), newTask);
@@ -2558,3 +2561,4 @@ export async function updateTaskStatus(taskId: string, status: Task['status']): 
     }
     await updateDoc(taskRef, payload);
 }
+
