@@ -4,7 +4,7 @@ import { db, storage, auth } from "@/lib/firebase";
 import { collection, getDocs, getDoc, doc, orderBy, query, limit, Timestamp, where, DocumentReference, addDoc, updateDoc, deleteDoc, arrayUnion, runTransaction, writeBatch, setDoc } from "firebase/firestore";
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import type { Activity, Notification, Order, Product, Client, Issuance, Supplier, PurchaseOrder, Shipment, Return, ReturnItem, OutboundReturn, OutboundReturnItem, UserProfile, OrderItem, PurchaseOrderItem, IssuanceItem, Backorder, UserRole, PagePermission, ProductCategory, ProductLocation, Tool, ToolBorrowRecord, SalvagedPart, DisposalRecord, ToolMaintenanceRecord, ToolBookingRequest, Vehicle } from "@/types";
+import type { Activity, Notification, Order, Product, Client, Issuance, Supplier, PurchaseOrder, Shipment, Return, ReturnItem, OutboundReturn, OutboundReturnItem, UserProfile, OrderItem, PurchaseOrderItem, IssuanceItem, Backorder, UserRole, PagePermission, ProductCategory, ProductLocation, Tool, ToolBorrowRecord, SalvagedPart, DisposalRecord, ToolMaintenanceRecord, ToolBookingRequest, Vehicle, Task } from "@/types";
 import { format, subDays, addDays } from 'date-fns';
 
 function timeSince(date: Date) {
@@ -2501,4 +2501,60 @@ export async function uploadImage(file: File, path: string): Promise<string> {
         console.error("Error uploading image:", error);
         throw new Error("Failed to upload image.");
     }
+}
+
+export async function getTasks(): Promise<Task[]> {
+    try {
+        const tasksCol = collection(db, "tasks");
+        const q = query(tasksCol, orderBy("createdAt", "desc"));
+        const taskSnapshot = await getDocs(q);
+        return taskSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                createdAt: data.createdAt,
+                dueDate: data.dueDate,
+                completedAt: data.completedAt,
+            } as Task;
+        });
+    } catch (error) {
+        console.error("Error fetching tasks:", error);
+        return [];
+    }
+}
+
+type NewTaskData = {
+    title: string;
+    description?: string;
+    assignedToId: string;
+    dueDate?: Date;
+}
+export async function addTask(taskData: NewTaskData): Promise<void> {
+    const userRef = doc(db, "users", taskData.assignedToId);
+    const userDoc = await getDoc(userRef);
+
+    if (!userDoc.exists()) {
+        throw new Error("Assigned user not found.");
+    }
+    const userData = userDoc.data() as UserProfile;
+
+    const newTask = {
+        ...taskData,
+        assignedToName: `${userData.firstName} ${userData.lastName}`,
+        status: 'To-Do' as const,
+        createdAt: Timestamp.now(),
+        dueDate: taskData.dueDate ? Timestamp.fromDate(taskData.dueDate) : null,
+    };
+    await addDoc(collection(db, "tasks"), newTask);
+}
+
+
+export async function updateTaskStatus(taskId: string, status: Task['status']): Promise<void> {
+    const taskRef = doc(db, "tasks", taskId);
+    const payload: { status: Task['status'], completedAt?: Timestamp } = { status };
+    if (status === 'Completed') {
+        payload.completedAt = Timestamp.now();
+    }
+    await updateDoc(taskRef, payload);
 }
