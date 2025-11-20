@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -11,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { addTask, updateTask, deleteTask } from "@/services/data-service";
 import type { Task } from "@/types";
 import { format } from "date-fns";
-import { BarChart, ResponsiveContainer, XAxis, YAxis, Bar, PieChart, Pie, Cell } from "recharts";
+import { BarChart, ResponsiveContainer, XAxis, YAxis, Bar, PieChart, Pie, Cell, Legend } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -28,7 +29,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Skeleton } from "@/components/ui/skeleton";
 import { PlusCircle, MoreHorizontal, Calendar as CalendarIcon, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -114,16 +115,17 @@ function StaffKpiDashboard() {
                 <CardHeader>
                     <CardTitle>Overall Task Status</CardTitle>
                 </CardHeader>
-                <CardContent>
-                    <ChartContainer config={chartConfig} className="h-72">
+                <CardContent className="flex justify-center">
+                    <ChartContainer config={chartConfig} className="h-72 w-full max-w-[250px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <ChartTooltip content={<ChartTooltipContent nameKey="name" hideLabel />} />
-                                <Pie data={overallStats} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} label>
+                                <Pie data={overallStats} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
                                     {overallStats.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={entry.fill} />
                                     ))}
                                 </Pie>
+                                <ChartLegend content={<ChartLegendContent />} />
                             </PieChart>
                         </ResponsiveContainer>
                     </ChartContainer>
