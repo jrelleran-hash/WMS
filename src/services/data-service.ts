@@ -2552,6 +2552,12 @@ export async function addTask(taskData: NewTaskData): Promise<void> {
 
     const date = new Date();
     const taskId = `TSK-${format(date, 'yyyyMMdd')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+    
+    let progress = 0;
+    if (taskData.subtasks && taskData.subtasks.length > 0) {
+        const completedCount = taskData.subtasks.filter(st => st.completed).length;
+        progress = Math.round((completedCount / taskData.subtasks.length) * 100);
+    }
 
     const newTask: Omit<Task, 'id'> = {
         ...taskData,
@@ -2561,7 +2567,7 @@ export async function addTask(taskData: NewTaskData): Promise<void> {
         createdAt: Timestamp.now(),
         startDate: taskData.dateRange?.from ? Timestamp.fromDate(taskData.dateRange.from) : null,
         dueDate: taskData.dateRange?.to ? Timestamp.fromDate(taskData.dateRange.to) : null,
-        progress: 0,
+        progress: progress,
         subtasks: taskData.subtasks?.map(st => ({
             ...st,
             startDate: (st as any).dateRange?.from ? Timestamp.fromDate((st as any).dateRange.from) : null,
@@ -2576,7 +2582,13 @@ export async function updateTask(taskId: string, data: Partial<Omit<Task, 'id'>>
     const taskRef = doc(db, "tasks", taskId);
     const payload: { [key: string]: any } = { ...data };
     
-    if (data.status === 'Completed') {
+    // Auto-update progress if subtasks are being updated
+    if (data.subtasks) {
+        const completedCount = data.subtasks.filter(st => st.completed).length;
+        payload.progress = data.subtasks.length > 0 ? Math.round((completedCount / data.subtasks.length) * 100) : 0;
+    }
+    
+    if (data.status === 'Completed' && payload.progress !== 100) {
         payload.completedAt = Timestamp.now();
         payload.progress = 100;
     } else if (data.status && data.status !== 'Completed') {
@@ -2607,3 +2619,4 @@ export async function deleteTask(taskId: string): Promise<void> {
     const taskRef = doc(db, "tasks", taskId);
     await deleteDoc(taskRef);
 }
+

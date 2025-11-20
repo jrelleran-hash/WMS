@@ -377,17 +377,18 @@ function TaskForm({ form, onSubmit, users, onClose }: { form: any, onSubmit: (da
     const subtasks = watch("subtasks", []);
     
     const progress = useMemo(() => {
-        if (!subtasks || subtasks.length === 0) return watch('progress') || 0; // Keep manual progress if no subtasks
+        if (!subtasks || subtasks.length === 0) return watch('progress') || 0;
         const completedCount = subtasks.filter((s: Subtask) => s.completed).length;
         return Math.round((completedCount / subtasks.length) * 100);
     }, [subtasks, watch]);
 
     useEffect(() => {
-        // This effect runs when subtasks change, updating the form's progress value.
-        const completedCount = subtasks.filter((s: any) => s.completed).length;
-        const totalSubtasks = subtasks.length;
-        const newProgress = totalSubtasks > 0 ? Math.round((completedCount / totalSubtasks) * 100) : 0;
-        setValue('progress', newProgress, { shouldDirty: true });
+        if (subtasks && subtasks.length > 0) {
+            const completedCount = subtasks.filter((s: any) => s.completed).length;
+            const totalSubtasks = subtasks.length;
+            const newProgress = totalSubtasks > 0 ? Math.round((completedCount / totalSubtasks) * 100) : 0;
+            setValue('progress', newProgress, { shouldDirty: true });
+        }
     }, [subtasks, setValue]);
 
 
