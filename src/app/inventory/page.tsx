@@ -68,7 +68,7 @@ import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import Image from 'next/image';
 
-const categories: ProductCategory[] = ["Tools", "Consumables", "Raw Materials", "Finished Goods", "Other"];
+const categories: ProductCategory[] = ["Consumables", "Raw Materials", "Finished Goods", "Other"];
 
 const locationSchema = z.object({
   zone: z.string().optional(),
