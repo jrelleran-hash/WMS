@@ -311,17 +311,25 @@ export interface Vehicle {
     description?: string;
 }
 
+export interface Subtask {
+    id: string;
+    title: string;
+    completed: boolean;
+}
+
 export interface Task {
     id: string;
     taskId: string;
     title: string;
     description?: string;
+    subtasks?: Subtask[];
     priority: 'Critical' | 'High' | 'Medium' | 'Low';
     assignedToId: string;
     assignedToName: string;
     createdBy: string;
     createdAt: Timestamp;
-    dueDate?: Timestamp;
+    startDate?: Timestamp | null;
+    dueDate?: Timestamp | null;
     status: 'Pending' | 'In Progress' | 'Completed' | 'Delayed';
     progress: number;
     attachments?: string;

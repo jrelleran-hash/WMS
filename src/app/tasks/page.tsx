@@ -2,15 +2,15 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useData } from "@/context/data-context";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { addTask, updateTask, deleteTask } from "@/services/data-service";
-import type { Task } from "@/types";
+import type { Task, Subtask } from "@/types";
 import { format } from "date-fns";
 import { BarChart, ResponsiveContainer, XAxis, YAxis, Bar, PieChart, Pie, Cell, Legend } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,13 +27,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PlusCircle, MoreHorizontal, Calendar as CalendarIcon, Trash2 } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Calendar as CalendarIcon, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
+
+const subtaskSchema = z.object({
+  id: z.string(),
+  title: z.string().min(1, "Subtask title cannot be empty."),
+  completed: z.boolean(),
+});
 
 const taskSchema = z.object({
   title: z.string().min(1, "Task title is required."),
@@ -45,6 +52,7 @@ const taskSchema = z.object({
   attachments: z.string().url("Must be a valid URL.").optional().or(z.literal('')),
   supervisorNotes: z.string().optional(),
   progress: z.number().min(0).max(100).optional(),
+  subtasks: z.array(subtaskSchema).optional(),
 });
 
 type TaskFormValues = z.infer<typeof taskSchema>;
@@ -111,16 +119,16 @@ function StaffKpiDashboard() {
 
     return (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-             <Card className="lg:col-span-1">
+             <Card className="lg:col-span-1 flex flex-col">
                 <CardHeader>
                     <CardTitle>Overall Task Status</CardTitle>
                 </CardHeader>
-                <CardContent className="flex justify-center">
-                    <ChartContainer config={chartConfig} className="h-72 w-full max-w-[250px]">
+                <CardContent className="flex-1 flex items-center justify-center">
+                    <ChartContainer config={chartConfig} className="h-60 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <ChartTooltip content={<ChartTooltipContent nameKey="name" hideLabel />} />
-                                <Pie data={overallStats} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                                <Pie data={overallStats} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} label>
                                     {overallStats.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={entry.fill} />
                                     ))}
@@ -181,6 +189,7 @@ export default function TasksPage() {
                 attachments: "",
                 supervisorNotes: "",
                 progress: 0,
+                subtasks: [],
             });
         }
     }, [isAddDialogOpen, form]);
@@ -197,6 +206,7 @@ export default function TasksPage() {
                 attachments: selectedTask.attachments,
                 supervisorNotes: selectedTask.supervisorNotes,
                 progress: selectedTask.progress,
+                subtasks: selectedTask.subtasks || [],
             });
         }
     }, [selectedTask, form]);
@@ -348,8 +358,31 @@ export default function TasksPage() {
 }
 
 function TaskForm({ form, onSubmit, users, onClose }: { form: any, onSubmit: (data: TaskFormValues) => Promise<void>, users: any[], onClose: () => void }) {
-    const { watch, control, register } = form;
-    const progress = watch('progress', 0);
+    const { watch, control, register, setValue } = form;
+    const [newSubtask, setNewSubtask] = useState("");
+    
+    const { fields, append, remove } = useFieldArray({
+      control,
+      name: "subtasks",
+    });
+
+    const subtasks = watch("subtasks", []);
+    const progress = useMemo(() => {
+        if (!subtasks || subtasks.length === 0) return 0;
+        const completedCount = subtasks.filter((s: Subtask) => s.completed).length;
+        return Math.round((completedCount / subtasks.length) * 100);
+    }, [subtasks]);
+
+    useEffect(() => {
+        setValue('progress', progress);
+    }, [progress, setValue]);
+
+    const handleAddSubtask = () => {
+        if (newSubtask.trim() !== "") {
+            append({ id: `new-${Date.now()}`, title: newSubtask.trim(), completed: false });
+            setNewSubtask("");
+        }
+    };
     
     return (
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-4">
@@ -361,6 +394,59 @@ function TaskForm({ form, onSubmit, users, onClose }: { form: any, onSubmit: (da
             <div className="space-y-2">
                 <Label htmlFor="description">Description (Optional)</Label>
                 <Textarea id="description" {...register("description")} />
+            </div>
+            <div className="space-y-2">
+                <Label>Subtasks</Label>
+                <div className="space-y-2">
+                    {fields.map((field, index) => (
+                        <div key={field.id} className="flex items-center gap-2">
+                            <Controller
+                                name={`subtasks.${index}.completed`}
+                                control={control}
+                                render={({ field: checkboxField }) => (
+                                    <Checkbox
+                                        checked={checkboxField.value}
+                                        onCheckedChange={checkboxField.onChange}
+                                    />
+                                )}
+                            />
+                            <Controller
+                                name={`subtasks.${index}.title`}
+                                control={control}
+                                render={({ field: inputField }) => (
+                                    <Input
+                                        {...inputField}
+                                        className={cn(checkboxField.value && "line-through text-muted-foreground")}
+                                    />
+                                )}
+                            />
+                            <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    ))}
+                </div>
+                <div className="flex items-center gap-2">
+                    <Input
+                        value={newSubtask}
+                        onChange={(e) => setNewSubtask(e.target.value)}
+                        placeholder="Add a new subtask..."
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleAddSubtask();
+                            }
+                        }}
+                    />
+                    <Button type="button" onClick={handleAddSubtask}>Add</Button>
+                </div>
+            </div>
+             <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                    <Label htmlFor="progress">Progress</Label>
+                    <span className="text-sm font-medium text-muted-foreground">{progress || 0}%</span>
+                </div>
+                 <Progress value={progress} />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                  <div className="space-y-2">
@@ -438,25 +524,6 @@ function TaskForm({ form, onSubmit, users, onClose }: { form: any, onSubmit: (da
                     />
                 </div>
             </div>
-            <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                    <Label htmlFor="progress">Progress</Label>
-                    <span className="text-sm font-medium text-muted-foreground">{progress || 0}%</span>
-                </div>
-                <Controller
-                    name="progress"
-                    control={control}
-                    defaultValue={0}
-                    render={({ field }) => (
-                        <Slider
-                            value={[field.value || 0]}
-                            onValueChange={(value) => field.onChange(value[0])}
-                            max={100}
-                            step={10}
-                        />
-                    )}
-                />
-            </div>
              <div className="space-y-2">
                 <Label htmlFor="attachments">Attachments (URL, Optional)</Label>
                 <Input id="attachments" {...register("attachments")} placeholder="https://example.com/file.pdf" />
@@ -483,7 +550,7 @@ function TaskTable({ tasks, loading, onStatusChange, onProgressChange, onEdit, o
             if (statusOrder[a.status] !== statusOrder[b.status]) {
                 return statusOrder[a.status] - statusOrder[b.status];
             }
-            return b.createdAt.toMillis() - a.createdAt.toMillis();
+            return (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0);
         });
     }, [tasks]);
 
@@ -517,14 +584,8 @@ function TaskTable({ tasks, loading, onStatusChange, onProgressChange, onEdit, o
                                     <TableCell>{task.assignedToName}</TableCell>
                                     <TableCell>{task.dueDate ? format(task.dueDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                                     <TableCell>
-                                        <div onClick={(e) => e.stopPropagation()} className="flex items-center gap-2">
-                                            <Slider 
-                                                defaultValue={[task.progress || 0]} 
-                                                max={100} 
-                                                step={10} 
-                                                className="flex-1"
-                                                onValueCommit={(value) => onProgressChange(task.id, value[0])}
-                                            />
+                                        <div className="flex items-center gap-2">
+                                            <Progress value={task.progress || 0} className="w-[60%]" />
                                             <span className="text-xs font-mono w-8 text-right">{task.progress || 0}%</span>
                                         </div>
                                     </TableCell>

@@ -4,7 +4,7 @@ import { db, storage, auth } from "@/lib/firebase";
 import { collection, getDocs, getDoc, doc, orderBy, query, limit, Timestamp, where, DocumentReference, addDoc, updateDoc, deleteDoc, arrayUnion, runTransaction, writeBatch, setDoc } from "firebase/firestore";
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import type { Activity, Notification, Order, Product, Client, Issuance, Supplier, PurchaseOrder, Shipment, Return, ReturnItem, OutboundReturn, OutboundReturnItem, UserProfile, OrderItem, PurchaseOrderItem, IssuanceItem, Backorder, UserRole, PagePermission, ProductCategory, ProductLocation, Tool, ToolBorrowRecord, SalvagedPart, DisposalRecord, ToolMaintenanceRecord, ToolBookingRequest, Vehicle, Task } from "@/types";
+import type { Activity, Notification, Order, Product, Client, Issuance, Supplier, PurchaseOrder, Shipment, Return, ReturnItem, OutboundReturn, OutboundReturnItem, UserProfile, OrderItem, PurchaseOrderItem, IssuanceItem, Backorder, UserRole, PagePermission, ProductCategory, ProductLocation, Tool, ToolBorrowRecord, SalvagedPart, DisposalRecord, ToolMaintenanceRecord, ToolBookingRequest, Vehicle, Task, Subtask } from "@/types";
 import { format, subDays, addDays } from 'date-fns';
 
 function timeSince(date: Date) {
@@ -2528,9 +2528,11 @@ export async function getTasks(): Promise<Task[]> {
 type NewTaskData = {
     title: string;
     description?: string;
+    subtasks?: Subtask[];
     priority: "Critical" | "High" | "Medium" | "Low";
     assignedToId: string;
     createdBy: string;
+    startDate?: Date;
     dueDate?: Date;
     attachments?: string;
     supervisorNotes?: string;
@@ -2553,14 +2555,16 @@ export async function addTask(taskData: NewTaskData): Promise<void> {
         assignedToName: `${userData.firstName} ${userData.lastName}`,
         status: 'Pending',
         createdAt: Timestamp.now(),
+        startDate: taskData.startDate ? Timestamp.fromDate(taskData.startDate) : null,
         dueDate: taskData.dueDate ? Timestamp.fromDate(taskData.dueDate) : null,
         progress: 0,
+        subtasks: taskData.subtasks || [],
     };
     await addDoc(collection(db, "tasks"), newTask);
 }
 
 
-export async function updateTask(taskId: string, data: Partial<Task>): Promise<void> {
+export async function updateTask(taskId: string, data: Partial<Omit<Task, 'id'>>): Promise<void> {
     const taskRef = doc(db, "tasks", taskId);
     const payload: { [key: string]: any } = { ...data };
     
@@ -2571,7 +2575,10 @@ export async function updateTask(taskId: string, data: Partial<Task>): Promise<v
         payload.completedAt = null;
     }
     
-    if(data.dueDate) {
+    if(data.startDate) {
+        payload.startDate = Timestamp.fromDate(data.startDate as Date);
+    }
+     if(data.dueDate) {
         payload.dueDate = Timestamp.fromDate(data.dueDate as Date);
     }
 
