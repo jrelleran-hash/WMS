@@ -315,6 +315,7 @@ export interface Subtask {
     id: string;
     title: string;
     completed: boolean;
+    startDate?: Timestamp | null;
     dueDate?: Timestamp | null;
 }
 

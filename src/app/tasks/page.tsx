@@ -34,13 +34,17 @@ import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import type { DateRange } from "react-day-picker";
 
 
 const subtaskSchema = z.object({
   id: z.string(),
   title: z.string().min(1, "Subtask title cannot be empty."),
   completed: z.boolean(),
-  dueDate: z.date().optional().nullable(),
+  dateRange: z.object({
+    from: z.date().optional(),
+    to: z.date().optional(),
+  }).optional(),
 });
 
 const taskSchema = z.object({
@@ -48,8 +52,10 @@ const taskSchema = z.object({
   description: z.string().optional(),
   priority: z.enum(["Critical", "High", "Medium", "Low"]),
   assignedToId: z.string().min(1, "Please assign this task to a staff member."),
-  startDate: z.date().optional(),
-  dueDate: z.date().optional(),
+  dateRange: z.object({
+      from: z.date().optional(),
+      to: z.date().optional(),
+  }).optional(),
   attachments: z.string().url("Must be a valid URL.").optional().or(z.literal('')),
   supervisorNotes: z.string().optional(),
   progress: z.number().min(0).max(100).optional(),
@@ -185,8 +191,7 @@ export default function TasksPage() {
                 title: "",
                 description: "",
                 assignedToId: "",
-                startDate: undefined,
-                dueDate: undefined,
+                dateRange: { from: undefined, to: undefined },
                 attachments: "",
                 supervisorNotes: "",
                 progress: 0,
@@ -202,12 +207,14 @@ export default function TasksPage() {
                 description: selectedTask.description,
                 priority: selectedTask.priority,
                 assignedToId: selectedTask.assignedToId,
-                startDate: selectedTask.startDate ? selectedTask.startDate.toDate() : undefined,
-                dueDate: selectedTask.dueDate ? selectedTask.dueDate.toDate() : undefined,
+                dateRange: {
+                    from: selectedTask.startDate ? selectedTask.startDate.toDate() : undefined,
+                    to: selectedTask.dueDate ? selectedTask.dueDate.toDate() : undefined
+                },
                 attachments: selectedTask.attachments,
                 supervisorNotes: selectedTask.supervisorNotes,
                 progress: selectedTask.progress,
-                subtasks: selectedTask.subtasks?.map(st => ({...st, dueDate: st.dueDate ? st.dueDate.toDate() : null})) || [],
+                subtasks: selectedTask.subtasks?.map(st => ({...st, dateRange: { from: st.startDate?.toDate(), to: st.dueDate?.toDate()}})) || [],
             });
         }
     }, [selectedTask, form]);
@@ -380,7 +387,7 @@ function TaskForm({ form, onSubmit, users, onClose }: { form: any, onSubmit: (da
 
     const handleAddSubtask = () => {
         if (newSubtask.trim() !== "") {
-            append({ id: `new-${Date.now()}`, title: newSubtask.trim(), completed: false, dueDate: null });
+            append({ id: `new-${Date.now()}`, title: newSubtask.trim(), completed: false, dateRange: { from: undefined, to: undefined } });
             setNewSubtask("");
         }
     };
@@ -421,17 +428,30 @@ function TaskForm({ form, onSubmit, users, onClose }: { form: any, onSubmit: (da
                                     />
                                 )}
                             />
-                             <Controller
+                            <Controller
+                                name={`subtasks.${index}.dateRange`}
                                 control={control}
-                                name={`subtasks.${index}.dueDate`}
                                 render={({ field: dateField }) => (
                                     <Popover>
                                         <PopoverTrigger asChild>
-                                            <Button variant="outline" size="icon" className="w-10 h-10">
+                                            <Button
+                                                variant={"outline"}
+                                                size="icon"
+                                                className={cn("w-10 h-10", !dateField.value?.from && "text-muted-foreground")}
+                                            >
                                                 <CalendarIcon className="h-4 w-4" />
                                             </Button>
                                         </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={dateField.value} onSelect={dateField.onChange} initialFocus /></PopoverContent>
+                                        <PopoverContent className="w-auto p-0">
+                                            <Calendar
+                                                initialFocus
+                                                mode="range"
+                                                defaultMonth={dateField.value?.from}
+                                                selected={dateField.value as DateRange}
+                                                onSelect={dateField.onChange}
+                                                numberOfMonths={2}
+                                            />
+                                        </PopoverContent>
                                     </Popover>
                                 )}
                             />
@@ -501,43 +521,46 @@ function TaskForm({ form, onSubmit, users, onClose }: { form: any, onSubmit: (da
                     />
                 </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <Label>Start Date (Optional)</Label>
-                    <Controller
-                        control={control}
-                        name="startDate"
-                        render={({ field }) => (
-                        <Popover>
+            <div className="space-y-2">
+                <Label>Task Dates</Label>
+                <Controller
+                    control={form.control}
+                    name="dateRange"
+                    render={({ field }) => (
+                         <Popover>
                             <PopoverTrigger asChild>
-                                <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn("w-full justify-start text-left font-normal", !field.value?.from && "text-muted-foreground")}
+                                >
                                     <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                    {field.value?.from ? (
+                                        field.value.to ? (
+                                        <>
+                                            {format(field.value.from, "LLL dd, y")} -{" "}
+                                            {format(field.value.to, "LLL dd, y")}
+                                        </>
+                                        ) : (
+                                        format(field.value.from, "LLL dd, y")
+                                        )
+                                    ) : (
+                                        <span>Pick a date range</span>
+                                    )}
                                 </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    initialFocus
+                                    mode="range"
+                                    defaultMonth={field.value?.from}
+                                    selected={field.value as DateRange}
+                                    onSelect={field.onChange}
+                                    numberOfMonths={2}
+                                />
+                            </PopoverContent>
                         </Popover>
-                        )}
-                    />
-                </div>
-                <div className="space-y-2">
-                    <Label>Due Date (Optional)</Label>
-                    <Controller
-                        control={control}
-                        name="dueDate"
-                        render={({ field }) => (
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
-                        </Popover>
-                        )}
-                    />
-                </div>
+                    )}
+                />
             </div>
              <div className="space-y-2">
                 <Label htmlFor="attachments">Attachments (URL, Optional)</Label>

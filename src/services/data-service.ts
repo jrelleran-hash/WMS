@@ -2517,6 +2517,11 @@ export async function getTasks(): Promise<Task[]> {
                 startDate: data.startDate,
                 dueDate: data.dueDate,
                 completedAt: data.completedAt,
+                subtasks: data.subtasks?.map((st: any) => ({
+                  ...st,
+                  startDate: st.startDate,
+                  dueDate: st.dueDate,
+                }))
             } as Task;
         });
     } catch (error) {
@@ -2528,12 +2533,11 @@ export async function getTasks(): Promise<Task[]> {
 type NewTaskData = {
     title: string;
     description?: string;
-    subtasks?: Subtask[];
+    subtasks?: Partial<Subtask>[];
     priority: "Critical" | "High" | "Medium" | "Low";
     assignedToId: string;
     createdBy: string;
-    startDate?: Date;
-    dueDate?: Date;
+    dateRange?: { from?: Date, to?: Date };
     attachments?: string;
     supervisorNotes?: string;
 }
@@ -2555,10 +2559,14 @@ export async function addTask(taskData: NewTaskData): Promise<void> {
         assignedToName: `${userData.firstName} ${userData.lastName}`,
         status: 'Pending',
         createdAt: Timestamp.now(),
-        startDate: taskData.startDate ? Timestamp.fromDate(taskData.startDate) : null,
-        dueDate: taskData.dueDate ? Timestamp.fromDate(taskData.dueDate) : null,
+        startDate: taskData.dateRange?.from ? Timestamp.fromDate(taskData.dateRange.from) : null,
+        dueDate: taskData.dateRange?.to ? Timestamp.fromDate(taskData.dateRange.to) : null,
         progress: 0,
-        subtasks: taskData.subtasks?.map(st => ({...st, dueDate: st.dueDate ? Timestamp.fromDate(st.dueDate as Date) : null})) || [],
+        subtasks: taskData.subtasks?.map(st => ({
+            ...st,
+            startDate: (st as any).dateRange?.from ? Timestamp.fromDate((st as any).dateRange.from) : null,
+            dueDate: (st as any).dateRange?.to ? Timestamp.fromDate((st as any).dateRange.to) : null,
+        })) || [],
     };
     await addDoc(collection(db, "tasks"), newTask);
 }
@@ -2575,17 +2583,21 @@ export async function updateTask(taskId: string, data: Partial<Omit<Task, 'id'>>
         payload.completedAt = null;
     }
     
-    if(data.startDate) {
-        payload.startDate = Timestamp.fromDate(data.startDate as Date);
+    if('dateRange' in data) {
+        payload.startDate = data.dateRange?.from ? Timestamp.fromDate(data.dateRange.from) : null;
+        payload.dueDate = data.dateRange?.to ? Timestamp.fromDate(data.dateRange.to) : null;
+        delete payload.dateRange;
     }
-     if(data.dueDate) {
-        payload.dueDate = Timestamp.fromDate(data.dueDate as Date);
-    }
+    
     if (data.subtasks) {
-        payload.subtasks = data.subtasks.map(st => ({
-            ...st,
-            dueDate: st.dueDate ? Timestamp.fromDate(st.dueDate as Date) : null
-        }));
+        payload.subtasks = data.subtasks.map(st => {
+            const { dateRange, ...rest } = st as any;
+            return {
+                ...rest,
+                startDate: dateRange?.from ? Timestamp.fromDate(dateRange.from) : null,
+                dueDate: dateRange?.to ? Timestamp.fromDate(dateRange.to) : null,
+            }
+        });
     }
 
     await updateDoc(taskRef, payload);
@@ -2595,4 +2607,3 @@ export async function deleteTask(taskId: string): Promise<void> {
     const taskRef = doc(db, "tasks", taskId);
     await deleteDoc(taskRef);
 }
-
