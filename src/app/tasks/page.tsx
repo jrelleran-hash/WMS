@@ -124,7 +124,7 @@ function StaffKpiDashboard() {
                     <CardTitle>Overall Task Status</CardTitle>
                 </CardHeader>
                 <CardContent className="flex-1 flex items-center justify-center">
-                    <ChartContainer config={chartConfig} className="h-60 w-full">
+                    <ChartContainer config={chartConfig} className="h-72 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <ChartTooltip content={<ChartTooltipContent nameKey="name" hideLabel />} />
@@ -416,7 +416,7 @@ function TaskForm({ form, onSubmit, users, onClose }: { form: any, onSubmit: (da
                                 render={({ field: inputField }) => (
                                     <Input
                                         {...inputField}
-                                        className={cn(checkboxField.value && "line-through text-muted-foreground")}
+                                        className={cn(form.watch(`subtasks.${index}.completed`) && "line-through text-muted-foreground")}
                                     />
                                 )}
                             />
