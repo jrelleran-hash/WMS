@@ -611,7 +611,7 @@ function TaskTable({ tasks, loading, onStatusChange, onProgressChange, onEdit, o
                                     <TableCell>{task.dueDate ? format(task.dueDate.toDate(), 'PPP') : 'N/A'}</TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-2">
-                                            <Progress value={task.progress || 0} className="w-[60%]" />
+                                            <Progress value={task.progress || 0} />
                                             <span className="text-xs font-mono w-8 text-right">{task.progress || 0}%</span>
                                         </div>
                                     </TableCell>

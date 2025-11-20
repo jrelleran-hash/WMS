@@ -315,8 +315,8 @@ export interface Subtask {
     id: string;
     title: string;
     completed: boolean;
-    startDate?: Timestamp | null;
-    dueDate?: Timestamp | null;
+    startDate: Timestamp | null;
+    dueDate: Timestamp | null;
 }
 
 export interface Task {
@@ -330,7 +330,7 @@ export interface Task {
     assignedToName: string;
     createdBy: string;
     createdAt: Timestamp;
-    dueDate?: Timestamp | null;
+    dueDate: Timestamp | null;
     status: 'Pending' | 'In Progress' | 'Completed' | 'Delayed';
     progress: number;
     attachments?: string;

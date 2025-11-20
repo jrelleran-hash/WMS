@@ -199,7 +199,7 @@ async function checkStockAndCreateNotification(product: Omit<Product, 'id' | 'hi
       title: `${status} Alert: ${product.name}`,
       description: `${product.name} is ${status.toLowerCase()}.`,
       details: `Product "${product.name}" (SKU: ${product.sku}) has a stock level of ${product.stock}, which is at or below the reorder limit of ${product.reorderLimit}. Please reorder soon.`,
-      href: `/inventory`,
+      href: "/inventory",
       icon: "Package",
     };
 
@@ -2616,5 +2616,6 @@ export async function deleteTask(taskId: string): Promise<void> {
     const taskRef = doc(db, "tasks", taskId);
     await deleteDoc(taskRef);
 }
+
 
 
