@@ -330,7 +330,6 @@ export interface Task {
     assignedToName: string;
     createdBy: string;
     createdAt: Timestamp;
-    startDate?: Timestamp | null;
     dueDate?: Timestamp | null;
     status: 'Pending' | 'In Progress' | 'Completed' | 'Delayed';
     progress: number;

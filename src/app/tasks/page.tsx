@@ -52,10 +52,7 @@ const taskSchema = z.object({
   description: z.string().optional(),
   priority: z.enum(["Critical", "High", "Medium", "Low"]),
   assignedToId: z.string().min(1, "Please assign this task to a staff member."),
-  dateRange: z.object({
-      from: z.date().optional(),
-      to: z.date().optional(),
-  }).optional(),
+  dueDate: z.date().optional(),
   attachments: z.string().url("Must be a valid URL.").optional().or(z.literal('')),
   supervisorNotes: z.string().optional(),
   progress: z.number().min(0).max(100).optional(),
@@ -191,7 +188,7 @@ export default function TasksPage() {
                 title: "",
                 description: "",
                 assignedToId: "",
-                dateRange: { from: undefined, to: undefined },
+                dueDate: undefined,
                 attachments: "",
                 supervisorNotes: "",
                 progress: 0,
@@ -207,10 +204,7 @@ export default function TasksPage() {
                 description: selectedTask.description,
                 priority: selectedTask.priority,
                 assignedToId: selectedTask.assignedToId,
-                dateRange: {
-                    from: selectedTask.startDate ? selectedTask.startDate.toDate() : undefined,
-                    to: selectedTask.dueDate ? selectedTask.dueDate.toDate() : undefined
-                },
+                dueDate: selectedTask.dueDate ? selectedTask.dueDate.toDate() : undefined,
                 attachments: selectedTask.attachments,
                 supervisorNotes: selectedTask.supervisorNotes,
                 progress: selectedTask.progress,
@@ -529,40 +523,27 @@ function TaskForm({ form, onSubmit, users, onClose }: { form: any, onSubmit: (da
                 </div>
             </div>
             <div className="space-y-2">
-                <Label>Task Dates</Label>
+                <Label>Due Date</Label>
                 <Controller
                     control={form.control}
-                    name="dateRange"
+                    name="dueDate"
                     render={({ field }) => (
                          <Popover>
                             <PopoverTrigger asChild>
                                 <Button
                                     variant={"outline"}
-                                    className={cn("w-full justify-start text-left font-normal", !field.value?.from && "text-muted-foreground")}
+                                    className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}
                                 >
                                     <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {field.value?.from ? (
-                                        field.value.to ? (
-                                        <>
-                                            {format(field.value.from, "LLL dd, y")} -{" "}
-                                            {format(field.value.to, "LLL dd, y")}
-                                        </>
-                                        ) : (
-                                        format(field.value.from, "LLL dd, y")
-                                        )
-                                    ) : (
-                                        <span>Pick a date range</span>
-                                    )}
+                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
                                 <Calendar
-                                    initialFocus
-                                    mode="range"
-                                    defaultMonth={field.value?.from}
-                                    selected={field.value as DateRange}
+                                    mode="single"
+                                    selected={field.value}
                                     onSelect={field.onChange}
-                                    numberOfMonths={2}
+                                    initialFocus
                                 />
                             </PopoverContent>
                         </Popover>

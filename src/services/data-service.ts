@@ -2537,7 +2537,7 @@ type NewTaskData = {
     priority: "Critical" | "High" | "Medium" | "Low";
     assignedToId: string;
     createdBy: string;
-    dateRange?: { from?: Date, to?: Date };
+    dueDate?: Date;
     attachments?: string;
     supervisorNotes?: string;
 }
@@ -2565,8 +2565,7 @@ export async function addTask(taskData: NewTaskData): Promise<void> {
         assignedToName: `${userData.firstName} ${userData.lastName}`,
         status: 'Pending',
         createdAt: Timestamp.now(),
-        startDate: taskData.dateRange?.from ? Timestamp.fromDate(taskData.dateRange.from) : null,
-        dueDate: taskData.dateRange?.to ? Timestamp.fromDate(taskData.dateRange.to) : null,
+        dueDate: taskData.dueDate ? Timestamp.fromDate(taskData.dueDate) : null,
         progress: progress,
         subtasks: taskData.subtasks?.map(st => ({
             ...st,
@@ -2595,10 +2594,8 @@ export async function updateTask(taskId: string, data: Partial<Omit<Task, 'id'>>
         payload.completedAt = null;
     }
     
-    if('dateRange' in data) {
-        payload.startDate = data.dateRange?.from ? Timestamp.fromDate(data.dateRange.from) : null;
-        payload.dueDate = data.dateRange?.to ? Timestamp.fromDate(data.dateRange.to) : null;
-        delete payload.dateRange;
+    if('dueDate' in data) {
+        payload.dueDate = data.dueDate ? Timestamp.fromDate(data.dueDate) : null;
     }
     
     if (data.subtasks) {
@@ -2619,4 +2616,5 @@ export async function deleteTask(taskId: string): Promise<void> {
     const taskRef = doc(db, "tasks", taskId);
     await deleteDoc(taskRef);
 }
+
 
