@@ -2613,7 +2613,6 @@ export async function getProductCategories(): Promise<ProductCategory[]> {
             // If no categories exist, create default ones
             const defaultCategories = [
                 { name: "Raw Materials" },
-                { name: "Consumables" },
             ];
             const batch = writeBatch(db);
             const createdCategories: ProductCategory[] = [];
@@ -2646,3 +2645,4 @@ export async function addProductCategory(name: string): Promise<DocumentReferenc
         throw error;
     }
 }
+
