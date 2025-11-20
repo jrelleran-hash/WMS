@@ -6,7 +6,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { PlusCircle, MoreHorizontal, Package, ChevronsUpDown, Check, Printer, FileDown, SlidersHorizontal, User, Search, History, View, Camera, Upload } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Package, ChevronsUpDown, Check, Printer, FileDown, SlidersHorizontal, User, Search, History, View } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -47,7 +47,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { addProduct, updateProduct, deleteProduct, addSupplier, adjustStock, uploadImage } from "@/services/data-service";
+import { addProduct, updateProduct, deleteProduct, addSupplier, adjustStock } from "@/services/data-service";
 import type { Product, Supplier, ProductCategory, ProductLocation, ProductHistory } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -88,8 +88,6 @@ const createProductSchema = (isSkuAuto: boolean) => z.object({
   maxStockLevel: z.coerce.number().int().nonnegative("Max stock must be a non-negative integer."),
   location: locationSchema,
   supplierId: z.string().optional(),
-  imageFile: z.any().optional(),
-  imageUrl: z.string().optional(),
 }).refine(data => isSkuAuto || (data.sku && data.sku.length > 0), {
     message: "SKU is required when not auto-generated.",
     path: ["sku"],
@@ -105,8 +103,6 @@ const editProductSchema = z.object({
   maxStockLevel: z.coerce.number().int().nonnegative("Max stock must be a non-negative integer."),
   location: locationSchema,
   supplierId: z.string().optional(),
-  imageFile: z.any().optional(),
-  imageUrl: z.string().url("Must be a valid URL").optional().or(z.literal('')),
 });
 
 const supplierSchema = z.object({
@@ -167,10 +163,6 @@ export default function InventoryPage() {
   const [isSupplierPopoverOpen, setIsSupplierPopoverOpen] = useState(false);
   const [isAddSupplierOpen, setIsAddSupplierOpen] = useState(false);
   const searchParams = useSearchParams();
-  
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
 
 
   const canEditProduct = userProfile?.role === 'Admin' || userProfile?.role === 'Manager';
@@ -189,7 +181,6 @@ export default function InventoryPage() {
       maxStockLevel: 100,
       location: { zone: "", aisle: "", rack: "", level: "", bin: "" },
       supplierId: "",
-      imageUrl: "",
     },
   });
 
@@ -214,7 +205,6 @@ export default function InventoryPage() {
     if (isAddDialogOpen) {
       addForm.reset();
       setAutoGenerateSku(true);
-      setImagePreview(null);
     }
   }, [isAddDialogOpen, addForm]);
 
@@ -223,9 +213,7 @@ export default function InventoryPage() {
       editForm.reset({
         ...editingProduct,
         supplierId: suppliers.find(s => s.name === editingProduct.supplier)?.id || '',
-        imageUrl: editingProduct.imageUrl || ''
       });
-      setImagePreview(editingProduct.imageUrl || null);
     }
   }, [editingProduct, editForm, suppliers]);
 
@@ -255,19 +243,6 @@ export default function InventoryPage() {
     // You would fetch the full history here, for now we use what we have
     setProductHistory(product.history || []);
     setHistoryLoading(false);
-  };
-  
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-        addForm.setValue('imageFile', file);
-        editForm.setValue('imageFile', file);
-      };
-      reader.readAsDataURL(file);
-    }
   };
 
 
@@ -323,15 +298,10 @@ export default function InventoryPage() {
   
   const onAddSubmit = async (data: ProductFormValues) => {
     try {
-      let imageUrl = '';
-      if (data.imageFile) {
-        imageUrl = await uploadImage(data.imageFile, `products/${Date.now()}_${data.imageFile.name}`);
-      }
-
-      const { supplierId, imageFile, ...productData } = data;
+      const { supplierId, ...productData } = data;
       const supplierName = suppliers.find(s => s.id === supplierId)?.name || '';
       
-      const finalProductData: any = { ...productData, supplier: supplierName, imageUrl };
+      const finalProductData: any = { ...productData, supplier: supplierName };
 
       if (autoGenerateSku) {
         const namePart = data.name.substring(0, 3).toUpperCase();
@@ -357,15 +327,10 @@ export default function InventoryPage() {
   const onEditSubmit = async (data: EditProductFormValues) => {
     if (!editingProduct) return;
     try {
-        let imageUrl = data.imageUrl;
-        if (data.imageFile) {
-            imageUrl = await uploadImage(data.imageFile, `products/${Date.now()}_${data.imageFile.name}`);
-        }
-
-      const { sku, supplierId, imageFile, ...updateData } = data;
+      const { sku, supplierId, ...updateData } = data;
       const supplierName = suppliers.find(s => s.id === supplierId)?.name || '';
       
-      const payload: any = { ...updateData, supplier: supplierName, imageUrl };
+      const payload: any = { ...updateData, supplier: supplierName };
       
       await updateProduct(editingProduct.id, payload);
       toast({ title: "Success", description: "Product updated successfully." });
@@ -566,41 +531,6 @@ export default function InventoryPage() {
                       <DialogDescription>Fill in the details for the new product.</DialogDescription>
                       </DialogHeader>
                       <form onSubmit={addForm.handleSubmit(onAddSubmit)} className="space-y-4">
-                       <div className="space-y-2 sm:col-span-2">
-                            <Label>Product Image</Label>
-                            <div className="flex items-center gap-4">
-                                <div className="w-24 h-24 rounded-md bg-muted flex items-center justify-center relative overflow-hidden">
-                                {imagePreview ? (
-                                    <Image src={imagePreview} alt="Product preview" layout="fill" objectFit="cover" />
-                                ) : (
-                                    <Package className="w-8 h-8 text-muted-foreground" />
-                                )}
-                                </div>
-                                <div className="flex-1 space-y-2">
-                                <Input
-                                    type="file"
-                                    accept="image/*"
-                                    className="hidden"
-                                    ref={fileInputRef}
-                                    onChange={handleImageChange}
-                                />
-                                <Input
-                                    type="file"
-                                    accept="image/*"
-                                    capture="environment"
-                                    className="hidden"
-                                    ref={cameraInputRef}
-                                    onChange={handleImageChange}
-                                />
-                                <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full">
-                                    <Upload className="mr-2 h-4 w-4" /> Upload Image
-                                </Button>
-                                <Button type="button" variant="outline" onClick={() => cameraInputRef.current?.click()} className="w-full">
-                                    <Camera className="mr-2 h-4 w-4" /> Use Camera
-                                </Button>
-                                </div>
-                            </div>
-                        </div>
                       <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-2 sm:col-span-2">
                               <Label htmlFor="name">Product Name</Label>
@@ -741,7 +671,6 @@ export default function InventoryPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[80px]">Image</TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>SKU</TableHead>
                       <TableHead>Category</TableHead>
@@ -759,7 +688,6 @@ export default function InventoryPage() {
                     {loading ? (
                       Array.from({ length: 5 }).map((_, i) => (
                         <TableRow key={i}>
-                          <TableCell><Skeleton className="h-12 w-12 rounded-md" /></TableCell>
                           <TableCell><Skeleton className="h-4 w-48" /></TableCell>
                           <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                           <TableCell><Skeleton className="h-4 w-24" /></TableCell>
@@ -776,15 +704,6 @@ export default function InventoryPage() {
                         const status = getStatus(product);
                         return (
                           <TableRow key={product.id} onClick={() => handleEditClick(product)} className="cursor-pointer">
-                             <TableCell>
-                                {product.imageUrl ? (
-                                    <Image src={product.imageUrl} alt={product.name} width={48} height={48} className="rounded-md object-cover" />
-                                ) : (
-                                    <div className="h-12 w-12 rounded-md bg-muted flex items-center justify-center">
-                                        <Package className="h-6 w-6 text-muted-foreground" />
-                                    </div>
-                                )}
-                            </TableCell>
                             <TableCell className="font-medium">
                               {product.name}
                             </TableCell>
@@ -854,13 +773,9 @@ export default function InventoryPage() {
                               <Card key={product.id} onClick={() => handleEditClick(product)} className="cursor-pointer">
                                   <CardHeader className="flex flex-row items-center justify-between">
                                        <div className="flex items-center gap-4">
-                                            {product.imageUrl ? (
-                                                <Image src={product.imageUrl} alt={product.name} width={48} height={48} className="rounded-md object-cover" />
-                                            ) : (
-                                                <div className="h-12 w-12 rounded-md bg-muted flex items-center justify-center">
-                                                    <Package className="h-6 w-6 text-muted-foreground" />
-                                                </div>
-                                            )}
+                                            <div className="h-12 w-12 rounded-md bg-muted flex items-center justify-center">
+                                                <Package className="h-6 w-6 text-muted-foreground" />
+                                            </div>
                                             <div>
                                                 <CardTitle className="text-base">{product.name}</CardTitle>
                                                 <CardDescription>{product.sku}</CardDescription>
@@ -922,170 +837,136 @@ export default function InventoryPage() {
       
       {editingProduct && (
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="sm:max-w-4xl">
+          <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
               <DialogTitle>Edit Product</DialogTitle>
               <DialogDescription>Update the details for {editingProduct.name}.</DialogDescription>
             </DialogHeader>
-            <div className="grid md:grid-cols-2 gap-8">
-              <div className="space-y-4">
-                 <div className="w-full aspect-square bg-muted rounded-md flex items-center justify-center relative overflow-hidden">
-                    {imagePreview ? (
-                        <Image src={imagePreview} alt="Product preview" layout="fill" objectFit="cover" />
-                    ) : (
-                        <Package className="w-16 h-16 text-muted-foreground" />
-                    )}
-                </div>
-                <div className="flex gap-2">
-                     <Input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        ref={fileInputRef}
-                        onChange={handleImageChange}
-                    />
-                    <Input
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        className="hidden"
-                        ref={cameraInputRef}
-                        onChange={handleImageChange}
-                    />
-                    <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} className="flex-1">
-                        <Upload className="mr-2 h-4 w-4" /> Upload
-                    </Button>
-                    <Button type="button" variant="outline" onClick={() => cameraInputRef.current?.click()} className="flex-1">
-                        <Camera className="mr-2 h-4 w-4" /> Camera
-                    </Button>
-                </div>
-              </div>
-              <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
-                  <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-2 sm:col-span-2">
-                          <Label htmlFor="edit-name">Product Name</Label>
-                          <Input id="edit-name" {...editForm.register("name")} onChange={(e) => {
-                              const { value } = e.target;
-                              e.target.value = toTitleCase(value);
-                              editForm.setValue("name", e.target.value);
-                          }}/>
-                          {editForm.formState.errors.name && <p className="text-sm text-destructive">{editForm.formState.errors.name.message}</p>}
-                      </div>
-                       <div className="space-y-2">
-                          <Label htmlFor="edit-category">Category</Label>
-                          <Controller
-                              name="category"
-                              control={editForm.control}
-                              render={({ field }) => (
-                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                      <SelectTrigger>
-                                          <SelectValue placeholder="Select a category" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                          {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-                                      </SelectContent>
-                                  </Select>
-                              )}
-                          />
-                          {editForm.formState.errors.category && <p className="text-sm text-destructive">{editForm.formState.errors.category.message}</p>}
-                      </div>
+            <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
+                <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2 sm:col-span-2">
+                        <Label htmlFor="edit-name">Product Name</Label>
+                        <Input id="edit-name" {...editForm.register("name")} onChange={(e) => {
+                            const { value } = e.target;
+                            e.target.value = toTitleCase(value);
+                            editForm.setValue("name", e.target.value);
+                        }}/>
+                        {editForm.formState.errors.name && <p className="text-sm text-destructive">{editForm.formState.errors.name.message}</p>}
+                    </div>
                       <div className="space-y-2">
-                          <Label htmlFor="edit-sku">SKU</Label>
-                          <Input id="edit-sku" {...editForm.register("sku")} disabled />
-                          {editForm.formState.errors.sku && <p className="text-sm text-destructive">{editForm.formState.errors.sku.message}</p>}
-                      </div>
-                  </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
-                   <div className="space-y-2">
-                    <Label htmlFor="edit-price">Price</Label>
-                    <div className="relative">
-                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">{CURRENCY_CONFIG.symbol}</span>
-                      <Input id="edit-price" type="number" step="0.01" className="pl-8" placeholder="0.00" {...editForm.register("price")} />
+                        <Label htmlFor="edit-category">Category</Label>
+                        <Controller
+                            name="category"
+                            control={editForm.control}
+                            render={({ field }) => (
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a category" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            )}
+                        />
+                        {editForm.formState.errors.category && <p className="text-sm text-destructive">{editForm.formState.errors.category.message}</p>}
                     </div>
-                    {editForm.formState.errors.price && <p className="text-sm text-destructive">{editForm.formState.errors.price.message}</p>}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-stock">Stock</Label>
-                    <Input id="edit-stock" type="number" {...editForm.register("stock")} />
-                    {editForm.formState.errors.stock && <p className="text-sm text-destructive">{editForm.formState.errors.stock.message}</p>}
-                  </div>
-                   <div className="space-y-2">
-                    <Label htmlFor="edit-reorderLimit">Reorder At</Label>
-                    <Input id="edit-reorderLimit" type="number" {...editForm.register("reorderLimit")} />
-                    {editForm.formState.errors.reorderLimit && <p className="text-sm text-destructive">{editForm.formState.errors.reorderLimit.message}</p>}
-                  </div>
-                   <div className="space-y-2">
-                        <Label htmlFor="edit-maxStockLevel">Max Stock</Label>
-                        <Input id="edit-maxStockLevel" type="number" {...editForm.register("maxStockLevel")} />
-                        {editForm.formState.errors.maxStockLevel && <p className="text-sm text-destructive">{editForm.formState.errors.maxStockLevel.message}</p>}
+                    <div className="space-y-2">
+                        <Label htmlFor="edit-sku">SKU</Label>
+                        <Input id="edit-sku" {...editForm.register("sku")} disabled />
+                        {editForm.formState.errors.sku && <p className="text-sm text-destructive">{editForm.formState.errors.sku.message}</p>}
                     </div>
                 </div>
-                 <div className="space-y-4 rounded-md border p-4">
-                    <Label className="text-base">Storage Location</Label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
-                        <Input placeholder="Zone" {...editForm.register("location.zone")} />
-                        <Input placeholder="Aisle" {...editForm.register("location.aisle")} />
-                        <Input placeholder="Rack" {...editForm.register("location.rack")} />
-                        <Input placeholder="Level" {...editForm.register("location.level")} />
-                        <Input placeholder="Bin" {...editForm.register("location.bin")} />
-                    </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                  <Label htmlFor="edit-price">Price</Label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">{CURRENCY_CONFIG.symbol}</span>
+                    <Input id="edit-price" type="number" step="0.01" className="pl-8" placeholder="0.00" {...editForm.register("price")} />
+                  </div>
+                  {editForm.formState.errors.price && <p className="text-sm text-destructive">{editForm.formState.errors.price.message}</p>}
                 </div>
                 <div className="space-y-2">
-                    <Label>Supplier</Label>
-                    <Controller
-                        control={editForm.control}
-                        name="supplierId"
-                        render={({ field }) => (
-                            <Popover open={isSupplierPopoverOpen} onOpenChange={setIsSupplierPopoverOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        role="combobox"
-                                        className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
-                                    >
-                                        {field.value ? suppliers.find(s => s.id === field.value)?.name : "Select supplier"}
-                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                                    <Command>
-                                        <CommandInput placeholder="Search supplier..." />
-                                        <CommandList>
-                                            <CommandEmpty>
-                                                <Button variant="ghost" className="w-full" onClick={() => { setIsSupplierPopoverOpen(false); setIsAddSupplierOpen(true); }}>
-                                                    Add new supplier
-                                                </Button>
-                                            </CommandEmpty>
-                                            <CommandGroup>
-                                                {suppliers.map(s => (
-                                                    <CommandItem
-                                                        key={s.id}
-                                                        value={s.name}
-                                                        onSelect={() => {
-                                                            field.onChange(s.id);
-                                                            setIsSupplierPopoverOpen(false);
-                                                        }}
-                                                    >
-                                                        <Check className={cn("mr-2 h-4 w-4", field.value === s.id ? "opacity-100" : "opacity-0")} />
-                                                        {s.name}
-                                                    </CommandItem>
-                                                ))}
-                                            </CommandGroup>
-                                        </CommandList>
-                                    </Command>
-                                </PopoverContent>
-                            </Popover>
-                        )}
-                    />
+                  <Label htmlFor="edit-stock">Stock</Label>
+                  <Input id="edit-stock" type="number" {...editForm.register("stock")} />
+                  {editForm.formState.errors.stock && <p className="text-sm text-destructive">{editForm.formState.errors.stock.message}</p>}
                 </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
-                <Button type="submit" disabled={editForm.formState.isSubmitting}>
-                  {editForm.formState.isSubmitting ? "Saving..." : "Save Changes"}
-                </Button>
-              </DialogFooter>
-            </form>
-            </div>
+                  <div className="space-y-2">
+                  <Label htmlFor="edit-reorderLimit">Reorder At</Label>
+                  <Input id="edit-reorderLimit" type="number" {...editForm.register("reorderLimit")} />
+                  {editForm.formState.errors.reorderLimit && <p className="text-sm text-destructive">{editForm.formState.errors.reorderLimit.message}</p>}
+                </div>
+                  <div className="space-y-2">
+                      <Label htmlFor="edit-maxStockLevel">Max Stock</Label>
+                      <Input id="edit-maxStockLevel" type="number" {...editForm.register("maxStockLevel")} />
+                      {editForm.formState.errors.maxStockLevel && <p className="text-sm text-destructive">{editForm.formState.errors.maxStockLevel.message}</p>}
+                  </div>
+              </div>
+                <div className="space-y-4 rounded-md border p-4">
+                  <Label className="text-base">Storage Location</Label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                      <Input placeholder="Zone" {...editForm.register("location.zone")} />
+                      <Input placeholder="Aisle" {...editForm.register("location.aisle")} />
+                      <Input placeholder="Rack" {...editForm.register("location.rack")} />
+                      <Input placeholder="Level" {...editForm.register("location.level")} />
+                      <Input placeholder="Bin" {...editForm.register("location.bin")} />
+                  </div>
+              </div>
+              <div className="space-y-2">
+                  <Label>Supplier</Label>
+                  <Controller
+                      control={editForm.control}
+                      name="supplierId"
+                      render={({ field }) => (
+                          <Popover open={isSupplierPopoverOpen} onOpenChange={setIsSupplierPopoverOpen}>
+                              <PopoverTrigger asChild>
+                                  <Button
+                                      variant="outline"
+                                      role="combobox"
+                                      className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
+                                  >
+                                      {field.value ? suppliers.find(s => s.id === field.value)?.name : "Select supplier"}
+                                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                  </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                  <Command>
+                                      <CommandInput placeholder="Search supplier..." />
+                                      <CommandList>
+                                          <CommandEmpty>
+                                              <Button variant="ghost" className="w-full" onClick={() => { setIsSupplierPopoverOpen(false); setIsAddSupplierOpen(true); }}>
+                                                  Add new supplier
+                                              </Button>
+                                          </CommandEmpty>
+                                          <CommandGroup>
+                                              {suppliers.map(s => (
+                                                  <CommandItem
+                                                      key={s.id}
+                                                      value={s.name}
+                                                      onSelect={() => {
+                                                          field.onChange(s.id);
+                                                          setIsSupplierPopoverOpen(false);
+                                                      }}
+                                                  >
+                                                      <Check className={cn("mr-2 h-4 w-4", field.value === s.id ? "opacity-100" : "opacity-0")} />
+                                                      {s.name}
+                                                  </CommandItem>
+                                              ))}
+                                          </CommandGroup>
+                                      </CommandList>
+                                  </Command>
+                              </PopoverContent>
+                          </Popover>
+                      )}
+                  />
+              </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={editForm.formState.isSubmitting}>
+                {editForm.formState.isSubmitting ? "Saving..." : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </form>
           </DialogContent>
         </Dialog>
       )}

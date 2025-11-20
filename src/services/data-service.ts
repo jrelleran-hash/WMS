@@ -250,7 +250,6 @@ export async function addProduct(product: Partial<Omit<Product, 'id' | 'lastUpda
       maxStockLevel: product.maxStockLevel || 100,
       location: product.location || {},
       supplier: product.supplier || "",
-      imageUrl: product.imageUrl || "",
       lastUpdated: now,
       history: [],
     };
@@ -2491,18 +2490,6 @@ export async function addVehicle(vehicle: Omit<Vehicle, 'id' | 'createdAt' | 'st
   }
 }
 
-export async function uploadImage(file: File, path: string): Promise<string> {
-    try {
-        const storageRef = ref(storage, path);
-        const snapshot = await uploadBytes(storageRef, file);
-        const downloadURL = await getDownloadURL(snapshot.ref);
-        return downloadURL;
-    } catch (error) {
-        console.error("Error uploading image:", error);
-        throw new Error("Failed to upload image.");
-    }
-}
-
 export async function getTasks(): Promise<Task[]> {
     try {
         const tasksCol = collection(db, "tasks");
@@ -2616,6 +2603,4 @@ export async function deleteTask(taskId: string): Promise<void> {
     const taskRef = doc(db, "tasks", taskId);
     await deleteDoc(taskRef);
 }
-
-
 
