@@ -48,7 +48,7 @@ export interface ProductHistory {
     changeReason?: string;
 }
 
-export type ProductCategory = "Consumables" | "Raw Materials" | "Finished Goods" | "Other";
+export type ProductCategory = "Consumables" | "Raw Materials" | "Other";
 
 export interface ProductLocation {
     zone?: string;
