@@ -2553,7 +2553,7 @@ export async function addTask(taskData: NewTaskData): Promise<void> {
         assignedToName: `${userData.firstName} ${userData.lastName}`,
         status: 'Pending',
         createdAt: Timestamp.now(),
-        dueDate: taskData.dueDate ? Timestamp.fromDate(taskData.dueDate) : undefined,
+        dueDate: taskData.dueDate ? Timestamp.fromDate(taskData.dueDate) : null,
         progress: 0,
     };
     await addDoc(collection(db, "tasks"), newTask);
@@ -2582,3 +2582,4 @@ export async function deleteTask(taskId: string): Promise<void> {
     const taskRef = doc(db, "tasks", taskId);
     await deleteDoc(taskRef);
 }
+
