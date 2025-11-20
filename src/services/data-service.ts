@@ -401,7 +401,20 @@ export async function getOrders(): Promise<Order[]> {
 export async function updateOrderStatus(orderId: string, status: Order['status']): Promise<void> {
   try {
     const orderRef = doc(db, "orders", orderId);
-    await updateDoc(orderRef, { status });
+    const batch = writeBatch(db);
+
+    batch.update(orderRef, { status });
+
+    if (status === 'Cancelled') {
+      const backordersQuery = query(collection(db, "backorders"), where("orderId", "==", orderId), where("status", "==", "Pending"));
+      const backorderSnapshot = await getDocs(backordersQuery);
+      backorderSnapshot.forEach(doc => {
+        batch.update(doc.ref, { status: "Cancelled" });
+      });
+    }
+    
+    await batch.commit();
+
   } catch (error) {
     console.error("Error updating order status:", error);
     throw new Error("Failed to update order status.");
@@ -2646,5 +2659,6 @@ export async function addProductCategory(name: string): Promise<DocumentReferenc
         throw error;
     }
 }
+
 
 

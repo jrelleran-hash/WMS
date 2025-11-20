@@ -69,6 +69,7 @@ const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | 
   Delivered: "outline",
   "PO Shipped": "outline",
   "PO Delivered": "outline",
+  Cancelled: "destructive",
 };
 
 const outboundReturnStatusVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
