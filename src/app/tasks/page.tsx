@@ -39,9 +39,11 @@ const taskSchema = z.object({
   description: z.string().optional(),
   priority: z.enum(["Critical", "High", "Medium", "Low"]),
   assignedToId: z.string().min(1, "Please assign this task to a staff member."),
+  startDate: z.date().optional(),
   dueDate: z.date().optional(),
   attachments: z.string().url("Must be a valid URL.").optional().or(z.literal('')),
   supervisorNotes: z.string().optional(),
+  progress: z.number().min(0).max(100).optional(),
 });
 
 type TaskFormValues = z.infer<typeof taskSchema>;
@@ -113,11 +115,11 @@ function StaffKpiDashboard() {
                     <CardTitle>Overall Task Status</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <ChartContainer config={chartConfig} className="h-64">
+                    <ChartContainer config={chartConfig} className="h-72">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <ChartTooltip content={<ChartTooltipContent nameKey="name" hideLabel />} />
-                                <Pie data={overallStats} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                                <Pie data={overallStats} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} label>
                                     {overallStats.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={entry.fill} />
                                     ))}
@@ -132,7 +134,7 @@ function StaffKpiDashboard() {
                     <CardTitle>Staff Performance</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <ChartContainer config={chartConfig} className="h-64">
+                    <ChartContainer config={chartConfig} className="h-72">
                          <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={staffKpis} layout="vertical" margin={{ left: 10, right: 20 }}>
                                 <XAxis type="number" hide />
@@ -172,9 +174,11 @@ export default function TasksPage() {
                 title: "",
                 description: "",
                 assignedToId: "",
+                startDate: undefined,
                 dueDate: undefined,
                 attachments: "",
                 supervisorNotes: "",
+                progress: 0,
             });
         }
     }, [isAddDialogOpen, form]);
@@ -186,9 +190,11 @@ export default function TasksPage() {
                 description: selectedTask.description,
                 priority: selectedTask.priority,
                 assignedToId: selectedTask.assignedToId,
-                dueDate: selectedTask.dueDate?.toDate(),
+                startDate: selectedTask.startDate ? selectedTask.startDate.toDate() : undefined,
+                dueDate: selectedTask.dueDate ? selectedTask.dueDate.toDate() : undefined,
                 attachments: selectedTask.attachments,
                 supervisorNotes: selectedTask.supervisorNotes,
+                progress: selectedTask.progress,
             });
         }
     }, [selectedTask, form]);
@@ -340,23 +346,26 @@ export default function TasksPage() {
 }
 
 function TaskForm({ form, onSubmit, users, onClose }: { form: any, onSubmit: (data: TaskFormValues) => Promise<void>, users: any[], onClose: () => void }) {
+    const { watch, control, register } = form;
+    const progress = watch('progress', 0);
+    
     return (
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-4">
             <div className="space-y-2">
                 <Label htmlFor="title">Task Title</Label>
-                <Input id="title" {...form.register("title")} />
+                <Input id="title" {...register("title")} />
                 {form.formState.errors.title && <p className="text-sm text-destructive">{form.formState.errors.title.message}</p>}
             </div>
             <div className="space-y-2">
                 <Label htmlFor="description">Description (Optional)</Label>
-                <Textarea id="description" {...form.register("description")} />
+                <Textarea id="description" {...register("description")} />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                  <div className="space-y-2">
                     <Label htmlFor="assignedToId">Assign To</Label>
                     <Controller
                         name="assignedToId"
-                        control={form.control}
+                        control={control}
                         render={({ field }) => (
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <SelectTrigger><SelectValue placeholder="Select staff..." /></SelectTrigger>
@@ -374,7 +383,7 @@ function TaskForm({ form, onSubmit, users, onClose }: { form: any, onSubmit: (da
                     <Label>Priority</Label>
                     <Controller
                         name="priority"
-                        control={form.control}
+                        control={control}
                         render={({ field }) => (
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <SelectTrigger><SelectValue placeholder="Select priority" /></SelectTrigger>
@@ -389,34 +398,73 @@ function TaskForm({ form, onSubmit, users, onClose }: { form: any, onSubmit: (da
                     />
                 </div>
             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label>Start Date (Optional)</Label>
+                    <Controller
+                        control={control}
+                        name="startDate"
+                        render={({ field }) => (
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
+                        </Popover>
+                        )}
+                    />
+                </div>
+                <div className="space-y-2">
+                    <Label>Due Date (Optional)</Label>
+                    <Controller
+                        control={control}
+                        name="dueDate"
+                        render={({ field }) => (
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
+                        </Popover>
+                        )}
+                    />
+                </div>
+            </div>
             <div className="space-y-2">
-                <Label>Due Date (Optional)</Label>
+                <div className="flex justify-between items-center">
+                    <Label htmlFor="progress">Progress</Label>
+                    <span className="text-sm font-medium text-muted-foreground">{progress || 0}%</span>
+                </div>
                 <Controller
-                    control={form.control}
-                    name="dueDate"
+                    name="progress"
+                    control={control}
+                    defaultValue={0}
                     render={({ field }) => (
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
-                    </Popover>
+                        <Slider
+                            value={[field.value || 0]}
+                            onValueChange={(value) => field.onChange(value[0])}
+                            max={100}
+                            step={10}
+                        />
                     )}
                 />
             </div>
              <div className="space-y-2">
                 <Label htmlFor="attachments">Attachments (URL, Optional)</Label>
-                <Input id="attachments" {...form.register("attachments")} placeholder="https://example.com/file.pdf" />
+                <Input id="attachments" {...register("attachments")} placeholder="https://example.com/file.pdf" />
                 {form.formState.errors.attachments && <p className="text-sm text-destructive">{form.formState.errors.attachments.message}</p>}
             </div>
              <div className="space-y-2">
                 <Label htmlFor="supervisorNotes">Supervisor Notes (Optional)</Label>
-                <Textarea id="supervisorNotes" {...form.register("supervisorNotes")} />
+                <Textarea id="supervisorNotes" {...register("supervisorNotes")} />
             </div>
-            <DialogFooter>
+            <DialogFooter className="pt-4">
                 <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
                 <Button type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? "Saving..." : "Save Task"}</Button>
             </DialogFooter>
