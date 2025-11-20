@@ -2,10 +2,10 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { PlusCircle, MoreHorizontal } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Check, ChevronsUpDown, X } from "lucide-react";
 import { Timestamp } from "firebase/firestore";
 import { format } from "date-fns";
 
@@ -43,9 +43,13 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { updateSupplier, deleteSupplier, addSupplier } from "@/services/data-service";
-import type { Supplier } from "@/types";
+import type { Supplier, Product } from "@/types";
 import { useData } from "@/context/data-context";
 import { validateEmailAction } from "../orders/actions";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 // Supplier Schema
 const supplierSchema = z.object({
@@ -55,6 +59,7 @@ const supplierSchema = z.object({
   phone: z.string().optional(),
   cellphoneNumber: z.string().optional(),
   address: z.string().min(1, "Address is required."),
+  suppliedProductIds: z.array(z.string()).optional(),
 });
 
 type SupplierFormValues = z.infer<typeof supplierSchema>;
@@ -70,7 +75,7 @@ const toTitleCase = (str: string) => {
 
 
 export default function SuppliersPage() {
-  const { suppliers, loading, refetchData } = useData();
+  const { suppliers, products, loading, refetchData } = useData();
   const { toast } = useToast();
 
   // Dialog states
@@ -83,11 +88,15 @@ export default function SuppliersPage() {
   const [deletingSupplierId, setDeletingSupplierId] = useState<string | null>(null);
   const [emailValidation, setEmailValidation] = useState<{ isValid: boolean; reason?: string; error?: string } | null>(null);
   const [isEmailChecking, setIsEmailChecking] = useState(false);
+  const [isProductPopoverOpen, setIsProductPopoverOpen] = useState(false);
   
   // Forms
   const supplierForm = useForm<SupplierFormValues>({
     resolver: zodResolver(supplierSchema),
     mode: 'onBlur',
+    defaultValues: {
+        suppliedProductIds: [],
+    }
   });
   
   const editSupplierForm = useForm<SupplierFormValues>({
@@ -97,7 +106,7 @@ export default function SuppliersPage() {
   
   useEffect(() => {
     if (!isAddSupplierOpen) {
-      supplierForm.reset();
+      supplierForm.reset({ suppliedProductIds: [] });
        setEmailValidation(null);
     }
      if (!isEditSupplierOpen) {
@@ -109,7 +118,10 @@ export default function SuppliersPage() {
 
   useEffect(() => {
     if (editingSupplier) {
-      editSupplierForm.reset(editingSupplier);
+      editSupplierForm.reset({
+        ...editingSupplier,
+        suppliedProductIds: editingSupplier.suppliedProductIds || []
+      });
     } else {
       editSupplierForm.reset();
     }
@@ -213,6 +225,64 @@ export default function SuppliersPage() {
     return null;
   };
 
+  const ProductMultiSelect = ({ form }: {form: any}) => {
+    const selectedIds = form.watch("suppliedProductIds") || [];
+    const selectedProducts = useMemo(() => products.filter(p => selectedIds.includes(p.id)), [selectedIds]);
+
+    const handleSelect = (productId: string) => {
+        const newSelectedIds = selectedIds.includes(productId)
+            ? selectedIds.filter((id: string) => id !== productId)
+            : [...selectedIds, productId];
+        form.setValue("suppliedProductIds", newSelectedIds);
+    }
+
+    return (
+        <div className="space-y-2">
+            <Label>Items Supplied</Label>
+             <Popover open={isProductPopoverOpen} onOpenChange={setIsProductPopoverOpen}>
+                <PopoverTrigger asChild>
+                    <Button
+                        variant="outline"
+                        role="combobox"
+                        className="w-full justify-between h-auto min-h-10"
+                    >
+                         <div className="flex flex-wrap gap-1">
+                            {selectedProducts.length > 0 ? selectedProducts.map(p => (
+                                <Badge key={p.id} variant="secondary">{p.name}</Badge>
+                            )) : "Select products..."}
+                         </div>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command>
+                        <CommandInput placeholder="Search products..." />
+                        <CommandList>
+                            <CommandEmpty>No products found.</CommandEmpty>
+                            <CommandGroup>
+                                {products.map(product => (
+                                    <CommandItem
+                                        key={product.id}
+                                        value={product.name}
+                                        onSelect={() => handleSelect(product.id)}
+                                    >
+                                        <Check
+                                            className={cn(
+                                                "mr-2 h-4 w-4",
+                                                selectedIds.includes(product.id) ? "opacity-100" : "opacity-0"
+                                            )}
+                                        />
+                                        {product.name}
+                                    </CommandItem>
+                                ))}
+                            </CommandGroup>
+                        </CommandList>
+                    </Command>
+                </PopoverContent>
+            </Popover>
+        </div>
+    )
+  }
 
 
   return (
@@ -229,62 +299,65 @@ export default function SuppliersPage() {
               Add Supplier
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Add New Supplier</DialogTitle>
               <DialogDescription>Fill in the details for the new supplier.</DialogDescription>
             </DialogHeader>
             <form onSubmit={supplierForm.handleSubmit(onAddSupplierSubmit)} className="space-y-4">
-            <div className="space-y-2">
-                <Label htmlFor="name">Supplier Name</Label>
-                <Input id="name" {...supplierForm.register("name")} onChange={(e) => {
-                    const { value } = e.target;
-                    supplierForm.setValue("name", toTitleCase(value), { shouldValidate: true });
-                }} />
-                {supplierForm.formState.errors.name && <p className="text-sm text-destructive">{supplierForm.formState.errors.name.message}</p>}
-            </div>
-            <div className="space-y-2">
-                <Label htmlFor="contactPerson">Contact Person</Label>
-                <Input id="contactPerson" {...supplierForm.register("contactPerson")} onChange={(e) => {
-                    const { value } = e.target;
-                    supplierForm.setValue("contactPerson", toTitleCase(value), { shouldValidate: true });
-                }} />
-                {supplierForm.formState.errors.contactPerson && <p className="text-sm text-destructive">{supplierForm.formState.errors.contactPerson.message}</p>}
-            </div>
-            <div className="space-y-2">
-                <Label htmlFor="email">Email (Optional)</Label>
-                <Input 
-                    id="email" 
-                    type="email" 
-                    {...supplierForm.register("email")}
-                    onBlur={(e) => handleEmailBlur(e.target.value)}
-                />
-                {supplierForm.formState.errors.email && <p className="text-sm text-destructive">{supplierForm.formState.errors.email.message}</p>}
-                {renderEmailValidation()}
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <Label htmlFor="phone">Phone (Optional)</Label>
-                    <Input id="phone" type="tel" {...supplierForm.register("phone")} />
-                    {supplierForm.formState.errors.phone && <p className="text-sm text-destructive">{supplierForm.formState.errors.phone.message}</p>}
+                    <Label htmlFor="name">Supplier Name</Label>
+                    <Input id="name" {...supplierForm.register("name")} onChange={(e) => {
+                        const { value } = e.target;
+                        supplierForm.setValue("name", toTitleCase(value), { shouldValidate: true });
+                    }} />
+                    {supplierForm.formState.errors.name && <p className="text-sm text-destructive">{supplierForm.formState.errors.name.message}</p>}
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="cellphoneNumber">Cellphone #</Label>
-                    <Input id="cellphoneNumber" type="tel" {...supplierForm.register("cellphoneNumber")} />
-                    {supplierForm.formState.errors.cellphoneNumber && <p className="text-sm text-destructive">{supplierForm.formState.errors.cellphoneNumber.message}</p>}
+                    <Label htmlFor="contactPerson">Contact Person</Label>
+                    <Input id="contactPerson" {...supplierForm.register("contactPerson")} onChange={(e) => {
+                        const { value } = e.target;
+                        supplierForm.setValue("contactPerson", toTitleCase(value), { shouldValidate: true });
+                    }} />
+                    {supplierForm.formState.errors.contactPerson && <p className="text-sm text-destructive">{supplierForm.formState.errors.contactPerson.message}</p>}
                 </div>
-            </div>
-            <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
-                <Input id="address" {...supplierForm.register("address")} />
-                {supplierForm.formState.errors.address && <p className="text-sm text-destructive">{supplierForm.formState.errors.address.message}</p>}
-            </div>
-            <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsAddSupplierOpen(false)}>Cancel</Button>
-                <Button type="submit" disabled={supplierForm.formState.isSubmitting}>
-                {supplierForm.formState.isSubmitting ? "Adding..." : "Add Supplier"}
-                </Button>
-            </DialogFooter>
+                <div className="space-y-2">
+                    <Label htmlFor="email">Email (Optional)</Label>
+                    <Input 
+                        id="email" 
+                        type="email" 
+                        {...supplierForm.register("email")}
+                        onBlur={(e) => handleEmailBlur(e.target.value)}
+                    />
+                    {supplierForm.formState.errors.email && <p className="text-sm text-destructive">{supplierForm.formState.errors.email.message}</p>}
+                    {renderEmailValidation()}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="phone">Phone (Optional)</Label>
+                        <Input id="phone" type="tel" {...supplierForm.register("phone")} />
+                        {supplierForm.formState.errors.phone && <p className="text-sm text-destructive">{supplierForm.formState.errors.phone.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="cellphoneNumber">Cellphone #</Label>
+                        <Input id="cellphoneNumber" type="tel" {...supplierForm.register("cellphoneNumber")} />
+                        {supplierForm.formState.errors.cellphoneNumber && <p className="text-sm text-destructive">{supplierForm.formState.errors.cellphoneNumber.message}</p>}
+                    </div>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="address">Address</Label>
+                    <Input id="address" {...supplierForm.register("address")} />
+                    {supplierForm.formState.errors.address && <p className="text-sm text-destructive">{supplierForm.formState.errors.address.message}</p>}
+                </div>
+                
+                <ProductMultiSelect form={supplierForm} />
+
+                <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setIsAddSupplierOpen(false)}>Cancel</Button>
+                    <Button type="submit" disabled={supplierForm.formState.isSubmitting}>
+                    {supplierForm.formState.isSubmitting ? "Adding..." : "Add Supplier"}
+                    </Button>
+                </DialogFooter>
             </form>
         </DialogContent>
         </Dialog>
@@ -352,62 +425,65 @@ export default function SuppliersPage() {
     </Card>
       
     <Dialog open={isEditSupplierOpen} onOpenChange={setIsEditSupplierOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
             <DialogHeader>
             <DialogTitle>Edit Supplier</DialogTitle>
             {editingSupplier && <DialogDescription>Update the details for {editingSupplier.name}.</DialogDescription>}
             </DialogHeader>
             <form onSubmit={editSupplierForm.handleSubmit(onEditSupplierSubmit)} className="space-y-4">
-            <div className="space-y-2">
-                <Label htmlFor="edit-name">Supplier Name</Label>
-                <Input id="edit-name" {...editSupplierForm.register("name")} onChange={(e) => {
-                    const { value } = e.target;
-                    editSupplierForm.setValue("name", toTitleCase(value), { shouldValidate: true });
-                }} />
-                {editSupplierForm.formState.errors.name && <p className="text-sm text-destructive">{editSupplierForm.formState.errors.name.message}</p>}
-            </div>
-            <div className="space-y-2">
-                <Label htmlFor="edit-contactPerson">Contact Person</Label>
-                <Input id="edit-contactPerson" {...editSupplierForm.register("contactPerson")} onChange={(e) => {
-                    const { value } = e.target;
-                    editSupplierForm.setValue("contactPerson", toTitleCase(value), { shouldValidate: true });
-                }} />
-                {editSupplierForm.formState.errors.contactPerson && <p className="text-sm text-destructive">{editSupplierForm.formState.errors.contactPerson.message}</p>}
-            </div>
                 <div className="space-y-2">
-                <Label htmlFor="edit-email">Email</Label>
-                <Input 
-                id="edit-email" 
-                type="email" 
-                {...editSupplierForm.register("email")}
-                onBlur={(e) => handleEmailBlur(e.target.value)}
-                />
-                {editSupplierForm.formState.errors.email && <p className="text-sm text-destructive">{editSupplierForm.formState.errors.email.message}</p>}
-                {renderEmailValidation()}
-            </div>
+                    <Label htmlFor="edit-name">Supplier Name</Label>
+                    <Input id="edit-name" {...editSupplierForm.register("name")} onChange={(e) => {
+                        const { value } = e.target;
+                        editSupplierForm.setValue("name", toTitleCase(value), { shouldValidate: true });
+                    }} />
+                    {editSupplierForm.formState.errors.name && <p className="text-sm text-destructive">{editSupplierForm.formState.errors.name.message}</p>}
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="edit-contactPerson">Contact Person</Label>
+                    <Input id="edit-contactPerson" {...editSupplierForm.register("contactPerson")} onChange={(e) => {
+                        const { value } = e.target;
+                        editSupplierForm.setValue("contactPerson", toTitleCase(value), { shouldValidate: true });
+                    }} />
+                    {editSupplierForm.formState.errors.contactPerson && <p className="text-sm text-destructive">{editSupplierForm.formState.errors.contactPerson.message}</p>}
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="edit-email">Email</Label>
+                    <Input 
+                    id="edit-email" 
+                    type="email" 
+                    {...editSupplierForm.register("email")}
+                    onBlur={(e) => handleEmailBlur(e.target.value)}
+                    />
+                    {editSupplierForm.formState.errors.email && <p className="text-sm text-destructive">{editSupplierForm.formState.errors.email.message}</p>}
+                    {renderEmailValidation()}
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <Label htmlFor="edit-phone">Phone (Optional)</Label>
-                    <Input id="edit-phone" type="tel" {...editSupplierForm.register("phone")} />
-                    {editSupplierForm.formState.errors.phone && <p className="text-sm text-destructive">{editSupplierForm.formState.errors.phone.message}</p>}
+                    <div className="space-y-2">
+                        <Label htmlFor="edit-phone">Phone (Optional)</Label>
+                        <Input id="edit-phone" type="tel" {...editSupplierForm.register("phone")} />
+                        {editSupplierForm.formState.errors.phone && <p className="text-sm text-destructive">{editSupplierForm.formState.errors.phone.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="edit-cellphoneNumber">Cellphone #</Label>
+                        <Input id="edit-cellphoneNumber" type="tel" {...editSupplierForm.register("cellphoneNumber")} />
+                        {editSupplierForm.formState.errors.cellphoneNumber && <p className="text-sm text-destructive">{editSupplierForm.formState.errors.cellphoneNumber.message}</p>}
+                    </div>
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="edit-cellphoneNumber">Cellphone #</Label>
-                    <Input id="edit-cellphoneNumber" type="tel" {...editSupplierForm.register("cellphoneNumber")} />
-                    {editSupplierForm.formState.errors.cellphoneNumber && <p className="text-sm text-destructive">{editSupplierForm.formState.errors.cellphoneNumber.message}</p>}
+                    <Label htmlFor="edit-address">Address</Label>
+                    <Input id="edit-address" {...editSupplierForm.register("address")} />
+                    {editSupplierForm.formState.errors.address && <p className="text-sm text-destructive">{editSupplierForm.formState.errors.address.message}</p>}
                 </div>
-            </div>
-            <div className="space-y-2">
-                <Label htmlFor="edit-address">Address</Label>
-                <Input id="edit-address" {...editSupplierForm.register("address")} />
-                {editSupplierForm.formState.errors.address && <p className="text-sm text-destructive">{editSupplierForm.formState.errors.address.message}</p>}
-            </div>
-            <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsEditSupplierOpen(false)}>Cancel</Button>
-                <Button type="submit" disabled={!editSupplierForm.formState.isValid || editSupplierForm.formState.isSubmitting}>
-                {editSupplierForm.formState.isSubmitting ? "Saving..." : "Save Changes"}
-                </Button>
-            </DialogFooter>
+
+                <ProductMultiSelect form={editSupplierForm} />
+                
+                <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setIsEditSupplierOpen(false)}>Cancel</Button>
+                    <Button type="submit" disabled={!editSupplierForm.formState.isValid || editSupplierForm.formState.isSubmitting}>
+                    {editSupplierForm.formState.isSubmitting ? "Saving..." : "Save Changes"}
+                    </Button>
+                </DialogFooter>
             </form>
         </DialogContent>
         </Dialog>

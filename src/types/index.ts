@@ -39,6 +39,7 @@ export interface Supplier {
   address: string;
   createdAt: Timestamp;
   cellphoneNumber?: string;
+  suppliedProductIds?: string[];
 }
 
 export interface ProductHistory {
@@ -340,4 +341,5 @@ export interface Task {
     supervisorNotes?: string;
     completedAt?: Timestamp;
 }
+
 

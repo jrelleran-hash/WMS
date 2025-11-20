@@ -837,7 +837,7 @@ export async function getSuppliers(): Promise<Supplier[]> {
   }
 }
 
-export async function addSupplier(supplier: Omit<Supplier, 'id' | 'createdAt'>): Promise<DocumentReference> {
+export async function addSupplier(supplier: Partial<Omit<Supplier, 'id' | 'createdAt'>>): Promise<DocumentReference> {
   try {
     const suppliersCol = collection(db, "suppliers");
     const supplierWithDate = {
@@ -2613,6 +2613,7 @@ export async function getProductCategories(): Promise<ProductCategory[]> {
             // If no categories exist, create default ones
             const defaultCategories = [
                 { name: "Raw Materials" },
+                { name: "Blum Products" },
             ];
             const batch = writeBatch(db);
             const createdCategories: ProductCategory[] = [];
@@ -2645,4 +2646,5 @@ export async function addProductCategory(name: string): Promise<DocumentReferenc
         throw error;
     }
 }
+
 
