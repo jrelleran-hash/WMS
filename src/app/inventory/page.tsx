@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -47,7 +47,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { addProduct, updateProduct, deleteProduct, addSupplier, adjustStock } from "@/services/data-service";
+import { addProduct, updateProduct, deleteProduct, addSupplier, adjustStock, addProductCategory } from "@/services/data-service";
 import type { Product, Supplier, ProductCategory, ProductLocation, ProductHistory } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -68,8 +68,6 @@ import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import Image from 'next/image';
 
-const categories: ProductCategory[] = ["Consumables", "Raw Materials", "Other"];
-
 const locationSchema = z.object({
   zone: z.string().optional(),
   aisle: z.string().optional(),
@@ -81,7 +79,7 @@ const locationSchema = z.object({
 const createProductSchema = (isSkuAuto: boolean) => z.object({
   name: z.string().min(1, "Product name is required."),
   sku: z.string().optional(),
-  category: z.enum(categories),
+  category: z.string().min(1, "Category is required."),
   price: z.coerce.number().nonnegative("Price must be a non-negative number.").optional(),
   stock: z.coerce.number().int().nonnegative("Stock must be a non-negative integer.").optional(),
   reorderLimit: z.coerce.number().int().nonnegative("Reorder limit must be a non-negative integer."),
@@ -96,7 +94,7 @@ const createProductSchema = (isSkuAuto: boolean) => z.object({
 const editProductSchema = z.object({
   name: z.string().min(1, "Product name is required."),
   sku: z.string().optional(),
-  category: z.enum(categories),
+  category: z.string().min(1, "Category is required."),
   price: z.coerce.number().nonnegative("Price must be a non-negative number."),
   stock: z.coerce.number().int().nonnegative("Stock must be a non-negative integer."),
   reorderLimit: z.coerce.number().int().nonnegative("Reorder limit must be a non-negative integer."),
@@ -119,12 +117,17 @@ const stockAdjustmentSchema = z.object({
   reason: z.string().min(5, "A reason is required for the adjustment."),
 });
 
+const categorySchema = z.object({
+    name: z.string().min(1, "Category name is required."),
+});
+
+type CategoryFormValues = z.infer<typeof categorySchema>;
 type StockAdjustmentFormValues = z.infer<typeof stockAdjustmentSchema>;
 type SupplierFormValues = z.infer<typeof supplierSchema>;
 type ProductFormValues = z.infer<ReturnType<typeof createProductSchema>>;
 type EditProductFormValues = z.infer<typeof editProductSchema>;
 type StatusFilter = "all" | "in-stock" | "low-stock" | "out-of-stock";
-type CategoryFilter = "all" | ProductCategory;
+type CategoryFilter = "all" | string;
 type LocationFilter = {
     zone?: string;
     aisle?: string;
@@ -142,7 +145,7 @@ const toTitleCase = (str: string) => {
 
 
 export default function InventoryPage() {
-  const { products, suppliers, loading, refetchData } = useData();
+  const { products, suppliers, productCategories, loading, refetchData } = useData();
   const { userProfile } = useAuth();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -162,6 +165,8 @@ export default function InventoryPage() {
   const [autoGenerateSku, setAutoGenerateSku] = useState(true);
   const [isSupplierPopoverOpen, setIsSupplierPopoverOpen] = useState(false);
   const [isAddSupplierOpen, setIsAddSupplierOpen] = useState(false);
+  const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
+  const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
   const searchParams = useSearchParams();
 
 
@@ -174,7 +179,7 @@ export default function InventoryPage() {
     defaultValues: {
       name: "",
       sku: "",
-      category: "Other",
+      category: "",
       price: undefined,
       stock: undefined,
       reorderLimit: 10,
@@ -201,9 +206,23 @@ export default function InventoryPage() {
     },
   });
 
+  const categoryForm = useForm<CategoryFormValues>({
+    resolver: zodResolver(categorySchema),
+  });
+
   useEffect(() => {
     if (isAddDialogOpen) {
-      addForm.reset();
+      addForm.reset({
+         name: "",
+         sku: "",
+         category: "",
+         price: undefined,
+         stock: undefined,
+         reorderLimit: 10,
+         maxStockLevel: 100,
+         location: { zone: "", aisle: "", rack: "", level: "", bin: "" },
+         supplierId: "",
+      });
       setAutoGenerateSku(true);
     }
   }, [isAddDialogOpen, addForm]);
@@ -422,6 +441,23 @@ export default function InventoryPage() {
     }
   };
 
+    const onAddCategorySubmit = async (data: CategoryFormValues) => {
+        try {
+            await addProductCategory(data.name);
+            toast({ title: "Success", description: "Category added successfully." });
+            setIsAddCategoryOpen(false);
+            categoryForm.reset();
+            await refetchData();
+        } catch (error) {
+            console.error(error);
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Failed to add category. Please try again.",
+            });
+        }
+    };
+
   const handleExport = () => {
     const headers = ["SKU", "Name", "Category", "Price", "Stock", "Status", "Supplier", "Location", "Last Updated"];
     const rows = filteredProducts.map(p => {
@@ -495,7 +531,7 @@ export default function InventoryPage() {
                         <DropdownMenuContent align="start">
                             <DropdownMenuLabel>Filter by Category</DropdownMenuLabel>
                             <DropdownMenuRadioGroup value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as CategoryFilter)}>
-                                {(['all', ...categories] as CategoryFilter[]).map((filter) => (
+                                {(['all', ...productCategories.map(c => c.name)] as CategoryFilter[]).map((filter) => (
                                     <DropdownMenuRadioItem key={filter} value={filter} className="capitalize">
                                         {filter}
                                     </DropdownMenuRadioItem>
@@ -542,23 +578,50 @@ export default function InventoryPage() {
                               {addForm.formState.errors.name && <p className="text-sm text-destructive">{addForm.formState.errors.name.message}</p>}
                           </div>
                           <div className="space-y-2">
-                              <Label htmlFor="category">Category</Label>
-                              <Controller
-                                  name="category"
-                                  control={addForm.control}
-                                  render={({ field }) => (
-                                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                          <SelectTrigger>
-                                              <SelectValue placeholder="Select a category" />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                              {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-                                          </SelectContent>
-                                      </Select>
-                                  )}
-                              />
-                              {addForm.formState.errors.category && <p className="text-sm text-destructive">{addForm.formState.errors.category.message}</p>}
-                          </div>
+                                <Label htmlFor="category">Category</Label>
+                                <Controller
+                                    name="category"
+                                    control={addForm.control}
+                                    render={({ field }) => (
+                                        <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen}>
+                                            <PopoverTrigger asChild>
+                                                <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value && "text-muted-foreground")}>
+                                                    {field.value || "Select a category"}
+                                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                                <Command>
+                                                    <CommandInput placeholder="Search category..." />
+                                                    <CommandList>
+                                                        <CommandEmpty>
+                                                            <Button variant="ghost" className="w-full" onClick={() => { setIsCategoryPopoverOpen(false); setIsAddCategoryOpen(true); }}>
+                                                                Add new category
+                                                            </Button>
+                                                        </CommandEmpty>
+                                                        <CommandGroup>
+                                                            {productCategories.map(cat => (
+                                                                <CommandItem
+                                                                    key={cat.id}
+                                                                    value={cat.name}
+                                                                    onSelect={() => {
+                                                                        field.onChange(cat.name);
+                                                                        setIsCategoryPopoverOpen(false);
+                                                                    }}
+                                                                >
+                                                                    <Check className={cn("mr-2 h-4 w-4", field.value === cat.name ? "opacity-100" : "opacity-0")} />
+                                                                    {cat.name}
+                                                                </CommandItem>
+                                                            ))}
+                                                        </CommandGroup>
+                                                    </CommandList>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
+                                    )}
+                                />
+                                {addForm.formState.errors.category && <p className="text-sm text-destructive">{addForm.formState.errors.category.message}</p>}
+                            </div>
                           <div className="space-y-2">
                               <div className="flex items-center justify-between">
                                   <Label htmlFor="sku">SKU</Label>
@@ -859,14 +922,41 @@ export default function InventoryPage() {
                             name="category"
                             control={editForm.control}
                             render={({ field }) => (
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select a category" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
+                                <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value && "text-muted-foreground")}>
+                                            {field.value || "Select a category"}
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                        <Command>
+                                            <CommandInput placeholder="Search category..." />
+                                            <CommandList>
+                                                <CommandEmpty>
+                                                    <Button variant="ghost" className="w-full" onClick={() => { setIsCategoryPopoverOpen(false); setIsAddCategoryOpen(true); }}>
+                                                        Add new category
+                                                    </Button>
+                                                </CommandEmpty>
+                                                <CommandGroup>
+                                                    {productCategories.map(cat => (
+                                                        <CommandItem
+                                                            key={cat.id}
+                                                            value={cat.name}
+                                                            onSelect={() => {
+                                                                field.onChange(cat.name);
+                                                                setIsCategoryPopoverOpen(false);
+                                                            }}
+                                                        >
+                                                            <Check className={cn("mr-2 h-4 w-4", field.value === cat.name ? "opacity-100" : "opacity-0")} />
+                                                            {cat.name}
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
                             )}
                         />
                         {editForm.formState.errors.category && <p className="text-sm text-destructive">{editForm.formState.errors.category.message}</p>}
@@ -1131,6 +1221,29 @@ export default function InventoryPage() {
             </DialogFooter>
         </DialogContent>
       </Dialog>
+
+        <Dialog open={isAddCategoryOpen} onOpenChange={setIsAddCategoryOpen}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Add New Category</DialogTitle>
+                    <DialogDescription>Create a new category for your products.</DialogDescription>
+                </DialogHeader>
+                <form onSubmit={categoryForm.handleSubmit(onAddCategorySubmit)} className="space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="category-name">Category Name</Label>
+                        <Input id="category-name" {...categoryForm.register("name")} />
+                        {categoryForm.formState.errors.name && <p className="text-sm text-destructive">{categoryForm.formState.errors.name.message}</p>}
+                    </div>
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setIsAddCategoryOpen(false)}>Cancel</Button>
+                        <Button type="submit" disabled={categoryForm.formState.isSubmitting}>
+                            {categoryForm.formState.isSubmitting ? "Adding..." : "Add Category"}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
     </>
   );
 }
+

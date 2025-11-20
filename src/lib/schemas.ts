@@ -1,4 +1,5 @@
 
+
 import * as z from "zod";
 
 // Order Schemas
@@ -57,8 +58,6 @@ export const clientSchema = z.object({
 export type ClientFormValues = z.infer<typeof clientSchema>;
 
 // Tool Schemas
-const toolCategories = ["Hand Tool", "Power Tool", "Measuring Tool", "Safety Equipment", "Other"];
-
 const locationSchema = z.object({
   zone: z.string().optional(),
   aisle: z.string().optional(),

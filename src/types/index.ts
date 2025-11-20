@@ -48,7 +48,11 @@ export interface ProductHistory {
     changeReason?: string;
 }
 
-export type ProductCategory = "Consumables" | "Raw Materials" | "Other";
+export interface ProductCategory {
+    id: string;
+    name: string;
+}
+
 
 export interface ProductLocation {
     zone?: string;
@@ -62,7 +66,7 @@ export interface Product {
     id:string;
     name: string;
     sku: string;
-    category: ProductCategory;
+    category: string;
     stock: number;
     price: number;
     reorderLimit: number;
@@ -336,3 +340,4 @@ export interface Task {
     supervisorNotes?: string;
     completedAt?: Timestamp;
 }
+

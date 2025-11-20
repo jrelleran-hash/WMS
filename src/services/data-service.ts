@@ -2604,3 +2604,45 @@ export async function deleteTask(taskId: string): Promise<void> {
     await deleteDoc(taskRef);
 }
 
+export async function getProductCategories(): Promise<ProductCategory[]> {
+    try {
+        const categoriesCol = collection(db, "productCategories");
+        const q = query(categoriesCol, orderBy("name", "asc"));
+        const snapshot = await getDocs(q);
+        if (snapshot.empty) {
+            // If no categories exist, create default ones
+            const defaultCategories = [
+                { name: "Raw Materials" },
+                { name: "Consumables" },
+            ];
+            const batch = writeBatch(db);
+            const createdCategories: ProductCategory[] = [];
+            defaultCategories.forEach(cat => {
+                const docRef = doc(collection(db, "productCategories"));
+                batch.set(docRef, cat);
+                createdCategories.push({ id: docRef.id, ...cat });
+            });
+            await batch.commit();
+            return createdCategories;
+        }
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProductCategory));
+    } catch (error) {
+        console.error("Error fetching product categories:", error);
+        return [];
+    }
+}
+
+export async function addProductCategory(name: string): Promise<DocumentReference> {
+    try {
+        // Check if category already exists
+        const q = query(collection(db, "productCategories"), where("name", "==", name));
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+            throw new Error(`Category "${name}" already exists.`);
+        }
+        return await addDoc(collection(db, "productCategories"), { name });
+    } catch (error) {
+        console.error("Error adding product category:", error);
+        throw error;
+    }
+}
