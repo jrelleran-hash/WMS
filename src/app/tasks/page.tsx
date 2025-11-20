@@ -40,6 +40,7 @@ const subtaskSchema = z.object({
   id: z.string(),
   title: z.string().min(1, "Subtask title cannot be empty."),
   completed: z.boolean(),
+  dueDate: z.date().optional().nullable(),
 });
 
 const taskSchema = z.object({
@@ -206,7 +207,7 @@ export default function TasksPage() {
                 attachments: selectedTask.attachments,
                 supervisorNotes: selectedTask.supervisorNotes,
                 progress: selectedTask.progress,
-                subtasks: selectedTask.subtasks || [],
+                subtasks: selectedTask.subtasks?.map(st => ({...st, dueDate: st.dueDate ? st.dueDate.toDate() : null})) || [],
             });
         }
     }, [selectedTask, form]);
@@ -379,7 +380,7 @@ function TaskForm({ form, onSubmit, users, onClose }: { form: any, onSubmit: (da
 
     const handleAddSubtask = () => {
         if (newSubtask.trim() !== "") {
-            append({ id: `new-${Date.now()}`, title: newSubtask.trim(), completed: false });
+            append({ id: `new-${Date.now()}`, title: newSubtask.trim(), completed: false, dueDate: null });
             setNewSubtask("");
         }
     };
@@ -416,8 +417,22 @@ function TaskForm({ form, onSubmit, users, onClose }: { form: any, onSubmit: (da
                                 render={({ field: inputField }) => (
                                     <Input
                                         {...inputField}
-                                        className={cn(form.watch(`subtasks.${index}.completed`) && "line-through text-muted-foreground")}
+                                        className={cn("flex-1", form.watch(`subtasks.${index}.completed`) && "line-through text-muted-foreground")}
                                     />
+                                )}
+                            />
+                             <Controller
+                                control={control}
+                                name={`subtasks.${index}.dueDate`}
+                                render={({ field: dateField }) => (
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="outline" size="icon" className="w-10 h-10">
+                                                <CalendarIcon className="h-4 w-4" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={dateField.value} onSelect={dateField.onChange} initialFocus /></PopoverContent>
+                                    </Popover>
                                 )}
                             />
                             <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
@@ -446,7 +461,7 @@ function TaskForm({ form, onSubmit, users, onClose }: { form: any, onSubmit: (da
                     <Label htmlFor="progress">Progress</Label>
                     <span className="text-sm font-medium text-muted-foreground">{progress || 0}%</span>
                 </div>
-                 <Progress value={progress} />
+                 <Progress value={progress || 0} />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                  <div className="space-y-2">
