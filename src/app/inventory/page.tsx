@@ -149,31 +149,29 @@ const toTitleCase = (str: string) => {
   );
 };
 
-const CategorySelectItem = ({ category, level = 0, onSelect, currentValue }: { category: HierarchicalCategory; level?: number; onSelect: (value: string) => void; currentValue: string; }) => {
+const CategorySelectItem = ({ category, onSelect, currentValue }: { category: HierarchicalCategory; onSelect: (value: string) => void; currentValue: string; }) => {
     const [isOpen, setIsOpen] = useState(true);
     const hasSubcategories = category.subcategories && category.subcategories.length > 0;
 
     return (
         <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
-            <div className={cn("flex items-center w-full rounded-md", currentValue === category.name && "bg-accent")}>
-                 <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn("h-8 w-8 shrink-0", !hasSubcategories && "invisible")}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        setIsOpen((prev) => !prev);
-                    }}
-                >
-                    <ChevronRight className={cn("h-4 w-4 transition-transform", isOpen && "rotate-90")} />
-                </Button>
-                <div
-                    className="flex-1 text-sm py-1.5 pr-2 cursor-pointer"
-                    onClick={() => onSelect(category.name)}
-                >
-                    {category.name}
+            <CommandItem
+                value={category.name}
+                onSelect={() => onSelect(category.name)}
+                className="flex items-center justify-between w-full cursor-pointer"
+            >
+                <div className="flex items-center gap-1">
+                    {hasSubcategories && (
+                        <CollapsibleTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 -ml-2">
+                                <ChevronRight className={cn("h-4 w-4 transition-transform", isOpen && "rotate-90")} />
+                            </Button>
+                        </CollapsibleTrigger>
+                    )}
+                    <span className={cn(!hasSubcategories && "ml-7")}>{category.name}</span>
                 </div>
-            </div>
+                <Check className={cn("mr-2 h-4 w-4", currentValue === category.name ? "opacity-100" : "opacity-0")} />
+            </CommandItem>
             <CollapsibleContent className="pl-4">
                  {hasSubcategories && (
                     <div className="space-y-1 mt-1">
@@ -181,7 +179,6 @@ const CategorySelectItem = ({ category, level = 0, onSelect, currentValue }: { c
                             <CategorySelectItem
                                 key={subCategory.id}
                                 category={subCategory}
-                                level={level + 1}
                                 onSelect={onSelect}
                                 currentValue={currentValue}
                             />
@@ -619,8 +616,9 @@ export default function InventoryPage() {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start">
-                            <DropdownMenuLabel>Filter by Category</DropdownMenuLabel>
-                             <DropdownMenuRadioGroup value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as CategoryFilter)}>
+                          <DropdownMenuLabel>Filter by Category</DropdownMenuLabel>
+                          <ScrollArea className="h-72">
+                            <DropdownMenuRadioGroup value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as CategoryFilter)} className="p-1">
                                 <DropdownMenuRadioItem key="all" value="all" className="capitalize">
                                     All
                                 </DropdownMenuRadioItem>
@@ -628,6 +626,7 @@ export default function InventoryPage() {
                                     <CollapsibleCategoryFilterItem key={category.id} category={category} />
                                 ))}
                             </DropdownMenuRadioGroup>
+                          </ScrollArea>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
@@ -682,21 +681,27 @@ export default function InventoryPage() {
                                                 </Button>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                                                <ScrollArea className="h-72">
+                                              <Command>
+                                                <CommandInput placeholder="Search category..." />
+                                                <CommandEmpty>No category found.</CommandEmpty>
+                                                <CommandList>
+                                                  <ScrollArea className="h-72">
                                                     <div className="p-1">
-                                                        {hierarchicalCategories.map(cat => (
-                                                            <CategorySelectItem
-                                                                key={cat.id}
-                                                                category={cat}
-                                                                onSelect={(value) => {
-                                                                    field.onChange(value);
-                                                                    setIsCategoryPopoverOpen(false);
-                                                                }}
-                                                                currentValue={field.value}
-                                                            />
-                                                        ))}
+                                                      {hierarchicalCategories.map(cat => (
+                                                          <CategorySelectItem
+                                                              key={cat.id}
+                                                              category={cat}
+                                                              onSelect={(value) => {
+                                                                  field.onChange(value);
+                                                                  setIsCategoryPopoverOpen(false);
+                                                              }}
+                                                              currentValue={field.value}
+                                                          />
+                                                      ))}
                                                     </div>
-                                                </ScrollArea>
+                                                  </ScrollArea>
+                                                </CommandList>
+                                              </Command>
                                             </PopoverContent>
                                         </Popover>
                                     )}
@@ -1003,16 +1008,20 @@ export default function InventoryPage() {
                             name="category"
                             control={editForm.control}
                             render={({ field }) => (
-                                <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen}>
+                                 <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen}>
                                     <PopoverTrigger asChild>
                                         <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value && "text-muted-foreground")}>
                                             {field.value || "Select a category"}
                                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                         </Button>
                                     </PopoverTrigger>
-                                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                                        <ScrollArea className="h-72">
-                                            <div className="p-1">
+                                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                        <Command>
+                                            <CommandInput placeholder="Search category..." />
+                                            <CommandEmpty>No category found.</CommandEmpty>
+                                            <CommandList>
+                                                <ScrollArea className="h-72">
+                                                <div className="p-1">
                                                 {hierarchicalCategories.map(cat => (
                                                     <CategorySelectItem
                                                         key={cat.id}
@@ -1024,8 +1033,10 @@ export default function InventoryPage() {
                                                         currentValue={field.value}
                                                     />
                                                 ))}
-                                            </div>
-                                        </ScrollArea>
+                                                </div>
+                                                </ScrollArea>
+                                            </CommandList>
+                                        </Command>
                                     </PopoverContent>
                                 </Popover>
                             )}
@@ -1295,6 +1306,7 @@ export default function InventoryPage() {
     </>
   );
 }
+
 
 
 
