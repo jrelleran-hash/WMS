@@ -149,7 +149,7 @@ const toTitleCase = (str: string) => {
   );
 };
 
-const CategorySelectItem = ({ category, onSelect, currentValue }: { category: HierarchicalCategory; onSelect: (value: string) => void; currentValue: string; }) => {
+const CategorySelectItem = ({ category, onSelect, currentValue, level = 0 }: { category: HierarchicalCategory; onSelect: (value: string) => void; currentValue: string, level?: number }) => {
     const [isOpen, setIsOpen] = useState(true);
     const hasSubcategories = category.subcategories && category.subcategories.length > 0;
 
@@ -159,10 +159,11 @@ const CategorySelectItem = ({ category, onSelect, currentValue }: { category: Hi
                 value={category.name}
                 onSelect={() => onSelect(category.name)}
                 className="flex items-center justify-between w-full cursor-pointer"
+                style={{ paddingLeft: `${level * 1.5 + 0.5}rem` }}
             >
                 <div className="flex items-center gap-1">
                     {hasSubcategories && (
-                        <CollapsibleTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <CollapsibleTrigger asChild onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}>
                             <Button variant="ghost" size="icon" className="h-6 w-6 -ml-2">
                                 <ChevronRight className={cn("h-4 w-4 transition-transform", isOpen && "rotate-90")} />
                             </Button>
@@ -172,8 +173,8 @@ const CategorySelectItem = ({ category, onSelect, currentValue }: { category: Hi
                 </div>
                 <Check className={cn("mr-2 h-4 w-4", currentValue === category.name ? "opacity-100" : "opacity-0")} />
             </CommandItem>
-            <CollapsibleContent className="pl-4">
-                 {hasSubcategories && (
+            <CollapsibleContent>
+                 {isOpen && hasSubcategories && (
                     <div className="space-y-1 mt-1">
                         {category.subcategories.map((subCategory) => (
                             <CategorySelectItem
@@ -181,6 +182,7 @@ const CategorySelectItem = ({ category, onSelect, currentValue }: { category: Hi
                                 category={subCategory}
                                 onSelect={onSelect}
                                 currentValue={currentValue}
+                                level={level + 1}
                             />
                         ))}
                     </div>
@@ -683,10 +685,10 @@ export default function InventoryPage() {
                                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                                               <Command>
                                                 <CommandInput placeholder="Search category..." />
-                                                <CommandEmpty>No category found.</CommandEmpty>
                                                 <CommandList>
-                                                  <ScrollArea className="h-72">
-                                                    <div className="p-1">
+                                                    <CommandEmpty>No category found.</CommandEmpty>
+                                                    <ScrollArea className="h-72">
+                                                    <CommandGroup>
                                                       {hierarchicalCategories.map(cat => (
                                                           <CategorySelectItem
                                                               key={cat.id}
@@ -698,8 +700,8 @@ export default function InventoryPage() {
                                                               currentValue={field.value}
                                                           />
                                                       ))}
-                                                    </div>
-                                                  </ScrollArea>
+                                                      </CommandGroup>
+                                                    </ScrollArea>
                                                 </CommandList>
                                               </Command>
                                             </PopoverContent>
@@ -1018,10 +1020,10 @@ export default function InventoryPage() {
                                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                                         <Command>
                                             <CommandInput placeholder="Search category..." />
-                                            <CommandEmpty>No category found.</CommandEmpty>
                                             <CommandList>
-                                                <ScrollArea className="h-72">
-                                                <div className="p-1">
+                                               <CommandEmpty>No category found.</CommandEmpty>
+                                               <ScrollArea className="h-72">
+                                                <CommandGroup>
                                                 {hierarchicalCategories.map(cat => (
                                                     <CategorySelectItem
                                                         key={cat.id}
@@ -1033,7 +1035,7 @@ export default function InventoryPage() {
                                                         currentValue={field.value}
                                                     />
                                                 ))}
-                                                </div>
+                                                </CommandGroup>
                                                 </ScrollArea>
                                             </CommandList>
                                         </Command>
@@ -1306,6 +1308,7 @@ export default function InventoryPage() {
     </>
   );
 }
+
 
 
 
