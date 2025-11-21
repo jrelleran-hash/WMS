@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { PlusCircle, MoreHorizontal, CornerDownRight, ChevronRight } from "lucide-react";
+import { PlusCircle, MoreHorizontal, ChevronRight } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -75,7 +75,7 @@ function CategoryRow({ category, level = 0, onEdit, onDelete, canManage }: { cat
         <React.Fragment>
             <TableRow onClick={() => canManage && onEdit(category)} className={cn(canManage && "cursor-pointer")}>
                 <TableCell style={{ paddingLeft: `${level * 1.5 + 1}rem` }}>
-                    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="flex items-center gap-2">
+                     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="flex items-center gap-2">
                         {category.subcategories.length > 0 && (
                             <CollapsibleTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-6 w-6 -ml-2" onClick={(e) => e.stopPropagation()}>
@@ -85,6 +85,9 @@ function CategoryRow({ category, level = 0, onEdit, onDelete, canManage }: { cat
                             </CollapsibleTrigger>
                         )}
                         <span className="font-medium">{category.name}</span>
+                        <CollapsibleContent asChild>
+                           <></>
+                        </CollapsibleContent>
                     </Collapsible>
                 </TableCell>
                 {canManage && (
@@ -105,13 +108,9 @@ function CategoryRow({ category, level = 0, onEdit, onDelete, canManage }: { cat
                 </TableCell>
                 )}
             </TableRow>
-            <CollapsibleContent asChild>
-                 <React.Fragment>
-                    {category.subcategories.map(subCategory => (
-                        <CategoryRow key={subCategory.id} category={subCategory} level={level + 1} onEdit={onEdit} onDelete={onDelete} canManage={canManage} />
-                    ))}
-                </React.Fragment>
-            </CollapsibleContent>
+            {isOpen && category.subcategories.map(subCategory => (
+                <CategoryRow key={subCategory.id} category={subCategory} level={level + 1} onEdit={onEdit} onDelete={onDelete} canManage={canManage} />
+            ))}
         </React.Fragment>
     )
 }
@@ -267,7 +266,7 @@ export default function CategoriesPage() {
                                         <SelectValue placeholder="None (Top-level)" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">None (Top-level)</SelectItem>
+                                        <SelectItem value="null">None (Top-level)</SelectItem>
                                         {productCategories.map(cat => (
                                             <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                                         ))}
@@ -358,7 +357,7 @@ export default function CategoriesPage() {
                                         <SelectValue placeholder="None (Top-level)" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">None (Top-level)</SelectItem>
+                                        <SelectItem value="null">None (Top-level)</SelectItem>
                                         {productCategories.filter(cat => cat.id !== editingCategory?.id).map(cat => (
                                             <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                                         ))}

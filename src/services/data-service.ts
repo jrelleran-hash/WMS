@@ -2633,16 +2633,39 @@ export async function getProductCategories(): Promise<ProductCategory[]> {
         if (snapshot.empty) {
             // If no categories exist, create default ones
             const defaultCategories = [
-                { name: "Blum Products" },
-                { name: "Raw Materials" },
+              { name: "Blum Products", parentId: null },
+              { name: "Raw Materials", parentId: null },
+              { name: "Consumables", parentId: null },
+              { name: "Hinges", parentId: "Blum Products" },
+              { name: "Drawer Systems", parentId: "Blum Products" },
+              { name: "Lift Systems", parentId: "Blum Products" },
+              { name: "Plywood", parentId: "Raw Materials" },
+              { name: "Laminates", parentId: "Raw Materials" },
             ];
             const batch = writeBatch(db);
             const createdCategories: ProductCategory[] = [];
-            defaultCategories.forEach(cat => {
+
+            // This needs to be smarter, we need parent IDs first
+            const parentIds: Record<string, string> = {};
+            
+            defaultCategories.filter(c => !c.parentId).forEach(cat => {
                 const docRef = doc(collection(db, "productCategories"));
-                batch.set(docRef, cat);
-                createdCategories.push({ id: docRef.id, ...cat });
+                batch.set(docRef, { name: cat.name, parentId: null });
+                parentIds[cat.name] = docRef.id;
+                createdCategories.push({ id: docRef.id, name: cat.name, parentId: null });
             });
+            
+            // This is a bit naive, will only work for one level of nesting on initial seed
+             defaultCategories.filter(c => c.parentId).forEach(cat => {
+                const docRef = doc(collection(db, "productCategories"));
+                const parentId = parentIds[cat.parentId!];
+                if (parentId) {
+                    batch.set(docRef, { name: cat.name, parentId });
+                    createdCategories.push({ id: docRef.id, name: cat.name, parentId });
+                }
+            });
+
+
             await batch.commit();
             return createdCategories;
         }
@@ -2655,12 +2678,13 @@ export async function getProductCategories(): Promise<ProductCategory[]> {
 
 export async function addProductCategory(name: string, parentId?: string): Promise<DocumentReference> {
   try {
-    const q = query(collection(db, "productCategories"), where("name", "==", name), where("parentId", "==", parentId || null));
+    const parentValue = parentId === 'null' || !parentId ? null : parentId;
+    const q = query(collection(db, "productCategories"), where("name", "==", name), where("parentId", "==", parentValue));
     const snapshot = await getDocs(q);
     if (!snapshot.empty) {
       throw new Error(`Category "${name}" already exists.`);
     }
-    return await addDoc(collection(db, "productCategories"), { name, parentId: parentId || null });
+    return await addDoc(collection(db, "productCategories"), { name, parentId: parentValue });
   } catch (error) {
     console.error("Error adding product category:", error);
     throw error;
@@ -2670,7 +2694,8 @@ export async function addProductCategory(name: string, parentId?: string): Promi
 export async function updateProductCategory(categoryId: string, name: string, parentId?: string): Promise<void> {
   try {
     const categoryRef = doc(db, "productCategories", categoryId);
-    await updateDoc(categoryRef, { name, parentId: parentId || null });
+    const parentValue = parentId === 'null' || !parentId ? null : parentId;
+    await updateDoc(categoryRef, { name, parentId: parentValue });
   } catch (error) {
     console.error("Error updating category:", error);
     throw new Error("Failed to update category.");
