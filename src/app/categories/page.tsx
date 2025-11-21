@@ -72,48 +72,47 @@ function CategoryRow({ category, level = 0, onEdit, onDelete, canManage }: { cat
     const [isOpen, setIsOpen] = useState(true);
 
     return (
-        <Collapsible asChild open={isOpen} onOpenChange={setIsOpen}>
-            <>
-                <TableRow onClick={() => canManage && onEdit(category)} className={cn(canManage && "cursor-pointer")}>
-                    <TableCell style={{ paddingLeft: `${level * 1.5 + 1}rem` }}>
-                        <div className="flex items-center gap-2">
-                            {category.subcategories.length > 0 && (
-                                <CollapsibleTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6 -ml-2" onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen)}}>
-                                        <ChevronRight className={cn("h-4 w-4 transition-transform", isOpen && "rotate-90")} />
-                                    </Button>
-                                </CollapsibleTrigger>
-                            )}
-                            <span className="font-medium">{category.name}</span>
-                        </div>
-                    </TableCell>
-                    {canManage && (
-                    <TableCell className="text-right">
-                        <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button aria-haspopup="true" size="icon" variant="ghost" onClick={(e) => e.stopPropagation()}>
-                            <MoreHorizontal />
-                            <span className="sr-only">Toggle menu</span>
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => onEdit(category)}>Edit</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => onDelete(category.id)} className="text-destructive">Delete</DropdownMenuItem>
-                        </DropdownMenuContent>
-                        </DropdownMenu>
-                    </TableCell>
-                    )}
-                </TableRow>
-                <CollapsibleContent asChild>
-                    <>
-                        {category.subcategories.map(subCategory => (
-                            <CategoryRow key={subCategory.id} category={subCategory} level={level + 1} onEdit={onEdit} onDelete={onDelete} canManage={canManage} />
-                        ))}
-                    </>
-                </CollapsibleContent>
-            </>
-        </Collapsible>
+        <React.Fragment>
+            <TableRow onClick={() => canManage && onEdit(category)} className={cn(canManage && "cursor-pointer")}>
+                <TableCell style={{ paddingLeft: `${level * 1.5 + 1}rem` }}>
+                    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="flex items-center gap-2">
+                        {category.subcategories.length > 0 && (
+                            <CollapsibleTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 -ml-2" onClick={(e) => e.stopPropagation()}>
+                                    <ChevronRight className={cn("h-4 w-4 transition-transform", isOpen && "rotate-90")} />
+                                    <span className="sr-only">Toggle subcategories</span>
+                                </Button>
+                            </CollapsibleTrigger>
+                        )}
+                        <span className="font-medium">{category.name}</span>
+                    </Collapsible>
+                </TableCell>
+                {canManage && (
+                <TableCell className="text-right">
+                    <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button aria-haspopup="true" size="icon" variant="ghost" onClick={(e) => e.stopPropagation()}>
+                        <MoreHorizontal />
+                        <span className="sr-only">Toggle menu</span>
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => onEdit(category)}>Edit</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onDelete(category.id)} className="text-destructive">Delete</DropdownMenuItem>
+                    </DropdownMenuContent>
+                    </DropdownMenu>
+                </TableCell>
+                )}
+            </TableRow>
+            <CollapsibleContent asChild>
+                 <React.Fragment>
+                    {category.subcategories.map(subCategory => (
+                        <CategoryRow key={subCategory.id} category={subCategory} level={level + 1} onEdit={onEdit} onDelete={onDelete} canManage={canManage} />
+                    ))}
+                </React.Fragment>
+            </CollapsibleContent>
+        </React.Fragment>
     )
 }
 
