@@ -1,5 +1,4 @@
 
-
 import { Timestamp, DocumentReference } from "firebase/firestore";
 
 export interface Activity {
@@ -40,6 +39,9 @@ export interface Supplier {
   createdAt: Timestamp;
   cellphoneNumber?: string;
   suppliedProductIds?: string[];
+  status: "Pending" | "Approved" | "Rejected";
+  type: string;
+  notes?: string;
 }
 
 export interface ProductHistory {
@@ -96,7 +98,7 @@ export interface Backorder {
     productSku: string;
     quantity: number;
     date: Timestamp;
-    status: 'Pending' | 'Ordered' | 'Fulfilled';
+    status: 'Pending' | 'Ordered' | 'Fulfilled' | 'Cancelled';
     purchaseOrderId?: string;
     parentBackorderId?: string;
 }
@@ -341,5 +343,3 @@ export interface Task {
     supervisorNotes?: string;
     completedAt?: Timestamp;
 }
-
-

@@ -401,20 +401,7 @@ export async function getOrders(): Promise<Order[]> {
 export async function updateOrderStatus(orderId: string, status: Order['status']): Promise<void> {
   try {
     const orderRef = doc(db, "orders", orderId);
-    const batch = writeBatch(db);
-
-    batch.update(orderRef, { status });
-
-    if (status === 'Cancelled') {
-      const backordersQuery = query(collection(db, "backorders"), where("orderId", "==", orderId), where("status", "==", "Pending"));
-      const backorderSnapshot = await getDocs(backordersQuery);
-      backorderSnapshot.forEach(doc => {
-        batch.update(doc.ref, { status: "Cancelled" });
-      });
-    }
-    
-    await batch.commit();
-
+    await updateDoc(orderRef, { status });
   } catch (error) {
     console.error("Error updating order status:", error);
     throw new Error("Failed to update order status.");
@@ -850,14 +837,24 @@ export async function getSuppliers(): Promise<Supplier[]> {
   }
 }
 
-export async function addSupplier(supplier: Partial<Omit<Supplier, 'id' | 'createdAt'>>): Promise<DocumentReference> {
+export async function addSupplier(supplier: Partial<Omit<Supplier, 'id' | 'createdAt' | 'status'>>): Promise<DocumentReference> {
   try {
     const suppliersCol = collection(db, "suppliers");
-    const supplierWithDate = {
+    const supplierWithDefaults = {
       ...supplier,
+      status: "Pending" as const,
       createdAt: Timestamp.now(),
     };
-    const docRef = await addDoc(suppliersCol, supplierWithDate);
+    const docRef = await addDoc(suppliersCol, supplierWithDefaults);
+    
+    await createNotification({
+        title: "New Supplier Pending",
+        description: `"${supplier.name}" is awaiting approval.`,
+        details: `A new supplier, ${supplier.name}, has been added and requires approval from an administrator or manager.`,
+        href: "/suppliers",
+        icon: "UserPlus",
+    });
+
     return docRef;
   } catch (error) {
     console.error("Error adding supplier:", error);
@@ -2659,6 +2656,4 @@ export async function addProductCategory(name: string): Promise<DocumentReferenc
         throw error;
     }
 }
-
-
 

@@ -18,6 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
+  DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog,
@@ -50,6 +51,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 
 // Supplier Schema
 const supplierSchema = z.object({
@@ -59,10 +62,18 @@ const supplierSchema = z.object({
   phone: z.string().optional(),
   cellphoneNumber: z.string().optional(),
   address: z.string().min(1, "Address is required."),
+  type: z.string().min(1, "Supplier type is required."),
+  notes: z.string().optional(),
   suppliedProductIds: z.array(z.string()).optional(),
 });
 
 type SupplierFormValues = z.infer<typeof supplierSchema>;
+
+const supplierStatusVariant: { [key in Supplier['status']]: "default" | "secondary" | "destructive" | "outline" } = {
+  Pending: "secondary",
+  Approved: "default",
+  Rejected: "destructive",
+};
 
 
 const toTitleCase = (str: string) => {
@@ -82,6 +93,7 @@ export default function SuppliersPage() {
   const [isAddSupplierOpen, setIsAddSupplierOpen] = useState(false);
   const [isEditSupplierOpen, setIsEditSupplierOpen] = useState(false);
   const [isDeleteSupplierOpen, setIsDeleteSupplierOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("all");
   
   // Data states
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
@@ -127,6 +139,11 @@ export default function SuppliersPage() {
     }
   }, [editingSupplier, editSupplierForm]);
 
+  const filteredSuppliers = useMemo(() => {
+    if (activeTab === 'all') return suppliers;
+    return suppliers.filter(s => s.status.toLowerCase() === activeTab);
+  }, [suppliers, activeTab]);
+
   
   // Supplier handlers
   const handleEmailBlur = useCallback(async (email: string) => {
@@ -151,7 +168,7 @@ export default function SuppliersPage() {
   const onAddSupplierSubmit = async (data: SupplierFormValues) => {
     try {
       await addSupplier(data);
-      toast({ title: "Success", description: "Supplier added successfully." });
+      toast({ title: "Success", description: "Supplier added and is pending approval." });
       setIsAddSupplierOpen(false);
       await refetchData();
     } catch (error) {
@@ -180,6 +197,16 @@ export default function SuppliersPage() {
       });
     }
   };
+
+  const handleStatusUpdate = async (supplierId: string, status: Supplier['status']) => {
+    try {
+        await updateSupplier(supplierId, { status });
+        toast({ title: "Success", description: `Supplier has been ${status.toLowerCase()}.`});
+        await refetchData();
+    } catch(error) {
+        toast({ variant: "destructive", title: "Error", description: "Failed to update supplier status." });
+    }
+  }
 
   const handleEditSupplierClick = (supplier: Supplier) => {
     setEditingSupplier(supplier);
@@ -290,7 +317,7 @@ export default function SuppliersPage() {
     <div className="flex items-center justify-between">
       <div>
         <h1 className="text-2xl font-bold font-headline tracking-tight">Suppliers</h1>
-        <p className="text-muted-foreground">Manage your supplier database.</p>
+        <p className="text-muted-foreground">Manage your supplier database and onboarding.</p>
       </div>
        <Dialog open={isAddSupplierOpen} onOpenChange={setIsAddSupplierOpen}>
           <DialogTrigger asChild>
@@ -302,7 +329,7 @@ export default function SuppliersPage() {
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Add New Supplier</DialogTitle>
-              <DialogDescription>Fill in the details for the new supplier.</DialogDescription>
+              <DialogDescription>Fill in the details for the new supplier. It will require approval before being active.</DialogDescription>
             </DialogHeader>
             <form onSubmit={supplierForm.handleSubmit(onAddSupplierSubmit)} className="space-y-4">
                 <div className="space-y-2">
@@ -312,6 +339,11 @@ export default function SuppliersPage() {
                         supplierForm.setValue("name", toTitleCase(value), { shouldValidate: true });
                     }} />
                     {supplierForm.formState.errors.name && <p className="text-sm text-destructive">{supplierForm.formState.errors.name.message}</p>}
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="type">Supplier Type</Label>
+                    <Input id="type" placeholder="e.g. Local, International, Service Provider" {...supplierForm.register("type")} />
+                    {supplierForm.formState.errors.type && <p className="text-sm text-destructive">{supplierForm.formState.errors.type.message}</p>}
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="contactPerson">Contact Person</Label>
@@ -349,6 +381,10 @@ export default function SuppliersPage() {
                     <Input id="address" {...supplierForm.register("address")} />
                     {supplierForm.formState.errors.address && <p className="text-sm text-destructive">{supplierForm.formState.errors.address.message}</p>}
                 </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="notes">Notes (Optional)</Label>
+                    <Textarea id="notes" {...supplierForm.register("notes")} />
+                </div>
                 
                 <ProductMultiSelect form={supplierForm} />
 
@@ -368,59 +404,75 @@ export default function SuppliersPage() {
           <CardDescription>A list of all your product suppliers.</CardDescription>
         </CardHeader>
         <CardContent>
-            <Table>
-              <TableHeader>
-                  <TableRow>
-                  <TableHead>Supplier Name</TableHead>
-                  <TableHead className="hidden sm:table-cell">Contact Person</TableHead>
-                  <TableHead className="hidden lg:table-cell">Email</TableHead>
-                  <TableHead className="hidden md:table-cell">Phone</TableHead>
-                  <TableHead>
-                      <span className="sr-only">Actions</span>
-                  </TableHead>
-                  </TableRow>
-              </TableHeader>
-              <TableBody>
-                  {loading ? (
-                  Array.from({ length: 8 }).map((_, i) => (
-                      <TableRow key={i}>
-                      <TableCell><Skeleton className="h-4 w-48" /></TableCell>
-                      <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-32" /></TableCell>
-                      <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-48" /></TableCell>
-                      <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="mb-4">
+                    <TabsTrigger value="all">All</TabsTrigger>
+                    <TabsTrigger value="pending">Pending</TabsTrigger>
+                    <TabsTrigger value="approved">Approved</TabsTrigger>
+                    <TabsTrigger value="rejected">Rejected</TabsTrigger>
+                </TabsList>
+                <Table>
+                  <TableHeader>
+                      <TableRow>
+                      <TableHead>Supplier Name</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead className="hidden md:table-cell">Contact Person</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>
+                          <span className="sr-only">Actions</span>
+                      </TableHead>
                       </TableRow>
-                  ))
-                  ) : (
-                  suppliers.map((supplier) => (
-                      <TableRow key={supplier.id} onClick={() => handleEditSupplierClick(supplier)} className="cursor-pointer">
-                      <TableCell>
-                          <div className="font-medium">{supplier.name}</div>
-                          <div className="text-sm text-muted-foreground sm:hidden">{supplier.contactPerson}</div>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">{supplier.contactPerson}</TableCell>
-                      <TableCell className="hidden lg:table-cell">{supplier.email}</TableCell>
-                      <TableCell className="hidden md:table-cell">{supplier.phone || supplier.cellphoneNumber}</TableCell>
-                      <TableCell className="text-right">
-                          <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                              <Button aria-haspopup="true" size="icon" variant="ghost" onClick={(e) => e.stopPropagation()}>
-                              <MoreHorizontal />
-                              <span className="sr-only">Toggle menu</span>
-                              </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem onClick={() => handleEditSupplierClick(supplier)}>Edit</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleDeleteSupplierClick(supplier.id)} className="text-destructive">Delete</DropdownMenuItem>
-                          </DropdownMenuContent>
-                          </DropdownMenu>
-                      </TableCell>
-                      </TableRow>
-                  ))
-                  )}
-              </TableBody>
-            </Table>
+                  </TableHeader>
+                  <TableBody>
+                      {loading ? (
+                      Array.from({ length: 8 }).map((_, i) => (
+                          <TableRow key={i}>
+                          <TableCell><Skeleton className="h-4 w-48" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-32" /></TableCell>
+                          <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                          <TableCell><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                          </TableRow>
+                      ))
+                      ) : (
+                      filteredSuppliers.map((supplier) => (
+                          <TableRow key={supplier.id} onClick={() => handleEditSupplierClick(supplier)} className="cursor-pointer">
+                          <TableCell>
+                              <div className="font-medium">{supplier.name}</div>
+                              <div className="text-sm text-muted-foreground md:hidden">{supplier.contactPerson}</div>
+                          </TableCell>
+                          <TableCell>{supplier.type}</TableCell>
+                          <TableCell className="hidden md:table-cell">{supplier.contactPerson}</TableCell>
+                          <TableCell><Badge variant={supplierStatusVariant[supplier.status]}>{supplier.status}</Badge></TableCell>
+                          <TableCell className="text-right">
+                              <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                  <Button aria-haspopup="true" size="icon" variant="ghost" onClick={(e) => e.stopPropagation()}>
+                                  <MoreHorizontal />
+                                  <span className="sr-only">Toggle menu</span>
+                                  </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                  <DropdownMenuItem onClick={() => handleEditSupplierClick(supplier)}>Edit</DropdownMenuItem>
+                                   {supplier.status === 'Pending' && (
+                                    <>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem onClick={() => handleStatusUpdate(supplier.id, "Approved")}>Approve</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleStatusUpdate(supplier.id, "Rejected")} className="text-destructive">Reject</DropdownMenuItem>
+                                    </>
+                                  )}
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem onClick={() => handleDeleteSupplierClick(supplier.id)} className="text-destructive">Delete</DropdownMenuItem>
+                              </DropdownMenuContent>
+                              </DropdownMenu>
+                          </TableCell>
+                          </TableRow>
+                      ))
+                      )}
+                  </TableBody>
+                </Table>
+            </Tabs>
         </CardContent>
     </Card>
       
@@ -438,6 +490,11 @@ export default function SuppliersPage() {
                         editSupplierForm.setValue("name", toTitleCase(value), { shouldValidate: true });
                     }} />
                     {editSupplierForm.formState.errors.name && <p className="text-sm text-destructive">{editSupplierForm.formState.errors.name.message}</p>}
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="edit-type">Supplier Type</Label>
+                    <Input id="edit-type" placeholder="e.g. Local, International, Service Provider" {...editSupplierForm.register("type")} />
+                    {editSupplierForm.formState.errors.type && <p className="text-sm text-destructive">{editSupplierForm.formState.errors.type.message}</p>}
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="edit-contactPerson">Contact Person</Label>
@@ -475,6 +532,10 @@ export default function SuppliersPage() {
                     <Input id="edit-address" {...editSupplierForm.register("address")} />
                     {editSupplierForm.formState.errors.address && <p className="text-sm text-destructive">{editSupplierForm.formState.errors.address.message}</p>}
                 </div>
+                <div className="space-y-2">
+                    <Label htmlFor="edit-notes">Notes (Optional)</Label>
+                    <Textarea id="edit-notes" {...editSupplierForm.register("notes")} />
+                </div>
 
                 <ProductMultiSelect form={editSupplierForm} />
                 
@@ -508,5 +569,3 @@ export default function SuppliersPage() {
     </>
   );
 }
-
-    
