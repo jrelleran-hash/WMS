@@ -135,6 +135,10 @@ type LocationFilter = {
     bin?: string;
 };
 
+interface HierarchicalCategory extends ProductCategory {
+    subcategories: HierarchicalCategory[];
+}
+
 const toTitleCase = (str: string) => {
   return str.replace(
     /\w\S*/g,
@@ -142,6 +146,43 @@ const toTitleCase = (str: string) => {
   );
 };
 
+const CategoryCommandItem = ({
+  category,
+  level = 0,
+  onSelect,
+  currentValue,
+}: {
+  category: HierarchicalCategory;
+  level?: number;
+  onSelect: (value: string) => void;
+  currentValue: string;
+}) => (
+  <>
+    <CommandItem
+      key={category.id}
+      value={category.name}
+      onSelect={onSelect}
+      style={{ paddingLeft: `${level * 1.5 + 0.5}rem` }}
+    >
+      <Check
+        className={cn(
+          "mr-2 h-4 w-4",
+          currentValue === category.name ? "opacity-100" : "opacity-0"
+        )}
+      />
+      {category.name}
+    </CommandItem>
+    {category.subcategories.map((subCategory) => (
+      <CategoryCommandItem
+        key={subCategory.id}
+        category={subCategory}
+        level={level + 1}
+        onSelect={onSelect}
+        currentValue={currentValue}
+      />
+    ))}
+  </>
+);
 
 export default function InventoryPage() {
   const { products, suppliers, productCategories, loading, refetchData } = useData();
@@ -208,6 +249,34 @@ export default function InventoryPage() {
   const categoryForm = useForm<CategoryFormValues>({
     resolver: zodResolver(categorySchema),
   });
+  
+  const hierarchicalCategories = useMemo(() => {
+    const categoryMap: Record<string, HierarchicalCategory> = {};
+    const topLevel: HierarchicalCategory[] = [];
+
+    productCategories.forEach(category => {
+        categoryMap[category.id] = { ...category, subcategories: [] };
+    });
+
+    Object.values(categoryMap).forEach(category => {
+        if (category.parentId && categoryMap[category.parentId]) {
+            categoryMap[category.parentId].subcategories.push(category);
+        } else {
+            topLevel.push(category);
+        }
+    });
+    
+    // Sort subcategories alphabetically
+    Object.values(categoryMap).forEach(category => {
+        category.subcategories.sort((a, b) => a.name.localeCompare(b.name));
+    });
+    
+    // Sort top-level categories alphabetically
+    topLevel.sort((a, b) => a.name.localeCompare(b.name));
+
+    return topLevel;
+  }, [productCategories]);
+
 
   useEffect(() => {
     if (isAddDialogOpen) {
@@ -599,18 +668,16 @@ export default function InventoryPage() {
                                                             </Button>
                                                         </CommandEmpty>
                                                         <CommandGroup>
-                                                            {productCategories.map(cat => (
-                                                                <CommandItem
+                                                            {hierarchicalCategories.map(cat => (
+                                                                <CategoryCommandItem
                                                                     key={cat.id}
-                                                                    value={cat.name}
+                                                                    category={cat}
                                                                     onSelect={() => {
                                                                         field.onChange(cat.name);
                                                                         setIsCategoryPopoverOpen(false);
                                                                     }}
-                                                                >
-                                                                    <Check className={cn("mr-2 h-4 w-4", field.value === cat.name ? "opacity-100" : "opacity-0")} />
-                                                                    {cat.name}
-                                                                </CommandItem>
+                                                                    currentValue={field.value}
+                                                                />
                                                             ))}
                                                         </CommandGroup>
                                                     </CommandList>
@@ -938,18 +1005,16 @@ export default function InventoryPage() {
                                                     </Button>
                                                 </CommandEmpty>
                                                 <CommandGroup>
-                                                    {productCategories.map(cat => (
-                                                        <CommandItem
+                                                     {hierarchicalCategories.map(cat => (
+                                                        <CategoryCommandItem
                                                             key={cat.id}
-                                                            value={cat.name}
+                                                            category={cat}
                                                             onSelect={() => {
                                                                 field.onChange(cat.name);
                                                                 setIsCategoryPopoverOpen(false);
                                                             }}
-                                                        >
-                                                            <Check className={cn("mr-2 h-4 w-4", field.value === cat.name ? "opacity-100" : "opacity-0")} />
-                                                            {cat.name}
-                                                        </CommandItem>
+                                                            currentValue={field.value}
+                                                        />
                                                     ))}
                                                 </CommandGroup>
                                             </CommandList>
@@ -1245,4 +1310,5 @@ export default function InventoryPage() {
     </>
   );
 }
+
 
