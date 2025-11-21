@@ -72,14 +72,14 @@ function CategoryRow({ category, level = 0, onEdit, onDelete, canManage }: { cat
     const [isOpen, setIsOpen] = useState(true);
 
     return (
-        <Collapsible asChild open={isOpen} onOpenChange={setIsOpen}>
+        <Collapsible open={isOpen} onOpenChange={setIsOpen} asChild>
             <>
                 <TableRow onClick={() => canManage && onEdit(category)} className={cn(canManage && "cursor-pointer")}>
                     <TableCell style={{ paddingLeft: `${level * 1.5 + 1}rem` }}>
                         <div className="flex items-center gap-2">
                              {category.subcategories.length > 0 && (
                                 <CollapsibleTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => e.stopPropagation()}>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 -ml-2" onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen)}}>
                                         <ChevronRight className={cn("h-4 w-4 transition-transform", isOpen && "rotate-90")} />
                                     </Button>
                                 </CollapsibleTrigger>
@@ -105,13 +105,11 @@ function CategoryRow({ category, level = 0, onEdit, onDelete, canManage }: { cat
                     </TableCell>
                     )}
                 </TableRow>
-                <CollapsibleContent asChild>
-                    <>
-                        {category.subcategories.map(subCategory => (
-                            <CategoryRow key={subCategory.id} category={subCategory} level={level + 1} onEdit={onEdit} onDelete={onDelete} canManage={canManage} />
-                        ))}
-                    </>
-                </CollapsibleContent>
+                {category.subcategories.map(subCategory => (
+                     <CollapsibleContent asChild key={subCategory.id}>
+                       <CategoryRow category={subCategory} level={level + 1} onEdit={onEdit} onDelete={onDelete} canManage={canManage} />
+                    </CollapsibleContent>
+                ))}
             </>
         </Collapsible>
     )
