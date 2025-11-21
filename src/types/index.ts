@@ -55,6 +55,7 @@ export interface ProductHistory {
 export interface ProductCategory {
     id: string;
     name: string;
+    parentId?: string | null;
 }
 
 

@@ -2653,25 +2653,24 @@ export async function getProductCategories(): Promise<ProductCategory[]> {
     }
 }
 
-export async function addProductCategory(name: string): Promise<DocumentReference> {
-    try {
-        // Check if category already exists
-        const q = query(collection(db, "productCategories"), where("name", "==", name));
-        const snapshot = await getDocs(q);
-        if (!snapshot.empty) {
-            throw new Error(`Category "${name}" already exists.`);
-        }
-        return await addDoc(collection(db, "productCategories"), { name });
-    } catch (error) {
-        console.error("Error adding product category:", error);
-        throw error;
+export async function addProductCategory(name: string, parentId?: string): Promise<DocumentReference> {
+  try {
+    const q = query(collection(db, "productCategories"), where("name", "==", name), where("parentId", "==", parentId || null));
+    const snapshot = await getDocs(q);
+    if (!snapshot.empty) {
+      throw new Error(`Category "${name}" already exists.`);
     }
+    return await addDoc(collection(db, "productCategories"), { name, parentId: parentId || null });
+  } catch (error) {
+    console.error("Error adding product category:", error);
+    throw error;
+  }
 }
 
-export async function updateProductCategory(categoryId: string, name: string): Promise<void> {
+export async function updateProductCategory(categoryId: string, name: string, parentId?: string): Promise<void> {
   try {
     const categoryRef = doc(db, "productCategories", categoryId);
-    await updateDoc(categoryRef, { name });
+    await updateDoc(categoryRef, { name, parentId: parentId || null });
   } catch (error) {
     console.error("Error updating category:", error);
     throw new Error("Failed to update category.");
@@ -2680,8 +2679,23 @@ export async function updateProductCategory(categoryId: string, name: string): P
 
 export async function deleteProductCategory(categoryId: string): Promise<void> {
   try {
+    const batch = writeBatch(db);
     const categoryRef = doc(db, "productCategories", categoryId);
-    await deleteDoc(categoryRef);
+    batch.delete(categoryRef);
+
+    // Recursively delete subcategories
+    const deleteSubcategories = async (parentId: string) => {
+        const q = query(collection(db, "productCategories"), where("parentId", "==", parentId));
+        const snapshot = await getDocs(q);
+        for(const doc of snapshot.docs) {
+            await deleteSubcategories(doc.id);
+            batch.delete(doc.ref);
+        }
+    }
+
+    await deleteSubcategories(categoryId);
+    await batch.commit();
+
   } catch (error) {
     console.error("Error deleting category:", error);
     throw new Error("Failed to delete category.");
