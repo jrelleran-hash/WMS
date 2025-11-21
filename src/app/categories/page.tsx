@@ -72,8 +72,8 @@ function CategoryRow({ category, level = 0, onEdit, onDelete, canManage }: { cat
     const [isOpen, setIsOpen] = useState(true);
 
     return (
-        <Collapsible open={isOpen} onOpenChange={setIsOpen} asChild>
-          <>
+      <Collapsible asChild open={isOpen} onOpenChange={setIsOpen}>
+        <>
             <TableRow onClick={() => canManage && onEdit(category)} className={cn(canManage && "cursor-pointer")}>
                 <TableCell style={{ paddingLeft: `${level * 1.5 + 1}rem` }}>
                     <div className="flex items-center gap-2">
@@ -107,13 +107,13 @@ function CategoryRow({ category, level = 0, onEdit, onDelete, canManage }: { cat
             </TableRow>
             <CollapsibleContent asChild>
               <>
-                {isOpen && category.subcategories.map(subCategory => (
+                {category.subcategories.map(subCategory => (
                     <CategoryRow key={subCategory.id} category={subCategory} level={level + 1} onEdit={onEdit} onDelete={onDelete} canManage={canManage} />
                 ))}
               </>
             </CollapsibleContent>
-          </>
-        </Collapsible>
+        </>
+      </Collapsible>
     )
 }
 
@@ -268,6 +268,7 @@ export default function CategoriesPage() {
                                         <SelectValue placeholder="None (Top-level)" />
                                     </SelectTrigger>
                                     <SelectContent>
+                                        <SelectItem value="">None (Top-level)</SelectItem>
                                         {productCategories.map(cat => (
                                             <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                                         ))}
@@ -358,6 +359,7 @@ export default function CategoriesPage() {
                                         <SelectValue placeholder="None (Top-level)" />
                                     </SelectTrigger>
                                     <SelectContent>
+                                        <SelectItem value="">None (Top-level)</SelectItem>
                                         {productCategories.filter(cat => cat.id !== editingCategory?.id).map(cat => (
                                             <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                                         ))}
