@@ -1231,7 +1231,7 @@ export async function getShipments(): Promise<Shipment[]> {
                 estimatedDeliveryDate: shipmentData.estimatedDeliveryDate ? (shipmentData.estimatedDeliveryDate as Timestamp).toDate() : undefined,
                 actualDeliveryDate: shipmentData.actualDeliveryDate ? (shipmentData.actualDeliveryDate as Timestamp).toDate() : undefined,
                 createdAt: (shipmentData.createdAt as Timestamp).toDate(),
-                issuance: resolvedIssuance,
+                deliveryProof: shipmentData.deliveryProof,
             } as Shipment;
         }));
 
@@ -2641,13 +2641,19 @@ export async function getProductCategories(): Promise<ProductCategory[]> {
               { name: "Lift Systems", parentId: "Blum Products" },
               { name: "Plywood", parentId: "Raw Materials" },
               { name: "Laminates", parentId: "Raw Materials" },
+              { name: "Atim Transformables Products", parentId: null },
+              { name: "Ambos Products", parentId: null },
+              { name: "Cinetto Products", parentId: null },
+              { name: "Furnipart Products", parentId: null },
+              { name: "Italiana Feramenta Products", parentId: null },
+              { name: "Volpato Products", parentId: null },
+              { name: "Agoform Products", parentId: null },
             ];
             const batch = writeBatch(db);
             const createdCategories: ProductCategory[] = [];
 
-            // This needs to be smarter, we need parent IDs first
+            // Create parents first
             const parentIds: Record<string, string> = {};
-            
             defaultCategories.filter(c => !c.parentId).forEach(cat => {
                 const docRef = doc(collection(db, "productCategories"));
                 batch.set(docRef, { name: cat.name, parentId: null });
@@ -2655,8 +2661,8 @@ export async function getProductCategories(): Promise<ProductCategory[]> {
                 createdCategories.push({ id: docRef.id, name: cat.name, parentId: null });
             });
             
-            // This is a bit naive, will only work for one level of nesting on initial seed
-             defaultCategories.filter(c => c.parentId).forEach(cat => {
+            // Create children
+            defaultCategories.filter(c => c.parentId).forEach(cat => {
                 const docRef = doc(collection(db, "productCategories"));
                 const parentId = parentIds[cat.parentId!];
                 if (parentId) {

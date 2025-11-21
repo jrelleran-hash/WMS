@@ -73,22 +73,21 @@ function CategoryRow({ category, level = 0, onEdit, onDelete, canManage }: { cat
 
     return (
         <React.Fragment>
-            <TableRow onClick={() => canManage && onEdit(category)} className={cn(canManage && "cursor-pointer")}>
-                <TableCell style={{ paddingLeft: `${level * 1.5 + 1}rem` }}>
-                     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="flex items-center gap-2">
+            <TableRow>
+                <TableCell style={{ paddingLeft: `${level * 1.5 + 1}rem` }} onClick={() => canManage && onEdit(category)} className={cn(canManage && "cursor-pointer")}>
+                     <div className="flex items-center gap-2">
                         {category.subcategories.length > 0 && (
-                            <CollapsibleTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-6 w-6 -ml-2" onClick={(e) => e.stopPropagation()}>
-                                    <ChevronRight className={cn("h-4 w-4 transition-transform", isOpen && "rotate-90")} />
-                                    <span className="sr-only">Toggle subcategories</span>
-                                </Button>
-                            </CollapsibleTrigger>
+                            <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+                                <CollapsibleTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 -ml-2" onClick={(e) => e.stopPropagation()}>
+                                        <ChevronRight className={cn("h-4 w-4 transition-transform", isOpen && "rotate-90")} />
+                                        <span className="sr-only">Toggle subcategories</span>
+                                    </Button>
+                                </CollapsibleTrigger>
+                            </Collapsible>
                         )}
-                        <span className="font-medium">{category.name}</span>
-                        <CollapsibleContent asChild>
-                           <></>
-                        </CollapsibleContent>
-                    </Collapsible>
+                        <span className={cn("font-medium", category.subcategories.length === 0 && "ml-4")}>{category.name}</span>
+                    </div>
                 </TableCell>
                 {canManage && (
                 <TableCell className="text-right">
@@ -108,7 +107,7 @@ function CategoryRow({ category, level = 0, onEdit, onDelete, canManage }: { cat
                 </TableCell>
                 )}
             </TableRow>
-            {isOpen && category.subcategories.map(subCategory => (
+             {isOpen && category.subcategories.map(subCategory => (
                 <CategoryRow key={subCategory.id} category={subCategory} level={level + 1} onEdit={onEdit} onDelete={onDelete} canManage={canManage} />
             ))}
         </React.Fragment>
@@ -143,6 +142,15 @@ export default function CategoriesPage() {
             topLevel.push(category);
         }
     });
+    
+    // Sort subcategories alphabetically
+    Object.values(categoryMap).forEach(category => {
+        category.subcategories.sort((a, b) => a.name.localeCompare(b.name));
+    });
+    
+    // Sort top-level categories alphabetically
+    topLevel.sort((a, b) => a.name.localeCompare(b.name));
+
     return topLevel;
   }, [productCategories]);
 
@@ -157,7 +165,10 @@ export default function CategoriesPage() {
   
   useEffect(() => {
     if (editingCategory) {
-      editForm.reset(editingCategory);
+      editForm.reset({
+        name: editingCategory.name,
+        parentId: editingCategory.parentId || undefined,
+      });
     } else {
       editForm.reset();
     }
@@ -295,7 +306,7 @@ export default function CategoriesPage() {
                 <TableRow>
                   <TableHead>Category Name</TableHead>
                   {canManage && (
-                    <TableHead>
+                    <TableHead className="w-20">
                       <span className="sr-only">Actions</span>
                     </TableHead>
                   )}
@@ -352,7 +363,7 @@ export default function CategoriesPage() {
                             name="parentId"
                             control={editForm.control}
                             render={({ field }) => (
-                                <Select onValueChange={field.onChange} value={field.value || ''}>
+                                <Select onValueChange={field.onChange} value={field.value || undefined}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="None (Top-level)" />
                                     </SelectTrigger>
