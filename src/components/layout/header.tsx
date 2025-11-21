@@ -38,6 +38,10 @@ export function Header() {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col p-0 w-64" showCloseButton={false}>
+              <SheetHeader className="sr-only">
+                <SheetTitle>Navigation Menu</SheetTitle>
+                <SheetDescription>Main navigation links for the application.</SheetDescription>
+              </SheetHeader>
               <Sidebar className="flex" inSheet />
             </SheetContent>
           </Sheet>
