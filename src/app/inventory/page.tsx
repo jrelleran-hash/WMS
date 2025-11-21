@@ -66,6 +66,7 @@ import { CoreFlowLogo } from "@/components/icons";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import Image from 'next/image';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const locationSchema = z.object({
   zone: z.string().optional(),
@@ -161,28 +162,29 @@ const CategoryCommandItem = ({
     const hasSubcategories = category.subcategories && category.subcategories.length > 0;
 
     return (
-        <>
+        <Collapsible open={isOpen} onOpenChange={setIsOpen}>
             <CommandItem
                 key={category.id}
                 value={category.name}
                 onSelect={() => onSelect(category.name)}
                 style={{ paddingLeft: `${level * 1 + 0.5}rem` }}
-                className="flex items-center gap-2 cursor-pointer"
+                className="flex items-center gap-2"
             >
-                 {hasSubcategories && (
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 -ml-2"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setIsOpen(!isOpen);
-                        }}
-                    >
-                        <ChevronRight className={cn("h-4 w-4 transition-transform", isOpen && "rotate-90")} />
-                    </Button>
-                )}
-                {!hasSubcategories && <span className="w-6 h-6"></span>}
+                 {hasSubcategories ? (
+                    <CollapsibleTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 -ml-2"
+                             onClick={(e) => {
+                                e.stopPropagation();
+                                setIsOpen((prev) => !prev);
+                            }}
+                        >
+                            <ChevronRight className={cn("h-4 w-4 transition-transform", isOpen && "rotate-90")} />
+                        </Button>
+                    </CollapsibleTrigger>
+                ) : <span className="w-6 h-6"></span>}
                 <Check
                     className={cn(
                     "mr-2 h-4 w-4",
@@ -191,16 +193,18 @@ const CategoryCommandItem = ({
                 />
                 <span>{category.name}</span>
             </CommandItem>
-            {isOpen && hasSubcategories && category.subcategories.map((subCategory) => (
-                <CategoryCommandItem
-                    key={subCategory.id}
-                    category={subCategory}
-                    level={level + 1}
-                    onSelect={onSelect}
-                    currentValue={currentValue}
-                />
-            ))}
-        </>
+            <CollapsibleContent>
+                {isOpen && hasSubcategories && category.subcategories.map((subCategory) => (
+                    <CategoryCommandItem
+                        key={subCategory.id}
+                        category={subCategory}
+                        level={level + 1}
+                        onSelect={onSelect}
+                        currentValue={currentValue}
+                    />
+                ))}
+            </CollapsibleContent>
+        </Collapsible>
     );
 };
 
@@ -1331,6 +1335,7 @@ export default function InventoryPage() {
     </>
   );
 }
+
 
 
 
