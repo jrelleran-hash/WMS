@@ -76,7 +76,7 @@ function CategoryRow({ category, level = 0, onEdit, onDelete, canManage }: { cat
             <TableRow>
                 <TableCell style={{ paddingLeft: `${level * 1.5 + 1}rem` }} onClick={() => canManage && onEdit(category)} className={cn(canManage && "cursor-pointer")}>
                      <div className="flex items-center gap-2">
-                        {category.subcategories.length > 0 && (
+                        {category.subcategories.length > 0 ? (
                             <Collapsible open={isOpen} onOpenChange={setIsOpen}>
                                 <CollapsibleTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-6 w-6 -ml-2" onClick={(e) => e.stopPropagation()}>
@@ -85,8 +85,10 @@ function CategoryRow({ category, level = 0, onEdit, onDelete, canManage }: { cat
                                     </Button>
                                 </CollapsibleTrigger>
                             </Collapsible>
+                        ) : (
+                          <span className="w-6 h-6"></span> 
                         )}
-                        <span className={cn("font-medium", category.subcategories.length === 0 && "ml-4")}>{category.name}</span>
+                        <span className={cn("font-medium")}>{category.name}</span>
                     </div>
                 </TableCell>
                 {canManage && (
