@@ -25,6 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogClose,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -44,6 +45,7 @@ import { addProductCategory, updateProductCategory, deleteProductCategory } from
 import { useData } from "@/context/data-context";
 import { useAuth } from "@/hooks/use-auth";
 import type { ProductCategory } from "@/types";
+import { cn } from "@/lib/utils";
 
 const categorySchema = z.object({
   name: z.string().min(1, "Category name is required."),
