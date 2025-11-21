@@ -166,30 +166,32 @@ const CategorySelectItem = ({
     return (
         <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
             <div className={cn("flex items-center w-full rounded-md", currentValue === category.name && "bg-accent")}>
-                <CollapsibleTrigger asChild>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className={cn("h-8 w-8 shrink-0", !hasSubcategories && "invisible")}
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setIsOpen((prev) => !prev);
-                        }}
-                    >
-                        <ChevronRight className={cn("h-4 w-4 transition-transform", isOpen && "rotate-90")} />
-                    </Button>
-                </CollapsibleTrigger>
                 <div 
-                    className="flex-1 text-sm py-1.5 pr-2 cursor-pointer"
-                    style={{ paddingLeft: `${level * 0.5}rem` }}
+                    className="flex-1 flex items-center text-sm py-1.5 pr-2 cursor-pointer"
+                    style={{ paddingLeft: `${level * 1.5 + 0.25}rem` }}
                     onClick={() => onSelect(category.name)}
                 >
+                     {hasSubcategories ? (
+                        <CollapsibleTrigger asChild>
+                             <Button
+                                variant="ghost"
+                                size="icon"
+                                className={cn("h-6 w-6 shrink-0", !hasSubcategories && "invisible")}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsOpen((prev) => !prev);
+                                }}
+                            >
+                                <ChevronRight className={cn("h-4 w-4 transition-transform", isOpen && "rotate-90")} />
+                            </Button>
+                        </CollapsibleTrigger>
+                     ) : <span className="w-6 h-6 shrink-0"></span>}
                     {category.name}
                 </div>
             </div>
             <CollapsibleContent>
                  {hasSubcategories && (
-                    <div className="pl-4">
+                    <div className="">
                         {category.subcategories.map((subCategory) => (
                             <CategorySelectItem
                                 key={subCategory.id}
@@ -206,6 +208,22 @@ const CategorySelectItem = ({
     );
 };
 
+const CategoryFilterItem = ({ category, level = 0 }: { category: HierarchicalCategory, level?: number }) => {
+    return (
+        <>
+            <DropdownMenuRadioItem 
+                value={category.name} 
+                className="capitalize"
+                style={{ paddingLeft: `${level * 1.5 + 1.25}rem` }}
+            >
+                {category.name}
+            </DropdownMenuRadioItem>
+            {category.subcategories.map(subCategory => (
+                <CategoryFilterItem key={subCategory.id} category={subCategory} level={level + 1} />
+            ))}
+        </>
+    );
+}
 
 export default function InventoryPage() {
   const { products, suppliers, productCategories, loading, refetchData } = useData();
@@ -604,10 +622,11 @@ export default function InventoryPage() {
                         <DropdownMenuContent align="start">
                             <DropdownMenuLabel>Filter by Category</DropdownMenuLabel>
                             <DropdownMenuRadioGroup value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as CategoryFilter)}>
-                                {(['all', ...productCategories.map(c => c.name)] as CategoryFilter[]).map((filter) => (
-                                    <DropdownMenuRadioItem key={filter} value={filter} className="capitalize">
-                                        {filter}
-                                    </DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem key="all" value="all" className="capitalize">
+                                    All
+                                </DropdownMenuRadioItem>
+                                {hierarchicalCategories.map(category => (
+                                    <CategoryFilterItem key={category.id} category={category} />
                                 ))}
                             </DropdownMenuRadioGroup>
                         </DropdownMenuContent>
@@ -1277,6 +1296,7 @@ export default function InventoryPage() {
     </>
   );
 }
+
 
 
 
