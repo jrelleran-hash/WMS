@@ -67,6 +67,8 @@ import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import Image from 'next/image';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
 
 const locationSchema = z.object({
   zone: z.string().optional(),
@@ -147,7 +149,7 @@ const toTitleCase = (str: string) => {
   );
 };
 
-const CategoryCommandItem = ({
+const CategorySelectItem = ({
   category,
   level = 0,
   onSelect,
@@ -162,47 +164,43 @@ const CategoryCommandItem = ({
     const hasSubcategories = category.subcategories && category.subcategories.length > 0;
 
     return (
-        <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-            <CommandItem
-                key={category.id}
-                value={category.name}
-                onSelect={() => onSelect(category.name)}
-                style={{ paddingLeft: `${level * 1 + 0.5}rem` }}
-                className="flex items-center gap-2"
-            >
-                 {hasSubcategories ? (
-                    <CollapsibleTrigger asChild>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 -ml-2"
-                             onClick={(e) => {
-                                e.stopPropagation();
-                                setIsOpen((prev) => !prev);
-                            }}
-                        >
-                            <ChevronRight className={cn("h-4 w-4 transition-transform", isOpen && "rotate-90")} />
-                        </Button>
-                    </CollapsibleTrigger>
-                ) : <span className="w-6 h-6"></span>}
-                <Check
-                    className={cn(
-                    "mr-2 h-4 w-4",
-                    currentValue === category.name ? "opacity-100" : "opacity-0"
-                    )}
-                />
-                <span>{category.name}</span>
-            </CommandItem>
+        <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
+            <div className={cn("flex items-center w-full rounded-md", currentValue === category.name && "bg-accent")}>
+                <CollapsibleTrigger asChild>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className={cn("h-8 w-8 shrink-0", !hasSubcategories && "invisible")}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setIsOpen((prev) => !prev);
+                        }}
+                    >
+                        <ChevronRight className={cn("h-4 w-4 transition-transform", isOpen && "rotate-90")} />
+                    </Button>
+                </CollapsibleTrigger>
+                <div 
+                    className="flex-1 text-sm py-1.5 pr-2 cursor-pointer"
+                    style={{ paddingLeft: `${level * 0.5}rem` }}
+                    onClick={() => onSelect(category.name)}
+                >
+                    {category.name}
+                </div>
+            </div>
             <CollapsibleContent>
-                {isOpen && hasSubcategories && category.subcategories.map((subCategory) => (
-                    <CategoryCommandItem
-                        key={subCategory.id}
-                        category={subCategory}
-                        level={level + 1}
-                        onSelect={onSelect}
-                        currentValue={currentValue}
-                    />
-                ))}
+                 {hasSubcategories && (
+                    <div className="pl-4">
+                        {category.subcategories.map((subCategory) => (
+                            <CategorySelectItem
+                                key={subCategory.id}
+                                category={subCategory}
+                                level={level + 1}
+                                onSelect={onSelect}
+                                currentValue={currentValue}
+                            />
+                        ))}
+                    </div>
+                )}
             </CollapsibleContent>
         </Collapsible>
     );
@@ -231,7 +229,6 @@ export default function InventoryPage() {
   const [isSupplierPopoverOpen, setIsSupplierPopoverOpen] = useState(false);
   const [isAddSupplierOpen, setIsAddSupplierOpen] = useState(false);
   const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
-  const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
   const searchParams = useSearchParams();
 
 
@@ -534,23 +531,6 @@ export default function InventoryPage() {
     }
   };
 
-    const onAddCategorySubmit = async (data: CategoryFormValues) => {
-        try {
-            await addProductCategory(data.name);
-            toast({ title: "Success", description: "Category added successfully." });
-            setIsAddCategoryOpen(false);
-            categoryForm.reset();
-            await refetchData();
-        } catch (error) {
-            console.error(error);
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: "Failed to add category. Please try again.",
-            });
-        }
-    };
-
   const handleExport = () => {
     const headers = ["SKU", "Name", "Category", "Price", "Stock", "Status", "Supplier", "Location", "Last Updated"];
     const rows = filteredProducts.map(p => {
@@ -684,29 +664,21 @@ export default function InventoryPage() {
                                                 </Button>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                                                <Command>
-                                                    <CommandInput placeholder="Search category..." />
-                                                    <CommandList>
-                                                        <CommandEmpty>
-                                                            <Button variant="ghost" className="w-full" onClick={() => { setIsCategoryPopoverOpen(false); setIsAddCategoryOpen(true); }}>
-                                                                Add new category
-                                                            </Button>
-                                                        </CommandEmpty>
-                                                        <CommandGroup>
-                                                            {hierarchicalCategories.map(cat => (
-                                                                <CategoryCommandItem
-                                                                    key={cat.id}
-                                                                    category={cat}
-                                                                    onSelect={(value) => {
-                                                                        field.onChange(value);
-                                                                        setIsCategoryPopoverOpen(false);
-                                                                    }}
-                                                                    currentValue={field.value}
-                                                                />
-                                                            ))}
-                                                        </CommandGroup>
-                                                    </CommandList>
-                                                </Command>
+                                                <ScrollArea className="h-72">
+                                                    <div className="p-1">
+                                                        {hierarchicalCategories.map(cat => (
+                                                            <CategorySelectItem
+                                                                key={cat.id}
+                                                                category={cat}
+                                                                onSelect={(value) => {
+                                                                    field.onChange(value);
+                                                                    setIsCategoryPopoverOpen(false);
+                                                                }}
+                                                                currentValue={field.value}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                </ScrollArea>
                                             </PopoverContent>
                                         </Popover>
                                     )}
@@ -1020,30 +992,22 @@ export default function InventoryPage() {
                                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                                        <Command>
-                                            <CommandInput placeholder="Search category..." />
-                                            <CommandList>
-                                                <CommandEmpty>
-                                                    <Button variant="ghost" className="w-full" onClick={() => { setIsCategoryPopoverOpen(false); setIsAddCategoryOpen(true); }}>
-                                                        Add new category
-                                                    </Button>
-                                                </CommandEmpty>
-                                                <CommandGroup>
-                                                     {hierarchicalCategories.map(cat => (
-                                                        <CategoryCommandItem
-                                                            key={cat.id}
-                                                            category={cat}
-                                                            onSelect={(value) => {
-                                                                field.onChange(value);
-                                                                setIsCategoryPopoverOpen(false);
-                                                            }}
-                                                            currentValue={field.value}
-                                                        />
-                                                    ))}
-                                                </CommandGroup>
-                                            </CommandList>
-                                        </Command>
+                                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                        <ScrollArea className="h-72">
+                                            <div className="p-1">
+                                                {hierarchicalCategories.map(cat => (
+                                                    <CategorySelectItem
+                                                        key={cat.id}
+                                                        category={cat}
+                                                        onSelect={(value) => {
+                                                            field.onChange(value);
+                                                            setIsCategoryPopoverOpen(false);
+                                                        }}
+                                                        currentValue={field.value}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </ScrollArea>
                                     </PopoverContent>
                                 </Popover>
                             )}
@@ -1310,31 +1274,10 @@ export default function InventoryPage() {
             </DialogFooter>
         </DialogContent>
       </Dialog>
-
-        <Dialog open={isAddCategoryOpen} onOpenChange={setIsAddCategoryOpen}>
-            <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                    <DialogTitle>Add New Category</DialogTitle>
-                    <DialogDescription>Create a new category for your products.</DialogDescription>
-                </DialogHeader>
-                <form onSubmit={categoryForm.handleSubmit(onAddCategorySubmit)} className="space-y-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="category-name">Category Name</Label>
-                        <Input id="category-name" {...categoryForm.register("name")} />
-                        {categoryForm.formState.errors.name && <p className="text-sm text-destructive">{categoryForm.formState.errors.name.message}</p>}
-                    </div>
-                    <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => setIsAddCategoryOpen(false)}>Cancel</Button>
-                        <Button type="submit" disabled={categoryForm.formState.isSubmitting}>
-                            {categoryForm.formState.isSubmitting ? "Adding..." : "Add Category"}
-                        </Button>
-                    </DialogFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
     </>
   );
 }
+
 
 
 
