@@ -401,7 +401,18 @@ export async function getOrders(): Promise<Order[]> {
 export async function updateOrderStatus(orderId: string, status: Order['status']): Promise<void> {
   try {
     const orderRef = doc(db, "orders", orderId);
-    await updateDoc(orderRef, { status });
+    if (status === 'Cancelled') {
+        const backorderQuery = query(collection(db, "backorders"), where("orderId", "==", orderId), where("status", "==", "Pending"));
+        const backorderSnapshot = await getDocs(backorderQuery);
+        const batch = writeBatch(db);
+        backorderSnapshot.forEach(doc => {
+            batch.update(doc.ref, { status: "Cancelled" });
+        });
+        batch.update(orderRef, { status });
+        await batch.commit();
+    } else {
+        await updateDoc(orderRef, { status });
+    }
   } catch (error) {
     console.error("Error updating order status:", error);
     throw new Error("Failed to update order status.");
@@ -2622,8 +2633,8 @@ export async function getProductCategories(): Promise<ProductCategory[]> {
         if (snapshot.empty) {
             // If no categories exist, create default ones
             const defaultCategories = [
-                { name: "Raw Materials" },
                 { name: "Blum Products" },
+                { name: "Raw Materials" },
             ];
             const batch = writeBatch(db);
             const createdCategories: ProductCategory[] = [];
@@ -2657,3 +2668,22 @@ export async function addProductCategory(name: string): Promise<DocumentReferenc
     }
 }
 
+export async function updateProductCategory(categoryId: string, name: string): Promise<void> {
+  try {
+    const categoryRef = doc(db, "productCategories", categoryId);
+    await updateDoc(categoryRef, { name });
+  } catch (error) {
+    console.error("Error updating category:", error);
+    throw new Error("Failed to update category.");
+  }
+}
+
+export async function deleteProductCategory(categoryId: string): Promise<void> {
+  try {
+    const categoryRef = doc(db, "productCategories", categoryId);
+    await deleteDoc(categoryRef);
+  } catch (error) {
+    console.error("Error deleting category:", error);
+    throw new Error("Failed to delete category.");
+  }
+}

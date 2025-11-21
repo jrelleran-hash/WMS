@@ -27,6 +27,7 @@ import {
   Book,
   UserCheck,
   ListTodo,
+  List,
 } from "lucide-react";
 import { CoreFlowLogo } from "@/components/icons";
 import { cn } from "@/lib/utils";
@@ -62,6 +63,7 @@ const logisticsNavItems: NavItem[] = [
 
 const warehouseNavItems: NavSectionItem[] = [
     { href: "/inventory", label: "Warehouse Inventory", icon: Package },
+    { href: "/categories", label: "Categories", icon: List },
     { href: "/issuance", label: "Issuance", icon: FileText },
     { href: "/warehouse", label: "Warehouse Mapping", icon: Map },
     { href: "/tasks", label: "Task Management", icon: ListTodo },
