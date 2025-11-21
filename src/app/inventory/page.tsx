@@ -167,7 +167,7 @@ const CategoryCommandItem = ({
                 value={category.name}
                 onSelect={() => onSelect(category.name)}
                 style={{ paddingLeft: `${level * 1 + 0.5}rem` }}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 cursor-pointer"
             >
                  {hasSubcategories && (
                     <Button
@@ -1331,6 +1331,7 @@ export default function InventoryPage() {
     </>
   );
 }
+
 
 
 
