@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
@@ -64,7 +65,7 @@ const supplierSchema = z.object({
   address: z.string().min(1, "Address is required."),
   type: z.string().min(1, "Supplier type is required."),
   notes: z.string().optional(),
-  suppliedProductIds: z.array(z.string()).optional(),
+  suppliedCategories: z.array(z.string()).optional(),
 });
 
 type SupplierFormValues = z.infer<typeof supplierSchema>;
@@ -86,7 +87,7 @@ const toTitleCase = (str: string) => {
 
 
 export default function SuppliersPage() {
-  const { suppliers, products, loading, refetchData } = useData();
+  const { suppliers, productCategories, loading, refetchData } = useData();
   const { toast } = useToast();
 
   // Dialog states
@@ -100,14 +101,14 @@ export default function SuppliersPage() {
   const [deletingSupplierId, setDeletingSupplierId] = useState<string | null>(null);
   const [emailValidation, setEmailValidation] = useState<{ isValid: boolean; reason?: string; error?: string } | null>(null);
   const [isEmailChecking, setIsEmailChecking] = useState(false);
-  const [isProductPopoverOpen, setIsProductPopoverOpen] = useState(false);
+  const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
   
   // Forms
   const supplierForm = useForm<SupplierFormValues>({
     resolver: zodResolver(supplierSchema),
     mode: 'onBlur',
     defaultValues: {
-        suppliedProductIds: [],
+        suppliedCategories: [],
     }
   });
   
@@ -118,7 +119,7 @@ export default function SuppliersPage() {
   
   useEffect(() => {
     if (!isAddSupplierOpen) {
-      supplierForm.reset({ suppliedProductIds: [] });
+      supplierForm.reset({ suppliedCategories: [] });
        setEmailValidation(null);
     }
      if (!isEditSupplierOpen) {
@@ -132,7 +133,7 @@ export default function SuppliersPage() {
     if (editingSupplier) {
       editSupplierForm.reset({
         ...editingSupplier,
-        suppliedProductIds: editingSupplier.suppliedProductIds || []
+        suppliedCategories: editingSupplier.suppliedCategories || []
       });
     } else {
       editSupplierForm.reset();
@@ -252,21 +253,20 @@ export default function SuppliersPage() {
     return null;
   };
 
-  const ProductMultiSelect = ({ form }: {form: any}) => {
-    const selectedIds = form.watch("suppliedProductIds") || [];
-    const selectedProducts = useMemo(() => products.filter(p => selectedIds.includes(p.id)), [selectedIds]);
+  const CategoryMultiSelect = ({ form }: {form: any}) => {
+    const selectedCategories = form.watch("suppliedCategories") || [];
 
-    const handleSelect = (productId: string) => {
-        const newSelectedIds = selectedIds.includes(productId)
-            ? selectedIds.filter((id: string) => id !== productId)
-            : [...selectedIds, productId];
-        form.setValue("suppliedProductIds", newSelectedIds);
+    const handleSelect = (categoryName: string) => {
+        const newSelected = selectedCategories.includes(categoryName)
+            ? selectedCategories.filter((name: string) => name !== categoryName)
+            : [...selectedCategories, categoryName];
+        form.setValue("suppliedCategories", newSelected);
     }
 
     return (
         <div className="space-y-2">
-            <Label>Items Supplied</Label>
-             <Popover open={isProductPopoverOpen} onOpenChange={setIsProductPopoverOpen}>
+            <Label>Categories Supplied</Label>
+             <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen}>
                 <PopoverTrigger asChild>
                     <Button
                         variant="outline"
@@ -274,32 +274,32 @@ export default function SuppliersPage() {
                         className="w-full justify-between h-auto min-h-10"
                     >
                          <div className="flex flex-wrap gap-1">
-                            {selectedProducts.length > 0 ? selectedProducts.map(p => (
-                                <Badge key={p.id} variant="secondary">{p.name}</Badge>
-                            )) : "Select products..."}
+                            {selectedCategories.length > 0 ? selectedCategories.map((cat: string) => (
+                                <Badge key={cat} variant="secondary">{cat}</Badge>
+                            )) : "Select categories..."}
                          </div>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                     <Command>
-                        <CommandInput placeholder="Search products..." />
+                        <CommandInput placeholder="Search categories..." />
                         <CommandList>
-                            <CommandEmpty>No products found.</CommandEmpty>
+                            <CommandEmpty>No categories found.</CommandEmpty>
                             <CommandGroup>
-                                {products.map(product => (
+                                {productCategories.map(category => (
                                     <CommandItem
-                                        key={product.id}
-                                        value={product.name}
-                                        onSelect={() => handleSelect(product.id)}
+                                        key={category.id}
+                                        value={category.name}
+                                        onSelect={() => handleSelect(category.name)}
                                     >
                                         <Check
                                             className={cn(
                                                 "mr-2 h-4 w-4",
-                                                selectedIds.includes(product.id) ? "opacity-100" : "opacity-0"
+                                                selectedCategories.includes(category.name) ? "opacity-100" : "opacity-0"
                                             )}
                                         />
-                                        {product.name}
+                                        {category.name}
                                     </CommandItem>
                                 ))}
                             </CommandGroup>
@@ -386,7 +386,7 @@ export default function SuppliersPage() {
                     <Textarea id="notes" {...supplierForm.register("notes")} />
                 </div>
                 
-                <ProductMultiSelect form={supplierForm} />
+                <CategoryMultiSelect form={supplierForm} />
 
                 <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setIsAddSupplierOpen(false)}>Cancel</Button>
@@ -537,7 +537,7 @@ export default function SuppliersPage() {
                     <Textarea id="edit-notes" {...editSupplierForm.register("notes")} />
                 </div>
 
-                <ProductMultiSelect form={editSupplierForm} />
+                <CategoryMultiSelect form={editSupplierForm} />
                 
                 <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setIsEditSupplierOpen(false)}>Cancel</Button>

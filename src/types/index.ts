@@ -38,7 +38,7 @@ export interface Supplier {
   address: string;
   createdAt: Timestamp;
   cellphoneNumber?: string;
-  suppliedProductIds?: string[];
+  suppliedCategories?: string[];
   status: "Pending" | "Approved" | "Rejected";
   type: string;
   notes?: string;
@@ -74,6 +74,7 @@ export interface Product {
     price: number;
     reorderLimit: number;
     maxStockLevel: number;
+    supplierInfo?: { supplierId: string; cost: number }[];
     location?: ProductLocation;
     supplier?: string;
     history?: ProductHistory[];
@@ -117,6 +118,7 @@ export interface Order {
 export interface PurchaseOrderItem {
     quantity: number;
     product: Product;
+    cost: number;
 }
 
 export interface PurchaseOrder {
