@@ -153,17 +153,21 @@ const CategorySelectItem = ({ category, onSelect, currentValue, level = 0 }: { c
     const [isOpen, setIsOpen] = useState(true);
     const hasSubcategories = category.subcategories && category.subcategories.length > 0;
 
+    const handleSelect = () => {
+        onSelect(category.name);
+    }
+    
     return (
         <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
             <CommandItem
                 value={category.name}
-                onSelect={() => onSelect(category.name)}
+                onSelect={handleSelect}
                 className="flex items-center justify-between w-full cursor-pointer"
                 style={{ paddingLeft: `${level * 1.5 + 0.5}rem` }}
             >
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 flex-1">
                     {hasSubcategories && (
-                        <CollapsibleTrigger asChild onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}>
+                         <CollapsibleTrigger asChild onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}>
                             <Button variant="ghost" size="icon" className="h-6 w-6 -ml-2">
                                 <ChevronRight className={cn("h-4 w-4 transition-transform", isOpen && "rotate-90")} />
                             </Button>
@@ -174,7 +178,7 @@ const CategorySelectItem = ({ category, onSelect, currentValue, level = 0 }: { c
                 <Check className={cn("mr-2 h-4 w-4", currentValue === category.name ? "opacity-100" : "opacity-0")} />
             </CommandItem>
             <CollapsibleContent>
-                 {isOpen && hasSubcategories && (
+                 {hasSubcategories && (
                     <div className="space-y-1 mt-1">
                         {category.subcategories.map((subCategory) => (
                             <CategorySelectItem
@@ -191,7 +195,6 @@ const CategorySelectItem = ({ category, onSelect, currentValue, level = 0 }: { c
         </Collapsible>
     );
 };
-
 
 const CollapsibleCategoryFilterItem = ({ category, level = 0 }: { category: HierarchicalCategory, level?: number }) => {
     const hasSubcategories = category.subcategories && category.subcategories.length > 0;
@@ -685,24 +688,24 @@ export default function InventoryPage() {
                                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                                               <Command>
                                                 <CommandInput placeholder="Search category..." />
-                                                <CommandList>
-                                                    <CommandEmpty>No category found.</CommandEmpty>
-                                                    <ScrollArea className="h-72">
-                                                    <CommandGroup>
-                                                      {hierarchicalCategories.map(cat => (
-                                                          <CategorySelectItem
-                                                              key={cat.id}
-                                                              category={cat}
-                                                              onSelect={(value) => {
-                                                                  field.onChange(value);
-                                                                  setIsCategoryPopoverOpen(false);
-                                                              }}
-                                                              currentValue={field.value}
-                                                          />
-                                                      ))}
-                                                      </CommandGroup>
-                                                    </ScrollArea>
-                                                </CommandList>
+                                                <ScrollArea className="h-72">
+                                                    <CommandList>
+                                                        <CommandEmpty>No category found.</CommandEmpty>
+                                                        <CommandGroup>
+                                                        {hierarchicalCategories.map(cat => (
+                                                            <CategorySelectItem
+                                                                key={cat.id}
+                                                                category={cat}
+                                                                onSelect={(value) => {
+                                                                    field.onChange(value);
+                                                                    setIsCategoryPopoverOpen(false);
+                                                                }}
+                                                                currentValue={field.value}
+                                                            />
+                                                        ))}
+                                                        </CommandGroup>
+                                                    </CommandList>
+                                                </ScrollArea>
                                               </Command>
                                             </PopoverContent>
                                         </Popover>
@@ -1017,29 +1020,29 @@ export default function InventoryPage() {
                                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                                        <Command>
-                                            <CommandInput placeholder="Search category..." />
-                                            <CommandList>
-                                               <CommandEmpty>No category found.</CommandEmpty>
-                                               <ScrollArea className="h-72">
-                                                <CommandGroup>
-                                                {hierarchicalCategories.map(cat => (
-                                                    <CategorySelectItem
-                                                        key={cat.id}
-                                                        category={cat}
-                                                        onSelect={(value) => {
-                                                            field.onChange(value);
-                                                            setIsCategoryPopoverOpen(false);
-                                                        }}
-                                                        currentValue={field.value}
-                                                    />
-                                                ))}
-                                                </CommandGroup>
+                                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                              <Command>
+                                                <CommandInput placeholder="Search category..." />
+                                                 <ScrollArea className="h-72">
+                                                    <CommandList>
+                                                        <CommandEmpty>No category found.</CommandEmpty>
+                                                        <CommandGroup>
+                                                        {hierarchicalCategories.map(cat => (
+                                                            <CategorySelectItem
+                                                                key={cat.id}
+                                                                category={cat}
+                                                                onSelect={(value) => {
+                                                                    field.onChange(value);
+                                                                    setIsCategoryPopoverOpen(false);
+                                                                }}
+                                                                currentValue={field.value}
+                                                            />
+                                                        ))}
+                                                        </CommandGroup>
+                                                    </CommandList>
                                                 </ScrollArea>
-                                            </CommandList>
-                                        </Command>
-                                    </PopoverContent>
+                                              </Command>
+                                            </PopoverContent>
                                 </Popover>
                             )}
                         />
@@ -1308,14 +1311,3 @@ export default function InventoryPage() {
     </>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
