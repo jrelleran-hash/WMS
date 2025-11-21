@@ -141,7 +141,7 @@ export default function SuppliersPage() {
 
   const filteredSuppliers = useMemo(() => {
     if (activeTab === 'all') return suppliers;
-    return suppliers.filter(s => s.status.toLowerCase() === activeTab);
+    return suppliers.filter(s => s.status && s.status.toLowerCase() === activeTab);
   }, [suppliers, activeTab]);
 
   
