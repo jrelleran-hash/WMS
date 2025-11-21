@@ -6,7 +6,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { PlusCircle, MoreHorizontal, Package, ChevronsUpDown, Check, Printer, FileDown, SlidersHorizontal, User, Search, History, View } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Package, ChevronsUpDown, Check, Printer, FileDown, SlidersHorizontal, User, Search, History, View, ChevronRight } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -156,33 +156,54 @@ const CategoryCommandItem = ({
   level?: number;
   onSelect: (value: string) => void;
   currentValue: string;
-}) => (
-  <>
-    <CommandItem
-      key={category.id}
-      value={category.name}
-      onSelect={onSelect}
-      style={{ paddingLeft: `${level * 1.5 + 0.5}rem` }}
-    >
-      <Check
-        className={cn(
-          "mr-2 h-4 w-4",
-          currentValue === category.name ? "opacity-100" : "opacity-0"
-        )}
-      />
-      {category.name}
-    </CommandItem>
-    {category.subcategories.map((subCategory) => (
-      <CategoryCommandItem
-        key={subCategory.id}
-        category={subCategory}
-        level={level + 1}
-        onSelect={onSelect}
-        currentValue={currentValue}
-      />
-    ))}
-  </>
-);
+}) => {
+    const [isOpen, setIsOpen] = useState(true);
+    const hasSubcategories = category.subcategories && category.subcategories.length > 0;
+
+    return (
+        <>
+            <CommandItem
+                key={category.id}
+                value={category.name}
+                onSelect={() => onSelect(category.name)}
+                style={{ paddingLeft: `${level * 1 + 0.5}rem` }}
+                className="flex items-center gap-2"
+            >
+                 {hasSubcategories && (
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 -ml-2"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setIsOpen(!isOpen);
+                        }}
+                    >
+                        <ChevronRight className={cn("h-4 w-4 transition-transform", isOpen && "rotate-90")} />
+                    </Button>
+                )}
+                {!hasSubcategories && <span className="w-6 h-6"></span>}
+                <Check
+                    className={cn(
+                    "mr-2 h-4 w-4",
+                    currentValue === category.name ? "opacity-100" : "opacity-0"
+                    )}
+                />
+                <span>{category.name}</span>
+            </CommandItem>
+            {isOpen && hasSubcategories && category.subcategories.map((subCategory) => (
+                <CategoryCommandItem
+                    key={subCategory.id}
+                    category={subCategory}
+                    level={level + 1}
+                    onSelect={onSelect}
+                    currentValue={currentValue}
+                />
+            ))}
+        </>
+    );
+};
+
 
 export default function InventoryPage() {
   const { products, suppliers, productCategories, loading, refetchData } = useData();
@@ -672,8 +693,8 @@ export default function InventoryPage() {
                                                                 <CategoryCommandItem
                                                                     key={cat.id}
                                                                     category={cat}
-                                                                    onSelect={() => {
-                                                                        field.onChange(cat.name);
+                                                                    onSelect={(value) => {
+                                                                        field.onChange(value);
                                                                         setIsCategoryPopoverOpen(false);
                                                                     }}
                                                                     currentValue={field.value}
@@ -1009,8 +1030,8 @@ export default function InventoryPage() {
                                                         <CategoryCommandItem
                                                             key={cat.id}
                                                             category={cat}
-                                                            onSelect={() => {
-                                                                field.onChange(cat.name);
+                                                            onSelect={(value) => {
+                                                                field.onChange(value);
                                                                 setIsCategoryPopoverOpen(false);
                                                             }}
                                                             currentValue={field.value}
@@ -1310,5 +1331,6 @@ export default function InventoryPage() {
     </>
   );
 }
+
 
 
