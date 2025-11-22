@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, ChangeEvent, KeyboardEvent } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -127,6 +127,8 @@ export default function CategoriesPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  const [suggestion, setSuggestion] = useState('');
 
   const canManage = userProfile?.role === "Admin" || userProfile?.role === "Manager";
 
@@ -231,6 +233,33 @@ export default function CategoriesPage() {
     }
   };
 
+  const handleCategoryNameChange = (e: ChangeEvent<HTMLInputElement>, currentForm: any) => {
+    const value = toTitleCase(e.target.value);
+    currentForm.setValue("name", value, { shouldValidate: true });
+
+    if (value) {
+        const foundSuggestion = productCategories.find(cat =>
+            cat.name.toLowerCase().startsWith(value.toLowerCase())
+        );
+        if (foundSuggestion && foundSuggestion.name.toLowerCase() !== value.toLowerCase()) {
+            setSuggestion(foundSuggestion.name);
+        } else {
+            setSuggestion('');
+        }
+    } else {
+        setSuggestion('');
+    }
+  };
+  
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>, currentForm: any) => {
+    if ((e.key === 'Tab' || e.key === 'ArrowRight') && suggestion) {
+        e.preventDefault();
+        currentForm.setValue("name", suggestion, { shouldValidate: true });
+        setSuggestion('');
+    }
+  };
+
+
   return (
     <>
       <Card>
@@ -243,7 +272,10 @@ export default function CategoriesPage() {
             <div className="flex gap-2 mt-4 md:mt-0">
               <Dialog open={isAddDialogOpen} onOpenChange={(isOpen) => {
                 setIsAddDialogOpen(isOpen);
-                if(!isOpen) form.reset();
+                if(!isOpen) {
+                  form.reset();
+                  setSuggestion('');
+                }
               }}>
                 <DialogTrigger asChild>
                   <Button size="sm" className="gap-1 w-full md:w-auto">
@@ -258,16 +290,25 @@ export default function CategoriesPage() {
                   </DialogHeader>
                   <form onSubmit={form.handleSubmit(onAddSubmit)} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Category Name</Label>
-                      <Input 
-                        id="name" 
-                        {...form.register("name")} 
-                        onChange={(e) => {
-                          const { value } = e.target;
-                          form.setValue("name", toTitleCase(value), { shouldValidate: true });
-                        }}
-                      />
-                      {form.formState.errors.name && <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>}
+                        <Label htmlFor="name">Category Name</Label>
+                        <div className="relative">
+                            <Input
+                                id="name"
+                                {...form.register("name")}
+                                onChange={(e) => handleCategoryNameChange(e, form)}
+                                onKeyDown={(e) => handleKeyDown(e, form)}
+                                autoComplete="off"
+                                className="bg-transparent z-10 relative"
+                            />
+                            {suggestion && form.getValues("name") && (
+                                <Input
+                                    className="absolute inset-0 text-muted-foreground z-0"
+                                    value={suggestion}
+                                    disabled
+                                />
+                            )}
+                        </div>
+                        {form.formState.errors.name && <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>}
                     </div>
                      <div className="space-y-2">
                       <Label htmlFor="parentId">Parent Category (Optional)</Label>
@@ -342,6 +383,7 @@ export default function CategoriesPage() {
               if(!isOpen) {
                   setEditingCategory(null);
                   editForm.reset();
+                  setSuggestion('');
               }
           }}>
               <DialogContent className="sm:max-w-md">
@@ -351,15 +393,24 @@ export default function CategoriesPage() {
                   </DialogHeader>
                   <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
                   <div className="space-y-2">
-                      <Label htmlFor="edit-name">Category Name</Label>
-                      <Input 
-                      id="edit-name" 
-                      {...editForm.register("name")} 
-                      onChange={(e) => {
-                          const { value } = e.target;
-                          editForm.setValue("name", toTitleCase(value), { shouldValidate: true });
-                      }}
-                      />
+                    <Label htmlFor="edit-name">Category Name</Label>
+                     <div className="relative">
+                        <Input
+                            id="edit-name"
+                            {...editForm.register("name")}
+                            onChange={(e) => handleCategoryNameChange(e, editForm)}
+                            onKeyDown={(e) => handleKeyDown(e, editForm)}
+                            autoComplete="off"
+                            className="bg-transparent z-10 relative"
+                        />
+                        {suggestion && editForm.getValues("name") && (
+                            <Input
+                                className="absolute inset-0 text-muted-foreground z-0"
+                                value={suggestion}
+                                disabled
+                            />
+                        )}
+                    </div>
                       {editForm.formState.errors.name && <p className="text-sm text-destructive">{editForm.formState.errors.name.message}</p>}
                   </div>
                    <div className="space-y-2">
