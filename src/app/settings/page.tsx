@@ -58,7 +58,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { UserRole, PagePermission } from "@/types";
 import { cn } from "@/lib/utils";
-import { Check, MoreHorizontal, X, ChevronsUpDown, User, Eye, EyeOff, List } from "lucide-react";
+import { Check, MoreHorizontal, X, ChevronsUpDown, User, Eye, EyeOff, List, Building, Users as UsersIcon, Truck } from "lucide-react";
 import { useData } from "@/context/data-context";
 import { Badge } from "@/components/ui/badge";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -574,17 +574,45 @@ function GeneralSettingsTab() {
                 <CardDescription>General application settings.</CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="space-y-2">
+                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div 
-                        className="flex items-center justify-between p-4 rounded-md border hover:bg-muted cursor-pointer"
+                        className="flex items-center gap-3 p-4 rounded-md border hover:bg-muted cursor-pointer"
                         onClick={() => router.push('/categories')}
                     >
-                        <div className="flex items-center gap-3">
-                            <List className="h-5 w-5 text-muted-foreground" />
-                            <div>
-                                <h3 className="font-semibold">Product Categories</h3>
-                                <p className="text-sm text-muted-foreground">Manage product categories and sub-categories.</p>
-                            </div>
+                        <List className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                            <h3 className="font-semibold">Product Categories</h3>
+                            <p className="text-sm text-muted-foreground">Manage product categories and sub-categories.</p>
+                        </div>
+                    </div>
+                     <div 
+                        className="flex items-center gap-3 p-4 rounded-md border hover:bg-muted cursor-pointer"
+                        onClick={() => router.push('/suppliers')}
+                    >
+                        <Building className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                            <h3 className="font-semibold">Suppliers</h3>
+                            <p className="text-sm text-muted-foreground">Manage your supplier database.</p>
+                        </div>
+                    </div>
+                     <div 
+                        className="flex items-center gap-3 p-4 rounded-md border hover:bg-muted cursor-pointer"
+                        onClick={() => router.push('/clients')}
+                    >
+                        <UsersIcon className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                            <h3 className="font-semibold">Clients</h3>
+                            <p className="text-sm text-muted-foreground">Manage your client database.</p>
+                        </div>
+                    </div>
+                      <div 
+                        className="flex items-center gap-3 p-4 rounded-md border hover:bg-muted cursor-pointer"
+                        onClick={() => router.push('/vehicles')}
+                    >
+                        <Truck className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                            <h3 className="font-semibold">Vehicles</h3>
+                            <p className="text-sm text-muted-foreground">Manage your fleet of vehicles.</p>
                         </div>
                     </div>
                 </div>

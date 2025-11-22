@@ -27,7 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PlusCircle, MoreHorizontal, Calendar as CalendarIcon, Trash2, X } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Calendar as CalendarIcon, Trash2, X, Edit2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { Slider } from "@/components/ui/slider";
@@ -94,7 +94,7 @@ function StaffKpiDashboard() {
             
             return {
                 userId: user.uid,
-                name: `${'user.firstName'} ${'user.lastName'}`,
+                name: `${user.firstName} ${user.lastName}`,
                 total: userTasks.length,
                 completed,
                 overdue,
@@ -222,7 +222,7 @@ export default function TasksPage() {
 
         const taskData = {
             ...data,
-            createdBy: `${'userProfile.firstName'} ${'userProfile.lastName'}`
+            createdBy: `${userProfile.firstName} ${userProfile.lastName}`
         }
 
         try {
@@ -362,6 +362,7 @@ export default function TasksPage() {
 function TaskForm({ form, onSubmit, users, onClose }: { form: any, onSubmit: (data: TaskFormValues) => Promise<void>, users: any[], onClose: () => void }) {
     const { watch, control, register, setValue } = form;
     const [newSubtask, setNewSubtask] = useState("");
+    const [openSubtaskPopovers, setOpenSubtaskPopovers] = useState<Record<number, boolean>>({});
     
     const { fields, append, remove } = useFieldArray({
       control,
@@ -419,43 +420,46 @@ function TaskForm({ form, onSubmit, users, onClose }: { form: any, onSubmit: (da
                                     />
                                 )}
                             />
-                            <Controller
-                                name={`subtasks.${index}.title`}
-                                control={control}
-                                render={({ field: inputField }) => (
-                                    <Input
-                                        {...inputField}
-                                        className={cn("flex-1", form.watch(`subtasks.${index}.completed`) && "line-through text-muted-foreground")}
-                                    />
-                                )}
-                            />
-                            <Controller
-                                name={`subtasks.${index}.dateRange`}
-                                control={control}
-                                render={({ field: dateField }) => (
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                variant={"outline"}
-                                                size="icon"
-                                                className={cn("w-10 h-10", !dateField.value?.from && "text-muted-foreground")}
-                                            >
-                                                <CalendarIcon className="h-4 w-4" />
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0">
-                                            <Calendar
-                                                initialFocus
-                                                mode="range"
-                                                defaultMonth={dateField.value?.from}
-                                                selected={dateField.value as DateRange}
-                                                onSelect={dateField.onChange}
-                                                numberOfMonths={2}
+                            <Popover open={openSubtaskPopovers[index]} onOpenChange={(open) => setOpenSubtaskPopovers(prev => ({...prev, [index]: open}))}>
+                                <PopoverTrigger asChild>
+                                    <Button variant="outline" className={cn("flex-1 justify-start font-normal h-auto", form.watch(`subtasks.${index}.completed`) && "line-through text-muted-foreground")}>
+                                        <div className="flex flex-col items-start">
+                                            <span>{watch(`subtasks.${index}.title`)}</span>
+                                            {watch(`subtasks.${index}.dateRange.from`) && (
+                                                 <span className="text-xs text-muted-foreground">
+                                                    {format(watch(`subtasks.${index}.dateRange.from`), 'PP')} - {watch(`subtasks.${index}.dateRange.to`) ? format(watch(`subtasks.${index}.dateRange.to`), 'PP') : ''}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-80">
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Label>Subtask Title</Label>
+                                            <Input {...register(`subtasks.${index}.title`)} />
+                                        </div>
+                                         <div className="space-y-2">
+                                            <Label>Date Range</Label>
+                                             <Controller
+                                                name={`subtasks.${index}.dateRange`}
+                                                control={control}
+                                                render={({ field: dateField }) => (
+                                                    <Calendar
+                                                        initialFocus
+                                                        mode="range"
+                                                        defaultMonth={dateField.value?.from}
+                                                        selected={dateField.value as DateRange}
+                                                        onSelect={dateField.onChange}
+                                                        numberOfMonths={1}
+                                                    />
+                                                )}
                                             />
-                                        </PopoverContent>
-                                    </Popover>
-                                )}
-                            />
+                                        </div>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+
                             <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
                                 <X className="h-4 w-4" />
                             </Button>

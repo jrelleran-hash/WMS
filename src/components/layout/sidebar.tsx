@@ -27,7 +27,6 @@ import {
   Book,
   UserCheck,
   ListTodo,
-  List,
 } from "lucide-react";
 import { CoreFlowLogo } from "@/components/icons";
 import { cn } from "@/lib/utils";
@@ -59,6 +58,7 @@ const procurementNavItems: NavItem[] = [
 const logisticsNavItems: NavItem[] = [
     { href: "/logistics", label: "Logistics & Shipment", icon: Truck },
     { href: "/logistics-booking", label: "Logistics Booking", icon: Book },
+    { href: "/vehicles", label: "Vehicle Management", icon: Truck },
 ];
 
 const warehouseNavItems: NavSectionItem[] = [
@@ -89,10 +89,8 @@ export const navItemsPermissions = [
   ...navItems,
   ...procurementNavItems,
   ...logisticsNavItems,
-  { href: "/vehicles", label: "Vehicle Management", icon: Truck},
   ...warehouseNavItems.flatMap(item => 'items' in item ? item.items : [item]),
   { href: "/settings", label: "Settings", icon: Settings },
-  { href: "/categories", label: "Categories", icon: List },
 ] as const;
 
 
