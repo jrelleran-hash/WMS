@@ -69,7 +69,7 @@ const toTitleCase = (str: string) => {
   );
 };
 
-function CategoryRow({ category, level = 0, onEdit, onDelete, canManage }: { category: HierarchicalCategory, level?: number, onEdit: (category: ProductCategory) => void, onDelete: (categoryId: string) => void, canManage: boolean }) {
+function CategoryRow({ category, level = 0, onEdit, onDelete, onAddSubCategory, canManage }: { category: HierarchicalCategory, level?: number, onEdit: (category: ProductCategory) => void, onDelete: (categoryId: string) => void, onAddSubCategory: (parentCategory: ProductCategory) => void, canManage: boolean }) {
     const [isOpen, setIsOpen] = useState(true);
 
     return (
@@ -103,6 +103,7 @@ function CategoryRow({ category, level = 0, onEdit, onDelete, canManage }: { cat
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => onAddSubCategory(category)}>Add Sub-category</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => onEdit(category)}>Edit</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => onDelete(category.id)} className="text-destructive">Delete</DropdownMenuItem>
                     </DropdownMenuContent>
@@ -111,7 +112,7 @@ function CategoryRow({ category, level = 0, onEdit, onDelete, canManage }: { cat
                 )}
             </TableRow>
              {isOpen && category.subcategories.map(subCategory => (
-                <CategoryRow key={subCategory.id} category={subCategory} level={level + 1} onEdit={onEdit} onDelete={onDelete} canManage={canManage} />
+                <CategoryRow key={subCategory.id} category={subCategory} level={level + 1} onEdit={onEdit} onDelete={onDelete} onAddSubCategory={onAddSubCategory} canManage={canManage} />
             ))}
         </React.Fragment>
     )
@@ -212,6 +213,11 @@ export default function CategoriesPage() {
     setEditingCategory(category);
     setIsEditDialogOpen(true);
   };
+
+  const handleAddSubCategoryClick = (parentCategory: ProductCategory) => {
+    form.reset({ parentId: parentCategory.id, name: '' });
+    setIsAddDialogOpen(true);
+  };
   
   const handleDeleteClick = (categoryId: string) => {
     setDeletingCategoryId(categoryId);
@@ -278,7 +284,7 @@ export default function CategoriesPage() {
                 }
               }}>
                 <DialogTrigger asChild>
-                  <Button size="sm" className="gap-1 w-full md:w-auto">
+                  <Button size="sm" className="gap-1 w-full md:w-auto" onClick={() => form.reset({parentId: undefined, name: ''})}>
                     <PlusCircle />
                     Add Category
                   </Button>
@@ -367,7 +373,7 @@ export default function CategoriesPage() {
                   ))
                 ) : (
                   hierarchicalCategories.map((category) => (
-                    <CategoryRow key={category.id} category={category} onEdit={handleEditClick} onDelete={handleDeleteClick} canManage={canManage} />
+                    <CategoryRow key={category.id} category={category} onEdit={handleEditClick} onDelete={handleDeleteClick} onAddSubCategory={handleAddSubCategoryClick} canManage={canManage} />
                   ))
                 )}
               </TableBody>
