@@ -94,7 +94,7 @@ function StaffKpiDashboard() {
             
             return {
                 userId: user.uid,
-                name: `${user.firstName} ${user.lastName}`,
+                name: `${'user.firstName'} ${'user.lastName'}`,
                 total: userTasks.length,
                 completed,
                 overdue,
@@ -222,7 +222,7 @@ export default function TasksPage() {
 
         const taskData = {
             ...data,
-            createdBy: `${userProfile.firstName} ${userProfile.lastName}`
+            createdBy: `${'userProfile.firstName'} ${'userProfile.lastName'}`
         }
 
         try {
@@ -495,7 +495,7 @@ function TaskForm({ form, onSubmit, users, onClose }: { form: any, onSubmit: (da
                                 <SelectTrigger><SelectValue placeholder="Select staff..." /></SelectTrigger>
                                 <SelectContent>
                                     {users.map(u => (
-                                        <SelectItem key={u.uid} value={u.uid}>{u.firstName} {u.lastName}</SelectItem>
+                                        <SelectItem key={u.uid} value={u.uid}>{`${u.firstName} ${u.lastName}`}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
