@@ -120,6 +120,8 @@ const supplierSchema = z.object({
   phone: z.string().optional(),
   cellphoneNumber: z.string().optional(),
   address: z.string().min(1, "Address is required."),
+  type: z.string().min(1, "Supplier type is required."),
+  notes: z.string().optional(),
 });
 
 type SupplierFormValues = z.infer<typeof supplierSchema>;

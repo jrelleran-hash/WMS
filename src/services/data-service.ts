@@ -2042,9 +2042,9 @@ export async function updateToolConditionAndStatus(toolId: string, condition: To
 
 export async function getToolHistory(toolId: string): Promise<ToolBorrowRecord[]> {
     try {
-        const q = query(collection(db, "toolBorrowRecords"), where("toolId", "==", toolId));
+        const q = query(collection(db, "toolBorrowRecords"), where("toolId", "==", toolId), orderBy("dateBorrowed", "desc"));
         const snapshot = await getDocs(q);
-        const records = snapshot.docs.map(doc => {
+        return snapshot.docs.map(doc => {
             const data = doc.data();
              return { 
                 id: doc.id, 
@@ -2054,8 +2054,6 @@ export async function getToolHistory(toolId: string): Promise<ToolBorrowRecord[]
                 dateReturned: data.dateReturned ? (data.dateReturned as Timestamp).toDate() : undefined,
             } as ToolBorrowRecord;
         });
-        // Sort in application code
-        return records.sort((a, b) => b.dateBorrowed.getTime() - a.dateBorrowed.getTime());
     } catch (error) {
         console.error("Error fetching tool history:", error);
         return [];
