@@ -58,7 +58,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { UserRole, PagePermission } from "@/types";
 import { cn } from "@/lib/utils";
-import { Check, MoreHorizontal, X, ChevronsUpDown, User, Eye, EyeOff } from "lucide-react";
+import { Check, MoreHorizontal, X, ChevronsUpDown, User, Eye, EyeOff, List } from "lucide-react";
 import { useData } from "@/context/data-context";
 import { Badge } from "@/components/ui/badge";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -94,6 +94,7 @@ const allPermissions: { group: string; permissions: { value: PagePermission; lab
     ]},
     { group: "Settings", permissions: [
         { value: "/settings", label: "Settings Access"},
+        { value: "/categories", label: "Category Management"},
     ]},
 ];
 
@@ -564,6 +565,34 @@ function SecurityTab() {
   )
 }
 
+function GeneralSettingsTab() {
+    const router = useRouter();
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>General</CardTitle>
+                <CardDescription>General application settings.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-2">
+                    <div 
+                        className="flex items-center justify-between p-4 rounded-md border hover:bg-muted cursor-pointer"
+                        onClick={() => router.push('/categories')}
+                    >
+                        <div className="flex items-center gap-3">
+                            <List className="h-5 w-5 text-muted-foreground" />
+                            <div>
+                                <h3 className="font-semibold">Product Categories</h3>
+                                <p className="text-sm text-muted-foreground">Manage product categories and sub-categories.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
 export default function SettingsPage() {
   const { user, userProfile, refetchUserProfile } = useAuth();
   const { toast } = useToast();
@@ -662,6 +691,7 @@ export default function SettingsPage() {
       <Tabs defaultValue="profile" value={activeTab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList>
           <TabsTrigger value="profile">My Profile</TabsTrigger>
+          <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
@@ -744,6 +774,9 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
         
+        <TabsContent value="general" className="space-y-4">
+          <GeneralSettingsTab />
+        </TabsContent>
 
         <TabsContent value="appearance" className="space-y-4">
           <AppearanceTab />

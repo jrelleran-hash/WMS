@@ -63,7 +63,6 @@ const logisticsNavItems: NavItem[] = [
 
 const warehouseNavItems: NavSectionItem[] = [
     { href: "/inventory", label: "Warehouse Inventory", icon: Package },
-    { href: "/categories", label: "Categories", icon: List },
     { href: "/issuance", label: "Issuance", icon: FileText },
     { href: "/warehouse", label: "Warehouse Mapping", icon: Map },
     { href: "/tasks", label: "Task Management", icon: ListTodo },
@@ -93,6 +92,7 @@ export const navItemsPermissions = [
   { href: "/vehicles", label: "Vehicle Management", icon: Truck},
   ...warehouseNavItems.flatMap(item => 'items' in item ? item.items : [item]),
   { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/categories", label: "Categories", icon: List },
 ] as const;
 
 
