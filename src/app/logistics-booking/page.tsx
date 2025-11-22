@@ -54,29 +54,30 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useData } from "@/context/data-context";
 
-const bookingSchema = z.object({
-  bookingType: z.enum(["Inbound", "Outbound"]),
-  serviceType: z.enum(["Standard", "Express", "Bulk"]),
-  vehicleId: z.string().min(1, "Vehicle is required."),
-  pickupAddress: z.string().min(1, "Pickup address is required."),
-  deliveryAddress: z.string().min(1, "Delivery address is required."),
-  pickupDate: z.date({ required_error: "Pickup date is required." }),
-  itemDescription: z.string().min(1, "Item description is required."),
-  specialInstructions: z.string().optional(),
+const vehicleSchema = z.object({
+  type: z.string().min(1, "Vehicle type is required."),
+  plateNumber: z.string().min(1, "Plate number is required."),
+  make: z.string().min(1, "Make is required."),
+  model: z.string().min(1, "Model is required."),
+  year: z.coerce.number().int().min(1900, "Invalid year.").max(new Date().getFullYear() + 1, "Invalid year."),
+  weightLimit: z.string().optional(),
+  sizeLimit: z.string().optional(),
+  description: z.string().optional(),
 });
 
-type BookingFormValues = z.infer<typeof bookingSchema>;
+
+type VehicleFormValues = z.infer<typeof vehicleSchema>;
 
 export default function LogisticsBookingPage() {
   const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
   const { toast } = useToast();
   const { vehicles, loading } = useData();
 
-  const form = useForm<BookingFormValues>({
-    resolver: zodResolver(bookingSchema),
+  const form = useForm<VehicleFormValues>({
+    resolver: zodResolver(vehicleSchema),
   });
 
-  const onSubmit = (data: BookingFormValues) => {
+  const onSubmit = (data: VehicleFormValues) => {
     console.log(data);
     toast({
       title: "Booking Created",
@@ -88,7 +89,7 @@ export default function LogisticsBookingPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold font-headline tracking-tight">
             Logistics Booking
@@ -102,7 +103,7 @@ export default function LogisticsBookingPage() {
           onOpenChange={setIsBookingDialogOpen}
         >
           <DialogTrigger asChild>
-            <Button>
+            <Button className="w-full sm:w-auto">
               <PlusCircle className="mr-2 h-4 w-4" />
               New Booking
             </Button>
@@ -115,149 +116,18 @@ export default function LogisticsBookingPage() {
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Booking Type</Label>
-                  <Controller
-                    name="bookingType"
-                    control={form.control}
-                    render={({ field }) => (
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select booking type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Inbound">Inbound</SelectItem>
-                          <SelectItem value="Outbound">Outbound</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Service Type</Label>
-                  <Controller
-                    name="serviceType"
-                    control={form.control}
-                    render={({ field }) => (
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select service type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Standard">Standard</SelectItem>
-                          <SelectItem value="Express">Express</SelectItem>
-                          <SelectItem value="Bulk">Bulk</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                </div>
-                 <div className="space-y-2">
-                  <Label>Vehicle</Label>
-                  <Controller
-                    name="vehicleId"
-                    control={form.control}
-                    render={({ field }) => (
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select vehicle" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {loading ? (
-                            <SelectItem value="loading" disabled>Loading...</SelectItem>
-                          ) : (
-                            vehicles.map(v => (
-                              <SelectItem key={v.id} value={v.id}>{v.make} {v.model} ({v.plateNumber})</SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                   {form.formState.errors.vehicleId && <p className="text-sm text-destructive">{form.formState.errors.vehicleId.message}</p>}
-                </div>
-              </div>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="pickupAddress">Pickup Address</Label>
-                  <Textarea
-                    id="pickupAddress"
-                    {...form.register("pickupAddress")}
-                  />
-                  {form.formState.errors.pickupAddress && <p className="text-sm text-destructive">{form.formState.errors.pickupAddress.message}</p>}
+                  <Label htmlFor="type">Vehicle Type</Label>
+                  <Input id="type" {...form.register("type")} placeholder="e.g. Passenger Type, 6-Wheeler Truck" />
+                  {form.formState.errors.type && <p className="text-sm text-destructive">{form.formState.errors.type.message}</p>}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="deliveryAddress">Delivery Address</Label>
-                  <Textarea
-                    id="deliveryAddress"
-                    {...form.register("deliveryAddress")}
-                  />
-                   {form.formState.errors.deliveryAddress && <p className="text-sm text-destructive">{form.formState.errors.deliveryAddress.message}</p>}
+                    <Label htmlFor="plateNumber">Plate Number</Label>
+                    <Input id="plateNumber" {...form.register("plateNumber")} />
+                    {form.formState.errors.plateNumber && <p className="text-sm text-destructive">{form.formState.errors.plateNumber.message}</p>}
                 </div>
               </div>
-                <div className="space-y-2">
-                    <Label>Preferred Pickup Date</Label>
-                     <Controller
-                        control={form.control}
-                        name="pickupDate"
-                        render={({ field }) => (
-                           <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                variant={"outline"}
-                                className={cn(
-                                    "w-full justify-start text-left font-normal",
-                                    !field.value && "text-muted-foreground"
-                                )}
-                                >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                                <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                                initialFocus
-                                />
-                            </PopoverContent>
-                            </Popover>
-                        )}
-                     />
-                    {form.formState.errors.pickupDate && <p className="text-sm text-destructive">{form.formState.errors.pickupDate.message}</p>}
-                </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="itemDescription">Item Description</Label>
-                <Textarea
-                  id="itemDescription"
-                  placeholder="e.g., 2 boxes of construction materials, 50kg total"
-                  {...form.register("itemDescription")}
-                />
-                 {form.formState.errors.itemDescription && <p className="text-sm text-destructive">{form.formState.errors.itemDescription.message}</p>}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="specialInstructions">Special Instructions</Label>
-                <Textarea
-                  id="specialInstructions"
-                  placeholder="e.g., Handle with care, contact person on site is..."
-                  {...form.register("specialInstructions")}
-                />
-              </div>
-
               <DialogFooter>
                 <Button
                   type="button"

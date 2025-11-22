@@ -278,7 +278,7 @@ export function ActiveOrders() {
     <Card className="card-gradient">
       <CardHeader className="flex flex-row items-start justify-between">
         <div>
-          <CardTitle>Active Orders</CardTitle>
+          <CardTitle>Client Orders in Progress</CardTitle>
           <CardDescription>
             A list of all orders currently in progress.
           </CardDescription>
@@ -542,7 +542,7 @@ export function ActiveOrders() {
               </ul>
             </div>
           </div>
-          <DialogFooter className="!justify-between">
+          <DialogFooter className="!justify-between flex-col-reverse sm:flex-row gap-2">
             <div>
                 <Button
                     variant="destructive"
@@ -586,7 +586,7 @@ export function ActiveOrders() {
               }}/>
               {productForm.formState.errors.name && <p className="text-sm text-destructive">{productForm.formState.errors.name.message}</p>}
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="sku-dash">SKU</Label>
@@ -607,7 +607,7 @@ export function ActiveOrders() {
                 {productForm.formState.errors.price && <p className="text-sm text-destructive">{productForm.formState.errors.price.message}</p>}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                <div className="space-y-2">
                 <Label htmlFor="reorderLimit-dash">Reorder Limit</Label>
                 <Input id="reorderLimit-dash" type="number" {...productForm.register("reorderLimit")} />

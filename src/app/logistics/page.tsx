@@ -256,7 +256,7 @@ export default function LogisticsPage() {
                 />
             </div>
             
-             <div className="flex items-center justify-between">
+             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
                   <TabsList>
                       <TabsTrigger value="outbound">Outbound</TabsTrigger>
@@ -285,7 +285,7 @@ export default function LogisticsPage() {
                                             <CardTitle>Site Deliveries</CardTitle>
                                             <CardDescription>A log of all shipments to clients.</CardDescription>
                                         </div>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 flex-wrap">
                                             <Button size="sm" variant="outline" className="gap-1" onClick={() => handleExport('outbound-deliveries')}>
                                                 <FileDown />
                                                 Export to CSV
@@ -380,7 +380,7 @@ export default function LogisticsPage() {
                                     </div>
                                 </CardHeader>
                                 <CardContent>
-                                        <div className="flex items-center gap-2 mb-4">
+                                        <div className="flex items-center gap-2 mb-4 flex-wrap">
                                             {(["all", "Pending", "In Transit", "Delivered", "Delayed", "Cancelled"] as ShipmentStatusFilter[]).map((filter) => (
                                                 <Button
                                                 key={filter}
@@ -470,7 +470,7 @@ export default function LogisticsPage() {
                                     <CardDescription>A log of all returns to suppliers.</CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="flex items-center gap-2 mb-4">
+                                    <div className="flex items-center gap-2 mb-4 flex-wrap">
                                         {(["all", "Pending", "Shipped", "Completed", "Cancelled"] as OutboundReturnStatusFilter[]).map((filter) => (
                                             <Button
                                             key={filter}
@@ -552,7 +552,7 @@ export default function LogisticsPage() {
                                     </div>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="flex items-center gap-2 mb-4">
+                                    <div className="flex items-center gap-2 mb-4 flex-wrap">
                                         {(["all", "Pending", "Shipped", "Delivered", "Completed", "Cancelled"] as POReturnStatusFilter[]).map((filter) => (
                                             <Button
                                             key={filter}
@@ -637,7 +637,7 @@ export default function LogisticsPage() {
                                     <CardDescription>A log of all customer returns.</CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="flex items-center gap-2 mb-4">
+                                    <div className="flex items-center gap-2 mb-4 flex-wrap">
                                         {(["all", "Pending", "Received", "Completed", "Cancelled"] as InboundReturnStatusFilter[]).map((filter) => (
                                             <Button
                                             key={filter}
@@ -713,7 +713,7 @@ export default function LogisticsPage() {
                             </DialogDescription>
                         </DialogHeader>
                         <div className="py-4 space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div><p><strong>Client:</strong></p><p className="text-sm text-muted-foreground">{selectedShipment.issuance.client.clientName}</p></div>
                                 <div><p><strong>Address:</strong></p><p className="text-sm text-muted-foreground">{selectedShipment.issuance.client.address}</p></div>
                                 <div><p><strong>Status:</strong></p><p><Badge variant={outboudStatusVariant[shipment.status]}>{shipment.status}</Badge></p></div>

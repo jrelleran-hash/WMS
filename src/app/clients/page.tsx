@@ -331,62 +331,112 @@ export default function ClientsPage() {
         </div>
       </CardHeader>
       <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Client Name</TableHead>
-                <TableHead className="hidden md:table-cell">Project Name</TableHead>
-                <TableHead className="hidden sm:table-cell">BOQ Number</TableHead>
-                <TableHead className="hidden lg:table-cell">Address</TableHead>
-                <TableHead className="hidden lg:table-cell">Date Added</TableHead>
-                <TableHead>
-                  <span className="sr-only">Actions</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Client Name</TableHead>
+                  <TableHead>Project Name</TableHead>
+                  <TableHead>BOQ Number</TableHead>
+                  <TableHead>Address</TableHead>
+                  <TableHead>Date Added</TableHead>
+                  <TableHead>
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  Array.from({ length: 8 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-48" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-8 w-8" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  clients.map((client) => (
+                    <TableRow key={client.id} onClick={() => handleEditClick(client)} className="cursor-pointer">
+                      <TableCell>{client.clientName}</TableCell>
+                      <TableCell>{client.projectName}</TableCell>
+                      <TableCell>{client.boqNumber}</TableCell>
+                      <TableCell>{client.address}</TableCell>
+                      <TableCell>{formatDate(client.createdAt)}</TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button aria-haspopup="true" size="icon" variant="ghost" onClick={(e) => e.stopPropagation()}>
+                              <MoreHorizontal />
+                              <span className="sr-only">Toggle menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => handleEditClick(client)}>Edit</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDeleteClick(client.id)} className="text-destructive">Delete</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="grid gap-4 md:hidden">
               {loading ? (
-                Array.from({ length: 8 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                    <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-32" /></TableCell>
-                    <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-48" /></TableCell>
-                    <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-8 w-8" /></TableCell>
-                  </TableRow>
-                ))
+                  Array.from({ length: 5 }).map((_, i) => (
+                      <Card key={i}>
+                          <CardHeader className="flex flex-row items-center justify-between">
+                            <Skeleton className="h-6 w-3/5" />
+                            <Skeleton className="h-8 w-8" />
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                              <Skeleton className="h-4 w-4/5" />
+                              <Skeleton className="h-4 w-full" />
+                              <Skeleton className="h-4 w-1/2" />
+                          </CardContent>
+                      </Card>
+                  ))
               ) : (
-                clients.map((client) => (
-                  <TableRow key={client.id} onClick={() => handleEditClick(client)} className="cursor-pointer">
-                    <TableCell>
-                      <div className="font-medium">{client.clientName}</div>
-                      <div className="text-sm text-muted-foreground md:hidden">{client.projectName}</div>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">{client.projectName}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{client.boqNumber}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{client.address}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{formatDate(client.createdAt)}</TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button aria-haspopup="true" size="icon" variant="ghost" onClick={(e) => e.stopPropagation()}>
-                            <MoreHorizontal />
-                            <span className="sr-only">Toggle menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => handleEditClick(client)}>Edit</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDeleteClick(client.id)} className="text-destructive">Delete</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
+                  clients.map((client) => (
+                      <Card key={client.id} onClick={() => handleEditClick(client)} className="cursor-pointer">
+                          <CardHeader className="flex flex-row items-center justify-between">
+                               <div>
+                                  <CardTitle className="text-base">{client.clientName}</CardTitle>
+                                  <CardDescription>{client.projectName}</CardDescription>
+                              </div>
+                              <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                      <Button size="icon" variant="ghost" onClick={(e) => e.stopPropagation()}><MoreHorizontal /></Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                      <DropdownMenuItem onClick={() => handleEditClick(client)}>Edit</DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleDeleteClick(client.id)} className="text-destructive">Delete</DropdownMenuItem>
+                                  </DropdownMenuContent>
+                              </DropdownMenu>
+                          </CardHeader>
+                          <CardContent className="space-y-2 text-sm">
+                              <div>
+                                  <p className="font-medium">BOQ Number</p>
+                                  <p>{client.boqNumber}</p>
+                              </div>
+                              <div>
+                                  <p className="font-medium">Address</p>
+                                  <p>{client.address}</p>
+                              </div>
+                          </CardContent>
+                           <CardFooter className="text-xs text-muted-foreground">
+                              Date Added: {formatDate(client.createdAt)}
+                          </CardFooter>
+                      </Card>
+                  ))
               )}
-            </TableBody>
-          </Table>
+          </div>
       </CardContent>
     </Card>
       
