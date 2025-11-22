@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback, ChangeEvent, KeyboardEvent } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -254,6 +254,7 @@ export default function InventoryPage() {
   const [isAddSupplierOpen, setIsAddSupplierOpen] = useState(false);
   const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
   const searchParams = useSearchParams();
+  const [suggestion, setSuggestion] = useState('');
 
 
   const canEditProduct = userProfile?.role === 'Admin' || userProfile?.role === 'Manager';
@@ -338,6 +339,7 @@ export default function InventoryPage() {
          supplierId: "",
       });
       setAutoGenerateSku(true);
+      setSuggestion('');
     }
   }, [isAddDialogOpen, addForm]);
 
@@ -347,6 +349,8 @@ export default function InventoryPage() {
         ...editingProduct,
         supplierId: suppliers.find(s => s.name === editingProduct.supplier)?.id || '',
       });
+    } else {
+      setSuggestion('');
     }
   }, [editingProduct, editForm, suppliers]);
 
@@ -429,6 +433,32 @@ export default function InventoryPage() {
     };
 }, [products]);
   
+  const handleProductNameChange = (e: ChangeEvent<HTMLInputElement>, currentForm: any) => {
+    const value = toTitleCase(e.target.value);
+    currentForm.setValue("name", value, { shouldValidate: true });
+
+    if (value) {
+        const foundSuggestion = products.find(prod =>
+            prod.name.toLowerCase().startsWith(value.toLowerCase())
+        );
+        if (foundSuggestion && foundSuggestion.name.toLowerCase() !== value.toLowerCase()) {
+            setSuggestion(foundSuggestion.name);
+        } else {
+            setSuggestion('');
+        }
+    } else {
+        setSuggestion('');
+    }
+  };
+  
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>, currentForm: any) => {
+    if ((e.key === 'Tab' || e.key === 'ArrowRight') && suggestion) {
+        e.preventDefault();
+        currentForm.setValue("name", suggestion, { shouldValidate: true });
+        setSuggestion('');
+    }
+  };
+
   const onAddSubmit = async (data: ProductFormValues) => {
     try {
       const { supplierId, ...productData } = data;
@@ -670,11 +700,23 @@ export default function InventoryPage() {
                       <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-2 sm:col-span-2">
                               <Label htmlFor="name">Product Name</Label>
-                              <Input id="name" {...addForm.register("name")} onChange={(e) => {
-                              const { value } = e.target;
-                              e.target.value = toTitleCase(value);
-                              addForm.setValue("name", e.target.value);
-                              }}/>
+                               <div className="relative">
+                                  <Input
+                                      id="name"
+                                      {...addForm.register("name")}
+                                      onChange={(e) => handleProductNameChange(e, addForm)}
+                                      onKeyDown={(e) => handleKeyDown(e, addForm)}
+                                      autoComplete="off"
+                                      className="bg-transparent z-10 relative"
+                                  />
+                                  {suggestion && addForm.getValues("name") && (
+                                      <Input
+                                          className="absolute inset-0 text-muted-foreground z-0"
+                                          value={suggestion}
+                                          disabled
+                                      />
+                                  )}
+                              </div>
                               {addForm.formState.errors.name && <p className="text-sm text-destructive">{addForm.formState.errors.name.message}</p>}
                           </div>
                           <div className="space-y-2">
@@ -1005,11 +1047,23 @@ export default function InventoryPage() {
                 <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2 sm:col-span-2">
                         <Label htmlFor="edit-name">Product Name</Label>
-                        <Input id="edit-name" {...editForm.register("name")} onChange={(e) => {
-                            const { value } = e.target;
-                            e.target.value = toTitleCase(value);
-                            editForm.setValue("name", e.target.value);
-                        }}/>
+                        <div className="relative">
+                            <Input
+                                id="edit-name"
+                                {...editForm.register("name")}
+                                onChange={(e) => handleProductNameChange(e, editForm)}
+                                onKeyDown={(e) => handleKeyDown(e, editForm)}
+                                autoComplete="off"
+                                className="bg-transparent z-10 relative"
+                            />
+                            {suggestion && editForm.getValues("name") && (
+                                <Input
+                                    className="absolute inset-0 text-muted-foreground z-0"
+                                    value={suggestion}
+                                    disabled
+                                />
+                            )}
+                        </div>
                         {editForm.formState.errors.name && <p className="text-sm text-destructive">{editForm.formState.errors.name.message}</p>}
                     </div>
                       <div className="space-y-2">

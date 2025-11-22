@@ -1,8 +1,7 @@
 
-
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, ChangeEvent, KeyboardEvent } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -102,6 +101,7 @@ export default function SuppliersPage() {
   const [emailValidation, setEmailValidation] = useState<{ isValid: boolean; reason?: string; error?: string } | null>(null);
   const [isEmailChecking, setIsEmailChecking] = useState(false);
   const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
+  const [suggestions, setSuggestions] = useState<{ [key: string]: string }>({});
   
   // Forms
   const supplierForm = useForm<SupplierFormValues>({
@@ -121,11 +121,13 @@ export default function SuppliersPage() {
     if (!isAddSupplierOpen) {
       supplierForm.reset({ suppliedCategories: [] });
        setEmailValidation(null);
+       setSuggestions({});
     }
      if (!isEditSupplierOpen) {
         editSupplierForm.reset();
         setEmailValidation(null);
         setEditingSupplier(null);
+        setSuggestions({});
      }
   }, [isAddSupplierOpen, isEditSupplierOpen, supplierForm, editSupplierForm]);
 
@@ -144,6 +146,33 @@ export default function SuppliersPage() {
     if (activeTab === 'all') return suppliers;
     return suppliers.filter(s => s.status && s.status.toLowerCase() === activeTab);
   }, [suppliers, activeTab]);
+
+  const handleSuggestion = (e: ChangeEvent<HTMLInputElement>, field: keyof SupplierFormValues, currentForm: any) => {
+    const value = toTitleCase(e.target.value);
+    currentForm.setValue(field, value, { shouldValidate: true });
+
+    if (value) {
+        const foundSuggestion = suppliers.find(supplier => 
+            String(supplier[field as keyof Supplier]).toLowerCase().startsWith(value.toLowerCase())
+        );
+        
+        if (foundSuggestion && String(foundSuggestion[field as keyof Supplier]).toLowerCase() !== value.toLowerCase()) {
+            setSuggestions(prev => ({...prev, [field]: String(foundSuggestion[field as keyof Supplier])}));
+        } else {
+            setSuggestions(prev => ({...prev, [field]: ''}));
+        }
+    } else {
+        setSuggestions(prev => ({...prev, [field]: ''}));
+    }
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>, field: keyof SupplierFormValues, currentForm: any) => {
+    if ((e.key === 'Tab' || e.key === 'ArrowRight') && suggestions[field]) {
+        e.preventDefault();
+        currentForm.setValue(field, suggestions[field], { shouldValidate: true });
+        setSuggestions(prev => ({...prev, [field]: ''}));
+    }
+  };
 
   
   // Supplier handlers
@@ -334,23 +363,32 @@ export default function SuppliersPage() {
             <form onSubmit={supplierForm.handleSubmit(onAddSupplierSubmit)} className="space-y-4">
                 <div className="space-y-2">
                     <Label htmlFor="name">Supplier Name</Label>
-                    <Input id="name" {...supplierForm.register("name")} onChange={(e) => {
-                        const { value } = e.target;
-                        supplierForm.setValue("name", toTitleCase(value), { shouldValidate: true });
-                    }} />
+                    <div className="relative">
+                        <Input id="name" {...supplierForm.register("name")} onChange={(e) => handleSuggestion(e, 'name', supplierForm)} onKeyDown={(e) => handleKeyDown(e, 'name', supplierForm)} autoComplete="off" className="bg-transparent z-10 relative" />
+                        {suggestions.name && supplierForm.getValues("name") && (
+                            <Input className="absolute inset-0 text-muted-foreground z-0" value={suggestions.name} disabled />
+                        )}
+                    </div>
                     {supplierForm.formState.errors.name && <p className="text-sm text-destructive">{supplierForm.formState.errors.name.message}</p>}
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="type">Supplier Type</Label>
-                    <Input id="type" placeholder="e.g. Local, International, Service Provider" {...supplierForm.register("type")} />
+                    <div className="relative">
+                        <Input id="type" placeholder="e.g. Local, International, Service Provider" {...supplierForm.register("type")} onChange={(e) => handleSuggestion(e, 'type', supplierForm)} onKeyDown={(e) => handleKeyDown(e, 'type', supplierForm)} autoComplete="off" className="bg-transparent z-10 relative" />
+                        {suggestions.type && supplierForm.getValues("type") && (
+                            <Input className="absolute inset-0 text-muted-foreground z-0" value={suggestions.type} disabled />
+                        )}
+                    </div>
                     {supplierForm.formState.errors.type && <p className="text-sm text-destructive">{supplierForm.formState.errors.type.message}</p>}
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="contactPerson">Contact Person</Label>
-                    <Input id="contactPerson" {...supplierForm.register("contactPerson")} onChange={(e) => {
-                        const { value } = e.target;
-                        supplierForm.setValue("contactPerson", toTitleCase(value), { shouldValidate: true });
-                    }} />
+                    <div className="relative">
+                        <Input id="contactPerson" {...supplierForm.register("contactPerson")} onChange={(e) => handleSuggestion(e, 'contactPerson', supplierForm)} onKeyDown={(e) => handleKeyDown(e, 'contactPerson', supplierForm)} autoComplete="off" className="bg-transparent z-10 relative" />
+                        {suggestions.contactPerson && supplierForm.getValues("contactPerson") && (
+                            <Input className="absolute inset-0 text-muted-foreground z-0" value={suggestions.contactPerson} disabled />
+                        )}
+                    </div>
                     {supplierForm.formState.errors.contactPerson && <p className="text-sm text-destructive">{supplierForm.formState.errors.contactPerson.message}</p>}
                 </div>
                 <div className="space-y-2">
@@ -485,23 +523,32 @@ export default function SuppliersPage() {
             <form onSubmit={editSupplierForm.handleSubmit(onEditSupplierSubmit)} className="space-y-4">
                 <div className="space-y-2">
                     <Label htmlFor="edit-name">Supplier Name</Label>
-                    <Input id="edit-name" {...editSupplierForm.register("name")} onChange={(e) => {
-                        const { value } = e.target;
-                        editSupplierForm.setValue("name", toTitleCase(value), { shouldValidate: true });
-                    }} />
+                    <div className="relative">
+                        <Input id="edit-name" {...editSupplierForm.register("name")} onChange={(e) => handleSuggestion(e, 'name', editSupplierForm)} onKeyDown={(e) => handleKeyDown(e, 'name', editSupplierForm)} autoComplete="off" className="bg-transparent z-10 relative" />
+                        {suggestions.name && editSupplierForm.getValues("name") && (
+                            <Input className="absolute inset-0 text-muted-foreground z-0" value={suggestions.name} disabled />
+                        )}
+                    </div>
                     {editSupplierForm.formState.errors.name && <p className="text-sm text-destructive">{editSupplierForm.formState.errors.name.message}</p>}
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="edit-type">Supplier Type</Label>
-                    <Input id="edit-type" placeholder="e.g. Local, International, Service Provider" {...editSupplierForm.register("type")} />
+                    <div className="relative">
+                        <Input id="edit-type" placeholder="e.g. Local, International, Service Provider" {...editSupplierForm.register("type")} onChange={(e) => handleSuggestion(e, 'type', editSupplierForm)} onKeyDown={(e) => handleKeyDown(e, 'type', editSupplierForm)} autoComplete="off" className="bg-transparent z-10 relative" />
+                        {suggestions.type && editSupplierForm.getValues("type") && (
+                            <Input className="absolute inset-0 text-muted-foreground z-0" value={suggestions.type} disabled />
+                        )}
+                    </div>
                     {editSupplierForm.formState.errors.type && <p className="text-sm text-destructive">{editSupplierForm.formState.errors.type.message}</p>}
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="edit-contactPerson">Contact Person</Label>
-                    <Input id="edit-contactPerson" {...editSupplierForm.register("contactPerson")} onChange={(e) => {
-                        const { value } = e.target;
-                        editSupplierForm.setValue("contactPerson", toTitleCase(value), { shouldValidate: true });
-                    }} />
+                    <div className="relative">
+                        <Input id="edit-contactPerson" {...editSupplierForm.register("contactPerson")} onChange={(e) => handleSuggestion(e, 'contactPerson', editSupplierForm)} onKeyDown={(e) => handleKeyDown(e, 'contactPerson', editSupplierForm)} autoComplete="off" className="bg-transparent z-10 relative" />
+                        {suggestions.contactPerson && editSupplierForm.getValues("contactPerson") && (
+                            <Input className="absolute inset-0 text-muted-foreground z-0" value={suggestions.contactPerson} disabled />
+                        )}
+                    </div>
                     {editSupplierForm.formState.errors.contactPerson && <p className="text-sm text-destructive">{editSupplierForm.formState.errors.contactPerson.message}</p>}
                 </div>
                 <div className="space-y-2">
@@ -569,5 +616,3 @@ export default function SuppliersPage() {
     </>
   );
 }
-
-    

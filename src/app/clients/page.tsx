@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, ChangeEvent, KeyboardEvent } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -107,6 +107,7 @@ export default function ClientsPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
   const { toast } = useToast();
+  const [suggestions, setSuggestions] = useState<{ [key: string]: string }>({});
 
   // Memoize schemas to avoid re-creating them on every render
   const addClientSchema = useMemo(() => createClientSchema(clients), [clients]);
@@ -130,6 +131,33 @@ export default function ClientsPage() {
       editForm.reset();
     }
   }, [editingClient, editForm]);
+
+  const handleSuggestion = (e: ChangeEvent<HTMLInputElement>, field: keyof ClientFormValues, currentForm: any) => {
+    const value = toTitleCase(e.target.value);
+    currentForm.setValue(field, value, { shouldValidate: true });
+
+    if (value) {
+        const foundSuggestion = clients.find(client => 
+            String(client[field]).toLowerCase().startsWith(value.toLowerCase())
+        );
+        
+        if (foundSuggestion && String(foundSuggestion[field]).toLowerCase() !== value.toLowerCase()) {
+            setSuggestions(prev => ({...prev, [field]: String(foundSuggestion[field])}));
+        } else {
+            setSuggestions(prev => ({...prev, [field]: ''}));
+        }
+    } else {
+        setSuggestions(prev => ({...prev, [field]: ''}));
+    }
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>, field: keyof ClientFormValues, currentForm: any) => {
+    if ((e.key === 'Tab' || e.key === 'ArrowRight') && suggestions[field]) {
+        e.preventDefault();
+        currentForm.setValue(field, suggestions[field], { shouldValidate: true });
+        setSuggestions(prev => ({...prev, [field]: ''}));
+    }
+  };
 
 
   const onAddSubmit = async (data: ClientFormValues) => {
@@ -214,7 +242,10 @@ export default function ClientsPage() {
         <div className="flex gap-2 mt-4 md:mt-0">
           <Dialog open={isAddDialogOpen} onOpenChange={(isOpen) => {
             setIsAddDialogOpen(isOpen);
-            if(!isOpen) form.reset();
+            if(!isOpen) {
+              form.reset();
+              setSuggestions({});
+            }
           }}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-1 w-full md:w-auto">
@@ -230,26 +261,44 @@ export default function ClientsPage() {
               <form onSubmit={form.handleSubmit(onAddSubmit)} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="projectName">Project Name</Label>
-                  <Input 
-                    id="projectName" 
-                    {...form.register("projectName")} 
-                    onChange={(e) => {
-                      const { value } = e.target;
-                      form.setValue("projectName", toTitleCase(value), { shouldValidate: true });
-                    }}
-                  />
+                  <div className="relative">
+                    <Input
+                        id="projectName"
+                        {...form.register("projectName")}
+                        onChange={(e) => handleSuggestion(e, 'projectName', form)}
+                        onKeyDown={(e) => handleKeyDown(e, 'projectName', form)}
+                        autoComplete="off"
+                        className="bg-transparent z-10 relative"
+                    />
+                    {suggestions.projectName && form.getValues("projectName") && (
+                        <Input
+                            className="absolute inset-0 text-muted-foreground z-0"
+                            value={suggestions.projectName}
+                            disabled
+                        />
+                    )}
+                  </div>
                   {form.formState.errors.projectName && <p className="text-sm text-destructive">{form.formState.errors.projectName.message}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="clientName">Client Name</Label>
-                  <Input 
-                    id="clientName" 
-                    {...form.register("clientName")} 
-                    onChange={(e) => {
-                      const { value } = e.target;
-                      form.setValue("clientName", toTitleCase(value), { shouldValidate: true });
-                    }}
-                  />
+                  <div className="relative">
+                     <Input
+                        id="clientName"
+                        {...form.register("clientName")}
+                        onChange={(e) => handleSuggestion(e, 'clientName', form)}
+                        onKeyDown={(e) => handleKeyDown(e, 'clientName', form)}
+                        autoComplete="off"
+                        className="bg-transparent z-10 relative"
+                    />
+                    {suggestions.clientName && form.getValues("clientName") && (
+                        <Input
+                            className="absolute inset-0 text-muted-foreground z-0"
+                            value={suggestions.clientName}
+                            disabled
+                        />
+                    )}
+                  </div>
                   {form.formState.errors.clientName && <p className="text-sm text-destructive">{form.formState.errors.clientName.message}</p>}
                 </div>
                  <div className="space-y-2">
@@ -346,6 +395,7 @@ export default function ClientsPage() {
         if(!isOpen) {
             setEditingClient(null);
             editForm.reset();
+            setSuggestions({});
         }
     }}>
         <DialogContent className="sm:max-w-md">
@@ -356,26 +406,44 @@ export default function ClientsPage() {
             <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
             <div className="space-y-2">
                 <Label htmlFor="edit-projectName">Project Name</Label>
-                <Input 
-                id="edit-projectName" 
-                {...editForm.register("projectName")} 
-                onChange={(e) => {
-                    const { value } = e.target;
-                    editForm.setValue("projectName", toTitleCase(value), { shouldValidate: true });
-                }}
-                />
+                <div className="relative">
+                    <Input
+                        id="edit-projectName"
+                        {...editForm.register("projectName")}
+                        onChange={(e) => handleSuggestion(e, 'projectName', editForm)}
+                        onKeyDown={(e) => handleKeyDown(e, 'projectName', editForm)}
+                        autoComplete="off"
+                        className="bg-transparent z-10 relative"
+                    />
+                    {suggestions.projectName && editForm.getValues("projectName") && (
+                        <Input
+                            className="absolute inset-0 text-muted-foreground z-0"
+                            value={suggestions.projectName}
+                            disabled
+                        />
+                    )}
+                </div>
                 {editForm.formState.errors.projectName && <p className="text-sm text-destructive">{editForm.formState.errors.projectName.message}</p>}
             </div>
             <div className="space-y-2">
                 <Label htmlFor="edit-clientName">Client Name</Label>
-                <Input 
-                id="edit-clientName" 
-                {...editForm.register("clientName")} 
-                onChange={(e) => {
-                    const { value } = e.target;
-                    editForm.setValue("clientName", toTitleCase(value), { shouldValidate: true });
-                }} 
-                />
+                <div className="relative">
+                    <Input
+                        id="edit-clientName"
+                        {...editForm.register("clientName")}
+                        onChange={(e) => handleSuggestion(e, 'clientName', editForm)}
+                        onKeyDown={(e) => handleKeyDown(e, 'clientName', editForm)}
+                        autoComplete="off"
+                        className="bg-transparent z-10 relative"
+                    />
+                    {suggestions.clientName && editForm.getValues("clientName") && (
+                        <Input
+                            className="absolute inset-0 text-muted-foreground z-0"
+                            value={suggestions.clientName}
+                            disabled
+                        />
+                    )}
+                </div>
                 {editForm.formState.errors.clientName && <p className="text-sm text-destructive">{editForm.formState.errors.clientName.message}</p>}
             </div>
                 <div className="space-y-2">
@@ -426,5 +494,3 @@ export default function ClientsPage() {
     </>
   );
 }
-
-    
