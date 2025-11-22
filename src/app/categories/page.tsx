@@ -2,10 +2,10 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, ChangeEvent, KeyboardEvent } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { PlusCircle, MoreHorizontal, ChevronRight } from "lucide-react";
+import { PlusCircle, MoreHorizontal, ChevronRight, X } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,7 +55,17 @@ const categorySchema = z.object({
   parentId: z.string().optional(),
 });
 
+const multiCategorySchema = z.object({
+    parentId: z.string().optional(),
+    subcategories: z.array(z.object({
+        name: z.string().min(1, "Subcategory name is required.")
+    })).min(1, "At least one subcategory is required.")
+});
+
+
 type CategoryFormValues = z.infer<typeof categorySchema>;
+type MultiCategoryFormValues = z.infer<typeof multiCategorySchema>;
+
 
 interface HierarchicalCategory extends ProductCategory {
     subcategories: HierarchicalCategory[];
@@ -161,8 +171,17 @@ export default function CategoriesPage() {
   }, [productCategories]);
 
 
-  const form = useForm<CategoryFormValues>({
-    resolver: zodResolver(categorySchema),
+  const form = useForm<MultiCategoryFormValues>({
+    resolver: zodResolver(multiCategorySchema),
+     defaultValues: {
+      parentId: undefined,
+      subcategories: [{ name: "" }],
+    },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "subcategories"
   });
 
   const editForm = useForm<CategoryFormValues>({
@@ -181,16 +200,21 @@ export default function CategoriesPage() {
   }, [editingCategory, editForm]);
 
 
-  const onAddSubmit = async (data: CategoryFormValues) => {
+  const onAddSubmit = async (data: MultiCategoryFormValues) => {
     try {
-      await addProductCategory(data.name, data.parentId);
-      toast({ title: "Success", description: "Category added successfully." });
+        let successCount = 0;
+        for (const subcategory of data.subcategories) {
+            await addProductCategory(subcategory.name, data.parentId);
+            successCount++;
+        }
+      
+      toast({ title: "Success", description: `${successCount} categor${successCount > 1 ? 'ies' : 'y'} added successfully.` });
       setIsAddDialogOpen(false);
       form.reset();
       await refetchData();
     } catch (error) {
       console.error(error);
-      const errorMessage = error instanceof Error ? error.message : "Failed to add category.";
+      const errorMessage = error instanceof Error ? error.message : "Failed to add categories.";
       toast({ variant: "destructive", title: "Error", description: errorMessage });
     }
   };
@@ -215,7 +239,7 @@ export default function CategoriesPage() {
   };
 
   const handleAddSubCategoryClick = (parentCategory: ProductCategory) => {
-    form.reset({ parentId: parentCategory.id, name: '' });
+    form.reset({ parentId: parentCategory.id, subcategories: [{ name: '' }] });
     setIsAddDialogOpen(true);
   };
   
@@ -239,9 +263,9 @@ export default function CategoriesPage() {
     }
   };
 
-  const handleCategoryNameChange = (e: ChangeEvent<HTMLInputElement>, currentForm: any) => {
+  const handleCategoryNameChange = (e: ChangeEvent<HTMLInputElement>, currentForm: any, fieldName: string = "name") => {
     const value = toTitleCase(e.target.value);
-    currentForm.setValue("name", value, { shouldValidate: true });
+    currentForm.setValue(fieldName, value, { shouldValidate: true });
 
     if (value) {
         const foundSuggestion = productCategories.find(cat =>
@@ -257,10 +281,10 @@ export default function CategoriesPage() {
     }
   };
   
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>, currentForm: any) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>, currentForm: any, fieldName: string = "name") => {
     if ((e.key === 'Tab' || e.key === 'ArrowRight') && suggestion) {
         e.preventDefault();
-        currentForm.setValue("name", suggestion, { shouldValidate: true });
+        currentForm.setValue(fieldName, suggestion, { shouldValidate: true });
         setSuggestion('');
     }
   };
@@ -279,44 +303,23 @@ export default function CategoriesPage() {
               <Dialog open={isAddDialogOpen} onOpenChange={(isOpen) => {
                 setIsAddDialogOpen(isOpen);
                 if(!isOpen) {
-                  form.reset();
+                  form.reset({ parentId: undefined, subcategories: [{ name: "" }] });
                   setSuggestion('');
                 }
               }}>
                 <DialogTrigger asChild>
-                  <Button size="sm" className="gap-1 w-full md:w-auto" onClick={() => form.reset({parentId: undefined, name: ''})}>
+                  <Button size="sm" className="gap-1 w-full md:w-auto" onClick={() => form.reset({ parentId: undefined, subcategories: [{ name: '' }] })}>
                     <PlusCircle />
                     Add Category
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="sm:max-w-lg">
                   <DialogHeader>
                     <DialogTitle>Add New Category</DialogTitle>
-                    <DialogDescription>Fill in the details for the new category.</DialogDescription>
+                    <DialogDescription>Fill in the details for the new category or sub-categories.</DialogDescription>
                   </DialogHeader>
                   <form onSubmit={form.handleSubmit(onAddSubmit)} className="space-y-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="name">Category Name</Label>
-                        <div className="relative">
-                            <Input
-                                id="name"
-                                {...form.register("name")}
-                                onChange={(e) => handleCategoryNameChange(e, form)}
-                                onKeyDown={(e) => handleKeyDown(e, form)}
-                                autoComplete="off"
-                                className="bg-transparent z-10 relative"
-                            />
-                            {suggestion && form.getValues("name") && (
-                                <Input
-                                    className="absolute inset-0 text-muted-foreground z-0"
-                                    value={suggestion}
-                                    disabled
-                                />
-                            )}
-                        </div>
-                        {form.formState.errors.name && <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>}
-                    </div>
-                     <div className="space-y-2">
+                      <div className="space-y-2">
                       <Label htmlFor="parentId">Parent Category (Optional)</Label>
                         <Controller
                             name="parentId"
@@ -336,12 +339,35 @@ export default function CategoriesPage() {
                             )}
                         />
                     </div>
+                    <div className="space-y-2">
+                        <Label>Category / Sub-category Names</Label>
+                        {fields.map((item, index) => (
+                           <div key={item.id} className="flex items-center gap-2">
+                                <Input
+                                    {...form.register(`subcategories.${index}.name` as const)}
+                                    placeholder={`Sub-category ${index + 1}`}
+                                    onChange={(e) => handleCategoryNameChange(e, form, `subcategories.${index}.name`)}
+                                    onKeyDown={(e) => handleKeyDown(e, form, `subcategories.${index}.name`)}
+                                    autoComplete="off"
+                                />
+                                <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
+                                    <X className="h-4 w-4" />
+                                </Button>
+                           </div>
+                        ))}
+                         {form.formState.errors.subcategories && <p className="text-sm text-destructive">{form.formState.errors.subcategories.message || form.formState.errors.subcategories.root?.message}</p>}
+                    </div>
+
+                    <Button type="button" variant="outline" size="sm" onClick={() => append({ name: "" })}>
+                        <PlusCircle className="mr-2 h-4 w-4"/>
+                        Add another
+                    </Button>
                     <DialogFooter>
                       <DialogClose asChild>
                         <Button type="button" variant="outline">Cancel</Button>
                       </DialogClose>
                       <Button type="submit" disabled={form.formState.isSubmitting}>
-                        {form.formState.isSubmitting ? "Adding..." : "Add Category"}
+                        {form.formState.isSubmitting ? "Adding..." : "Add Categories"}
                       </Button>
                     </DialogFooter>
                   </form>
