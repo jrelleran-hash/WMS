@@ -80,7 +80,7 @@ const toTitleCase = (str: string) => {
 };
 
 function CategoryRow({ category, level = 0, onEdit, onDelete, onAddSubCategory, canManage }: { category: HierarchicalCategory, level?: number, onEdit: (category: ProductCategory) => void, onDelete: (categoryId: string) => void, onAddSubCategory: (parentCategory: ProductCategory) => void, canManage: boolean }) {
-    const [isOpen, setIsOpen] = useState(true);
+    const [isOpen, setIsOpen] = useState(false);
 
     return (
         <React.Fragment>
