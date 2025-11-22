@@ -512,7 +512,10 @@ export default function ToolManagementPage() {
                                                 </DropdownMenuSub>
                                             )}
                                             <DropdownMenuItem onClick={() => setEditingTool(tool)}>Edit</DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => setHistoryTool(tool)}>History</DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => setHistoryTool(tool)}>
+                                                <History className="mr-2 h-4 w-4"/>
+                                                History
+                                            </DropdownMenuItem>
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem className="text-destructive" onClick={() => { setDeletingToolId(tool.id); setIsDeleteDialogOpen(true);}}>Delete</DropdownMenuItem>
                                         </DropdownMenuContent>
@@ -997,3 +1000,7 @@ export default function ToolManagementPage() {
     </div>
   );
 }
+
+
+
+    
