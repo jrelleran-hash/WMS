@@ -48,6 +48,7 @@ import type { ProductCategory } from "@/types";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const categorySchema = z.object({
   name: z.string().min(1, "Category name is required."),
@@ -303,8 +304,9 @@ export default function CategoriesPage() {
           )}
         </CardHeader>
         <CardContent>
+          <ScrollArea className="h-[calc(100vh-22rem)]">
             <Table>
-              <TableHeader>
+              <TableHeader className="sticky top-0 bg-card z-10">
                 <TableRow>
                   <TableHead>Category Name</TableHead>
                   {canManage && (
@@ -316,7 +318,7 @@ export default function CategoriesPage() {
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
+                  Array.from({ length: 15 }).map((_, i) => (
                     <TableRow key={i}>
                       <TableCell><Skeleton className="h-4 w-48" /></TableCell>
                       {canManage && <TableCell><Skeleton className="h-8 w-8" /></TableCell>}
@@ -329,6 +331,7 @@ export default function CategoriesPage() {
                 )}
               </TableBody>
             </Table>
+          </ScrollArea>
         </CardContent>
       </Card>
       
