@@ -10,10 +10,10 @@ import { format, addYears, isBefore, startOfToday, differenceInDays } from 'date
 
 import { useData } from '@/context/data-context';
 import { useToast } from '@/hooks/use-toast';
-import { addVehicle, updateVehicle } from '@/services/data-service';
+import { addVehicle, updateVehicle, deleteVehicle } from '@/services/data-service';
 import type { Vehicle } from '@/types';
 
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -35,6 +35,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog,
@@ -45,6 +46,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -85,7 +96,9 @@ export default function VehiclesPage() {
   const { vehicles, loading, refetchData } = useData();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
+  const [deletingVehicleId, setDeletingVehicleId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const form = useForm<VehicleFormValues>({
@@ -152,6 +165,30 @@ export default function VehiclesPage() {
         toast({ variant: "destructive", title: "Error", description: "Failed to update vehicle."});
     }
   }
+
+  const handleDeleteClick = (vehicleId: string) => {
+    setDeletingVehicleId(vehicleId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingVehicleId) return;
+    try {
+      await deleteVehicle(deletingVehicleId);
+      toast({ title: "Success", description: "Vehicle deleted successfully." });
+      await refetchData();
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete vehicle.",
+      });
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setDeletingVehicleId(null);
+    }
+  };
+
 
   const handleRegistrationDateChange = (date: Date | undefined, currentForm: any) => {
     currentForm.setValue("registrationDate", date);
@@ -317,6 +354,7 @@ export default function VehiclesPage() {
   )
 
   return (
+    <>
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -391,7 +429,7 @@ export default function VehiclesPage() {
                 vehicles.map((vehicle) => {
                   const expiryStatus = getExpiryStatus(vehicle.registrationExpiryDate?.toDate());
                   return (
-                  <TableRow key={vehicle.id} onClick={() => setEditingVehicle(vehicle)} className="cursor-pointer">
+                  <TableRow key={vehicle.id}>
                     <TableCell>
                         <div className="font-medium">{vehicle.make} {vehicle.model} ({vehicle.year})</div>
                         <div className="text-sm text-muted-foreground">{vehicle.type}</div>
@@ -430,6 +468,13 @@ export default function VehiclesPage() {
                               <DropdownMenuItem onSelect={() => setEditingVehicle(vehicle)}>
                                 Edit
                               </DropdownMenuItem>
+                               <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onSelect={() => handleDeleteClick(vehicle.id)}
+                              >
+                                Delete
+                              </DropdownMenuItem>
                           </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -465,5 +510,22 @@ export default function VehiclesPage() {
           </DialogContent>
         </Dialog>
     </div>
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete this vehicle from your records.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className={buttonVariants({ variant: "destructive" })}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

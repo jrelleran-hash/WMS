@@ -2562,6 +2562,16 @@ export async function updateVehicle(vehicleId: string, data: Partial<Omit<Vehicl
     }
 }
 
+export async function deleteVehicle(vehicleId: string): Promise<void> {
+    try {
+        const vehicleRef = doc(db, "vehicles", vehicleId);
+        await deleteDoc(vehicleRef);
+    } catch (error) {
+        console.error("Error deleting vehicle:", error);
+        throw new Error("Failed to delete vehicle.");
+    }
+}
+
 
 export async function getTasks(): Promise<Task[]> {
     try {
