@@ -165,13 +165,17 @@ export default function VehiclesPage() {
   
   const formatDate = (date: any) => {
     if(!date) return 'N/A';
-    return format(date.toDate ? date.toDate() : new Date(date), 'PPP');
+    // Handle both Firestore Timestamp and JS Date objects
+    const jsDate = date.toDate ? date.toDate() : new Date(date);
+    if (isNaN(jsDate.getTime())) return 'Invalid Date';
+    return format(jsDate, 'PPP');
   }
   
   const getExpiryStatus = (expiryDate?: Date): { color: string, message: string } | null => {
     if (!expiryDate) return null;
     const today = startOfToday();
     const expiry = new Date(expiryDate);
+    if (isNaN(expiry.getTime())) return null;
     const daysUntilExpiry = differenceInDays(expiry, today);
 
     if (isBefore(expiry, today)) {
