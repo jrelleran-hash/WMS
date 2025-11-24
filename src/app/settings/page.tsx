@@ -245,7 +245,7 @@ function UserManagementTable({ isAdmin }: { isAdmin: boolean }) {
                                                     <DropdownMenuSub>
                                                         <DropdownMenuSubTrigger>Change Role</DropdownMenuSubTrigger>
                                                         <DropdownMenuSubContent>
-                                                            {(["Admin", "Manager", "Staff", "Worker", "Approver"] as UserRole[]).map(role => (
+                                                            {(["Admin", "Manager", "Staff", "Worker", "Approver", "Site Coordinator"] as UserRole[]).map(role => (
                                                                 <DropdownMenuItem 
                                                                     key={role}
                                                                     disabled={u.role === role}

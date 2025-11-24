@@ -220,7 +220,7 @@ export interface OutboundReturn {
     dateShipped?: Date;
 }
 
-export type UserRole = "Admin" | "Manager" | "Staff" | "Worker" | "Approver";
+export type UserRole = "Admin" | "Manager" | "Staff" | "Worker" | "Approver" | "Site Coordinator";
 export type PagePermission = "/" | "/clients" | "/logistics" | "/analytics" | "/orders" | "/purchase-orders" | "/suppliers" | "/inventory" | "/issuance" | "/returns" | "/quality-control" | "/settings" | "/warehouse" | "/tools" | "/tool-maintenance" | "/waste-management" | "/logistics-booking" | "/tool-booking" | "/vehicles" | "/tool-accountability" | "/tasks" | "/categories";
 
 export interface UserProfile {
