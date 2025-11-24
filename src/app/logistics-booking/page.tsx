@@ -66,17 +66,19 @@ const bookingSchema = z.object({
 
 const backloadSchema = z.object({
     hasBackload: z.boolean().default(false),
+    serviceType: z.string().optional(),
     pickupAddress: z.string().optional(),
     deliveryAddress: z.string().optional(),
     itemDescription: z.string().optional(),
+    specialInstructions: z.string().optional(),
 }).refine(data => {
     if (data.hasBackload) {
-        return data.pickupAddress && data.deliveryAddress && data.itemDescription;
+        return data.pickupAddress && data.deliveryAddress && data.itemDescription && data.serviceType;
     }
     return true;
 }, {
     message: "Please fill all backload fields if selected.",
-    path: ["pickupAddress"], // Arbitrary path
+    path: ["pickupAddress"],
 });
 
 
@@ -329,10 +331,32 @@ export default function LogisticsBookingPage() {
           <DialogHeader>
             <DialogTitle>Backload Booking (Step 2 of 2)</DialogTitle>
             <DialogDescription>
-              Optional: Add details for a backload to maximize this trip.
+              Optional: Add delivery details for a backload to maximize this trip.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={backloadForm.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="space-y-2">
+                <Label>Service Type</Label>
+                  <Controller
+                    name="serviceType"
+                    control={backloadForm.control}
+                    render={({ field }) => (
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select service type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Standard">Standard</SelectItem>
+                          <SelectItem value="Express">Express</SelectItem>
+                          <SelectItem value="Bulk">Bulk</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="backloadPickupAddress">Backload Pickup Address</Label>
@@ -356,6 +380,14 @@ export default function LogisticsBookingPage() {
                   {...backloadForm.register("itemDescription")}
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="backloadSpecialInstructions">Backload Special Instructions</Label>
+                <Textarea
+                  id="backloadSpecialInstructions"
+                  {...backloadForm.register("specialInstructions")}
+                />
+              </div>
+
                {backloadForm.formState.errors.root && <p className="text-sm text-destructive">{backloadForm.formState.errors.root.message}</p>}
 
               <DialogFooter className="!justify-between">
