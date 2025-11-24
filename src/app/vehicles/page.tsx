@@ -30,6 +30,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -412,9 +419,19 @@ export default function VehiclesPage() {
                       <Badge variant={statusVariant[vehicle.status] || 'default'}>{vehicle.status}</Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                       <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                       </Button>
+                       <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
+                                  <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuItem onSelect={() => setEditingVehicle(vehicle)}>
+                                Edit
+                              </DropdownMenuItem>
+                          </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 )})
