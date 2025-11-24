@@ -2528,6 +2528,7 @@ export async function addVehicle(vehicle: Omit<Vehicle, 'id' | 'createdAt' | 'st
       ...vehicle,
       status: 'Available' as const,
       createdAt: Timestamp.now(),
+      crDate: vehicle.crDate ? Timestamp.fromDate(vehicle.crDate) : null,
       registrationDate: vehicle.registrationDate ? Timestamp.fromDate(vehicle.registrationDate) : null,
       registrationExpiryDate: vehicle.registrationExpiryDate ? Timestamp.fromDate(vehicle.registrationExpiryDate) : null,
       registrationDuration: vehicle.registrationDuration || 1,
@@ -2544,6 +2545,9 @@ export async function updateVehicle(vehicleId: string, data: Partial<Omit<Vehicl
         const vehicleRef = doc(db, "vehicles", vehicleId);
         const payload: { [key: string]: any } = { ...data };
 
+        if (data.crDate) {
+            payload.crDate = Timestamp.fromDate(data.crDate);
+        }
         if (data.registrationDate) {
             payload.registrationDate = Timestamp.fromDate(data.registrationDate);
         }

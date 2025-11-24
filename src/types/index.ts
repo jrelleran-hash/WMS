@@ -319,6 +319,9 @@ export interface Vehicle {
     weightLimit?: string;
     sizeLimit?: string;
     description?: string;
+    crNumber?: string;
+    crDate?: Timestamp;
+    latestOrNumber?: string;
     registrationDate?: Timestamp;
     registrationExpiryDate?: Timestamp;
     registrationDuration?: number;

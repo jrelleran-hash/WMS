@@ -57,6 +57,9 @@ const vehicleSchema = z.object({
   weightLimit: z.string().optional(),
   sizeLimit: z.string().optional(),
   description: z.string().optional(),
+  crNumber: z.string().optional(),
+  crDate: z.date().optional(),
+  latestOrNumber: z.string().optional(),
   registrationDate: z.date().optional(),
   registrationExpiryDate: z.date().optional(),
   registrationDuration: z.coerce.number().int().min(1, "Duration must be at least 1 year.").optional(),
@@ -101,6 +104,7 @@ export default function VehiclesPage() {
     if(editingVehicle) {
       editForm.reset({
         ...editingVehicle,
+        crDate: editingVehicle.crDate ? new Date(editingVehicle.crDate) : undefined,
         registrationDate: editingVehicle.registrationDate ? new Date(editingVehicle.registrationDate) : undefined,
         registrationExpiryDate: editingVehicle.registrationExpiryDate ? new Date(editingVehicle.registrationExpiryDate) : undefined,
         registrationDuration: editingVehicle.registrationDuration || 1,
@@ -222,6 +226,35 @@ export default function VehiclesPage() {
                 <Input id="sizeLimit" {...currentForm.register("sizeLimit")} placeholder="e.g. 3.2 x 1.9 x 2.3 ft" />
             </div>
         </div>
+
+         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+             <div className="space-y-2">
+                <Label htmlFor="crNumber">CR Number (Optional)</Label>
+                <Input id="crNumber" {...currentForm.register("crNumber")} />
+            </div>
+             <div className="space-y-2">
+                <Label>CR Date (Optional)</Label>
+                <Controller
+                    control={currentForm.control}
+                    name="crDate"
+                    render={({ field }) => (
+                       <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
+                       </Popover>
+                    )}
+                />
+            </div>
+             <div className="space-y-2">
+                <Label htmlFor="latestOrNumber">Latest OR # (Optional)</Label>
+                <Input id="latestOrNumber" {...currentForm.register("latestOrNumber")} />
+            </div>
+        </div>
         
          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-2">
@@ -325,6 +358,7 @@ export default function VehiclesPage() {
               <TableRow>
                 <TableHead>Vehicle</TableHead>
                 <TableHead>Plate Number</TableHead>
+                <TableHead className="hidden md:table-cell">CR Number</TableHead>
                 <TableHead className="hidden md:table-cell">Expiry Date</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -336,6 +370,7 @@ export default function VehiclesPage() {
                   <TableRow key={i}>
                     <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-48" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
                     <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
@@ -351,6 +386,7 @@ export default function VehiclesPage() {
                         <div className="text-sm text-muted-foreground">{vehicle.type}</div>
                     </TableCell>
                     <TableCell>{vehicle.plateNumber}</TableCell>
+                    <TableCell className="hidden md:table-cell">{vehicle.crNumber || 'N/A'}</TableCell>
                     <TableCell className="hidden md:table-cell">
                       <div className="flex items-center gap-2">
                         <span>{formatDate(vehicle.registrationExpiryDate)}</span>
