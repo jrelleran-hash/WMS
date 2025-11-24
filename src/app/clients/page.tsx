@@ -45,6 +45,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { addClient, updateClient, deleteClient } from "@/services/data-service";
 import { useData } from "@/context/data-context";
+import { useAuth } from "@/hooks/use-auth";
 
 import type { Client } from "@/types";
 
@@ -101,6 +102,7 @@ const toTitleCase = (str: string) => {
 
 export default function ClientsPage() {
   const { clients, loading, refetchData } = useData();
+  const { userProfile } = useAuth();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
@@ -108,6 +110,8 @@ export default function ClientsPage() {
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
   const { toast } = useToast();
   const [suggestions, setSuggestions] = useState<{ [key: string]: string }>({});
+
+  const canManage = useMemo(() => userProfile?.role === "Admin" || userProfile?.role === "Manager", [userProfile]);
 
   // Memoize schemas to avoid re-creating them on every render
   const addClientSchema = useMemo(() => createClientSchema(clients), [clients]);
@@ -239,98 +243,101 @@ export default function ClientsPage() {
           <CardTitle>Clients</CardTitle>
           <CardDescription>Manage your client database.</CardDescription>
         </div>
-        <div className="flex gap-2 mt-4 md:mt-0">
-          <Dialog open={isAddDialogOpen} onOpenChange={(isOpen) => {
-            setIsAddDialogOpen(isOpen);
-            if(!isOpen) {
-              form.reset();
-              setSuggestions({});
-            }
-          }}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="gap-1 w-full md:w-auto">
-                <PlusCircle />
-                Add Client
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Add New Client</DialogTitle>
-                <DialogDescription>Fill in the details for the new client.</DialogDescription>
-              </DialogHeader>
-              <form onSubmit={form.handleSubmit(onAddSubmit)} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="projectName">Project Name</Label>
-                  <div className="relative">
-                    <Input
-                        id="projectName"
-                        {...form.register("projectName")}
-                        onChange={(e) => handleSuggestion(e, 'projectName', form)}
-                        onKeyDown={(e) => handleKeyDown(e, 'projectName', form)}
-                        autoComplete="off"
-                        className="bg-transparent z-10 relative"
-                    />
-                    {suggestions.projectName && form.getValues("projectName") && (
+        {canManage && (
+            <div className="flex gap-2 mt-4 md:mt-0">
+            <Dialog open={isAddDialogOpen} onOpenChange={(isOpen) => {
+                setIsAddDialogOpen(isOpen);
+                if(!isOpen) {
+                form.reset();
+                setSuggestions({});
+                }
+            }}>
+                <DialogTrigger asChild>
+                <Button size="sm" className="gap-1 w-full md:w-auto">
+                    <PlusCircle />
+                    Add Client
+                </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Add New Client</DialogTitle>
+                    <DialogDescription>Fill in the details for the new client.</DialogDescription>
+                </DialogHeader>
+                <form onSubmit={form.handleSubmit(onAddSubmit)} className="space-y-4">
+                    <div className="space-y-2">
+                    <Label htmlFor="projectName">Project Name</Label>
+                    <div className="relative">
                         <Input
-                            className="absolute inset-0 text-muted-foreground z-0"
-                            value={suggestions.projectName}
-                            disabled
+                            id="projectName"
+                            {...form.register("projectName")}
+                            onChange={(e) => handleSuggestion(e, 'projectName', form)}
+                            onKeyDown={(e) => handleKeyDown(e, 'projectName', form)}
+                            autoComplete="off"
+                            className="bg-transparent z-10 relative"
                         />
-                    )}
-                  </div>
-                  {form.formState.errors.projectName && <p className="text-sm text-destructive">{form.formState.errors.projectName.message}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="clientName">Client Name</Label>
-                  <div className="relative">
-                     <Input
-                        id="clientName"
-                        {...form.register("clientName")}
-                        onChange={(e) => handleSuggestion(e, 'clientName', form)}
-                        onKeyDown={(e) => handleKeyDown(e, 'clientName', form)}
-                        autoComplete="off"
-                        className="bg-transparent z-10 relative"
-                    />
-                    {suggestions.clientName && form.getValues("clientName") && (
+                        {suggestions.projectName && form.getValues("projectName") && (
+                            <Input
+                                className="absolute inset-0 text-muted-foreground z-0"
+                                value={suggestions.projectName}
+                                disabled
+                            />
+                        )}
+                    </div>
+                    {form.formState.errors.projectName && <p className="text-sm text-destructive">{form.formState.errors.projectName.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                    <Label htmlFor="clientName">Client Name</Label>
+                    <div className="relative">
                         <Input
-                            className="absolute inset-0 text-muted-foreground z-0"
-                            value={suggestions.clientName}
-                            disabled
+                            id="clientName"
+                            {...form.register("clientName")}
+                            onChange={(e) => handleSuggestion(e, 'clientName', form)}
+                            onKeyDown={(e) => handleKeyDown(e, 'clientName', form)}
+                            autoComplete="off"
+                            className="bg-transparent z-10 relative"
                         />
-                    )}
-                  </div>
-                  {form.formState.errors.clientName && <p className="text-sm text-destructive">{form.formState.errors.clientName.message}</p>}
-                </div>
-                 <div className="space-y-2">
-                  <Label htmlFor="boqNumber">BOQ Number</Label>
-                  <Input 
-                    id="boqNumber" 
-                    {...form.register("boqNumber")}
-                  />
-                  {form.formState.errors.boqNumber && <p className="text-sm text-destructive">{form.formState.errors.boqNumber.message}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="address">Address</Label>
-                  <Input 
-                    id="address" 
-                    {...form.register("address")}
-                   />
-                  {form.formState.errors.address && <p className="text-sm text-destructive">{form.formState.errors.address.message}</p>}
-                </div>
-                <DialogFooter>
-                  <DialogClose asChild>
-                    <Button type="button" variant="outline">Cancel</Button>
-                  </DialogClose>
-                  <Button type="submit" disabled={!form.formState.isValid || form.formState.isSubmitting}>
-                    {form.formState.isSubmitting ? "Adding..." : "Add Client"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
+                        {suggestions.clientName && form.getValues("clientName") && (
+                            <Input
+                                className="absolute inset-0 text-muted-foreground z-0"
+                                value={suggestions.clientName}
+                                disabled
+                            />
+                        )}
+                    </div>
+                    {form.formState.errors.clientName && <p className="text-sm text-destructive">{form.formState.errors.clientName.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                    <Label htmlFor="boqNumber">BOQ Number</Label>
+                    <Input 
+                        id="boqNumber" 
+                        {...form.register("boqNumber")}
+                    />
+                    {form.formState.errors.boqNumber && <p className="text-sm text-destructive">{form.formState.errors.boqNumber.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                    <Label htmlFor="address">Address</Label>
+                    <Input 
+                        id="address" 
+                        {...form.register("address")}
+                    />
+                    {form.formState.errors.address && <p className="text-sm text-destructive">{form.formState.errors.address.message}</p>}
+                    </div>
+                    <DialogFooter>
+                    <DialogClose asChild>
+                        <Button type="button" variant="outline">Cancel</Button>
+                    </DialogClose>
+                    <Button type="submit" disabled={!form.formState.isValid || form.formState.isSubmitting}>
+                        {form.formState.isSubmitting ? "Adding..." : "Add Client"}
+                    </Button>
+                    </DialogFooter>
+                </form>
+                </DialogContent>
+            </Dialog>
+            </div>
+        )}
       </CardHeader>
       <CardContent>
+<<<<<<< HEAD
           <div className="hidden md:block">
             <Table>
               <TableHeader>
@@ -435,112 +442,175 @@ export default function ClientsPage() {
                           </CardFooter>
                       </Card>
                   ))
+=======
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Client Name</TableHead>
+                <TableHead className="hidden md:table-cell">Project Name</TableHead>
+                <TableHead className="hidden sm:table-cell">BOQ Number</TableHead>
+                <TableHead className="hidden lg:table-cell">Address</TableHead>
+                <TableHead className="hidden lg:table-cell">Date Added</TableHead>
+                {canManage && (
+                    <TableHead>
+                        <span className="sr-only">Actions</span>
+                    </TableHead>
+                )}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                Array.from({ length: 8 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-48" /></TableCell>
+                    <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
+                    {canManage && <TableCell><Skeleton className="h-8 w-8" /></TableCell>}
+                  </TableRow>
+                ))
+              ) : (
+                clients.map((client) => (
+                  <TableRow key={client.id} onClick={() => canManage && handleEditClick(client)} className={cn(canManage && "cursor-pointer")}>
+                    <TableCell>
+                      <div className="font-medium">{client.clientName}</div>
+                      <div className="text-sm text-muted-foreground md:hidden">{client.projectName}</div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">{client.projectName}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{client.boqNumber}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{client.address}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{formatDate(client.createdAt)}</TableCell>
+                    {canManage && (
+                        <TableCell>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                            <Button aria-haspopup="true" size="icon" variant="ghost" onClick={(e) => e.stopPropagation()}>
+                                <MoreHorizontal />
+                                <span className="sr-only">Toggle menu</span>
+                            </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => handleEditClick(client)}>Edit</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDeleteClick(client.id)} className="text-destructive">Delete</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        </TableCell>
+                    )}
+                  </TableRow>
+                ))
+>>>>>>> 58e70c0 (lets fix the user's accessibility depending on the user's role)
               )}
           </div>
       </CardContent>
     </Card>
       
-    <Dialog open={isEditDialogOpen} onOpenChange={(isOpen) => {
-        setIsEditDialogOpen(isOpen);
-        if(!isOpen) {
-            setEditingClient(null);
-            editForm.reset();
-            setSuggestions({});
-        }
-    }}>
-        <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-            <DialogTitle>Edit Client</DialogTitle>
-            {editingClient && <DialogDescription>Update the details for {editingClient.clientName}.</DialogDescription>}
-            </DialogHeader>
-            <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
-            <div className="space-y-2">
-                <Label htmlFor="edit-projectName">Project Name</Label>
-                <div className="relative">
-                    <Input
-                        id="edit-projectName"
-                        {...editForm.register("projectName")}
-                        onChange={(e) => handleSuggestion(e, 'projectName', editForm)}
-                        onKeyDown={(e) => handleKeyDown(e, 'projectName', editForm)}
-                        autoComplete="off"
-                        className="bg-transparent z-10 relative"
-                    />
-                    {suggestions.projectName && editForm.getValues("projectName") && (
-                        <Input
-                            className="absolute inset-0 text-muted-foreground z-0"
-                            value={suggestions.projectName}
-                            disabled
+    {canManage && (
+        <>
+            <Dialog open={isEditDialogOpen} onOpenChange={(isOpen) => {
+                setIsEditDialogOpen(isOpen);
+                if(!isOpen) {
+                    setEditingClient(null);
+                    editForm.reset();
+                    setSuggestions({});
+                }
+            }}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                    <DialogTitle>Edit Client</DialogTitle>
+                    {editingClient && <DialogDescription>Update the details for {editingClient.clientName}.</DialogDescription>}
+                    </DialogHeader>
+                    <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="edit-projectName">Project Name</Label>
+                        <div className="relative">
+                            <Input
+                                id="edit-projectName"
+                                {...editForm.register("projectName")}
+                                onChange={(e) => handleSuggestion(e, 'projectName', editForm)}
+                                onKeyDown={(e) => handleKeyDown(e, 'projectName', editForm)}
+                                autoComplete="off"
+                                className="bg-transparent z-10 relative"
+                            />
+                            {suggestions.projectName && editForm.getValues("projectName") && (
+                                <Input
+                                    className="absolute inset-0 text-muted-foreground z-0"
+                                    value={suggestions.projectName}
+                                    disabled
+                                />
+                            )}
+                        </div>
+                        {editForm.formState.errors.projectName && <p className="text-sm text-destructive">{editForm.formState.errors.projectName.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="edit-clientName">Client Name</Label>
+                        <div className="relative">
+                            <Input
+                                id="edit-clientName"
+                                {...editForm.register("clientName")}
+                                onChange={(e) => handleSuggestion(e, 'clientName', editForm)}
+                                onKeyDown={(e) => handleKeyDown(e, 'clientName', editForm)}
+                                autoComplete="off"
+                                className="bg-transparent z-10 relative"
+                            />
+                            {suggestions.clientName && editForm.getValues("clientName") && (
+                                <Input
+                                    className="absolute inset-0 text-muted-foreground z-0"
+                                    value={suggestions.clientName}
+                                    disabled
+                                />
+                            )}
+                        </div>
+                        {editForm.formState.errors.clientName && <p className="text-sm text-destructive">{editForm.formState.errors.clientName.message}</p>}
+                    </div>
+                        <div className="space-y-2">
+                        <Label htmlFor="edit-boqNumber">BOQ Number</Label>
+                        <Input 
+                        id="edit-boqNumber" 
+                        {...editForm.register("boqNumber")}
                         />
-                    )}
-                </div>
-                {editForm.formState.errors.projectName && <p className="text-sm text-destructive">{editForm.formState.errors.projectName.message}</p>}
-            </div>
-            <div className="space-y-2">
-                <Label htmlFor="edit-clientName">Client Name</Label>
-                <div className="relative">
-                    <Input
-                        id="edit-clientName"
-                        {...editForm.register("clientName")}
-                        onChange={(e) => handleSuggestion(e, 'clientName', editForm)}
-                        onKeyDown={(e) => handleKeyDown(e, 'clientName', editForm)}
-                        autoComplete="off"
-                        className="bg-transparent z-10 relative"
-                    />
-                    {suggestions.clientName && editForm.getValues("clientName") && (
-                        <Input
-                            className="absolute inset-0 text-muted-foreground z-0"
-                            value={suggestions.clientName}
-                            disabled
+                        {editForm.formState.errors.boqNumber && <p className="text-sm text-destructive">{editForm.formState.errors.boqNumber.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="edit-address">Address</Label>
+                        <Input 
+                        id="edit-address" 
+                        {...editForm.register("address")}
                         />
-                    )}
-                </div>
-                {editForm.formState.errors.clientName && <p className="text-sm text-destructive">{editForm.formState.errors.clientName.message}</p>}
-            </div>
-                <div className="space-y-2">
-                <Label htmlFor="edit-boqNumber">BOQ Number</Label>
-                <Input 
-                id="edit-boqNumber" 
-                {...editForm.register("boqNumber")}
-                />
-                {editForm.formState.errors.boqNumber && <p className="text-sm text-destructive">{editForm.formState.errors.boqNumber.message}</p>}
-            </div>
-            <div className="space-y-2">
-                <Label htmlFor="edit-address">Address</Label>
-                <Input 
-                id="edit-address" 
-                {...editForm.register("address")}
-                />
-                {editForm.formState.errors.address && <p className="text-sm text-destructive">{editForm.formState.errors.address.message}</p>}
-            </div>
-            <DialogFooter>
-                <DialogClose asChild>
-                <Button type="button" variant="outline">Cancel</Button>
-                </DialogClose>
-                <Button type="submit" disabled={!editForm.formState.isValid || editForm.formState.isSubmitting}>
-                {editForm.formState.isSubmitting ? "Saving..." : "Save Changes"}
-                </Button>
-            </DialogFooter>
-            </form>
-        </DialogContent>
-        </Dialog>
-    
-    <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete this
-            client from your records.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleDeleteConfirm} className={buttonVariants({ variant: "destructive" })}>
-            Delete
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+                        {editForm.formState.errors.address && <p className="text-sm text-destructive">{editForm.formState.errors.address.message}</p>}
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                        <Button type="button" variant="outline">Cancel</Button>
+                        </DialogClose>
+                        <Button type="submit" disabled={!editForm.formState.isValid || editForm.formState.isSubmitting}>
+                        {editForm.formState.isSubmitting ? "Saving..." : "Save Changes"}
+                        </Button>
+                    </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+        
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete this
+                    client from your records.
+                </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteConfirm} className={buttonVariants({ variant: "destructive" })}>
+                    Delete
+                </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+            </AlertDialog>
+        </>
+    )}
     </>
   );
 }
