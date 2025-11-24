@@ -18,7 +18,7 @@ export interface Notification {
   href: string;
   timestamp: Timestamp;
   read: boolean;
-  icon?: "ShoppingCart" | "UserPlus" | "Package" | "Truck" | "RefreshCcw" | "ClipboardCheck";
+  icon?: "ShoppingCart" | "UserPlus" | "Package" | "Truck" | "RefreshCcw" | "ClipboardCheck" | "Wrench";
 }
 
 export interface Client {
@@ -319,6 +319,8 @@ export interface Vehicle {
     weightLimit?: string;
     sizeLimit?: string;
     description?: string;
+    registrationDate?: Timestamp;
+    registrationExpiryDate?: Timestamp;
 }
 
 export interface Subtask {

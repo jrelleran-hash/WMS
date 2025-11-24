@@ -5,7 +5,7 @@ import { collection, getDocs, getDoc, doc, orderBy, query, limit, Timestamp, whe
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import type { Activity, Notification, Order, Product, Client, Issuance, Supplier, PurchaseOrder, Shipment, Return, ReturnItem, OutboundReturn, OutboundReturnItem, UserProfile, OrderItem, PurchaseOrderItem, IssuanceItem, Backorder, UserRole, PagePermission, ProductCategory, ProductLocation, Tool, ToolBorrowRecord, SalvagedPart, DisposalRecord, ToolMaintenanceRecord, ToolBookingRequest, Vehicle, Task, Subtask } from "@/types";
-import { format, subDays, addDays } from 'date-fns';
+import { format, subDays, addDays, differenceInDays } from 'date-fns';
 
 function timeSince(date: Date) {
   const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
@@ -2485,14 +2485,37 @@ export async function getVehicles(): Promise<Vehicle[]> {
         const vehiclesCol = collection(db, "vehicles");
         const q = query(vehiclesCol, orderBy("make", "asc"));
         const vehicleSnapshot = await getDocs(q);
-        return vehicleSnapshot.docs.map(doc => {
-            const data = doc.data();
+
+        const today = new Date();
+        const notificationThreshold = addDays(today, 60);
+
+        const vehicles = vehicleSnapshot.docs.map(doc => {
+            const data = doc.data() as Omit<Vehicle, 'id'>;
+
+            if (data.registrationExpiryDate) {
+                const expiryDate = data.registrationExpiryDate.toDate();
+                if (expiryDate < notificationThreshold) {
+                    const daysUntilExpiry = differenceInDays(expiryDate, today);
+                    const title = daysUntilExpiry < 0 ? `Vehicle Registration Expired` : `Vehicle Registration Expiring Soon`;
+                    const description = `${data.make} ${data.model} (Plate: ${data.plateNumber}) registration ${daysUntilExpiry < 0 ? 'has expired' : `expires in ${daysUntilExpiry} days`}.`;
+                    
+                     createNotification({
+                        title: title,
+                        description: description,
+                        details: description + " Please renew the registration.",
+                        href: "/vehicles",
+                        icon: "Wrench",
+                    });
+                }
+            }
+
             return {
                 id: doc.id,
                 ...data,
-                createdAt: data.createdAt,
             } as Vehicle;
         });
+
+        return vehicles;
     } catch (error) {
         console.error("Error fetching vehicles:", error);
         return [];
@@ -2505,6 +2528,8 @@ export async function addVehicle(vehicle: Omit<Vehicle, 'id' | 'createdAt' | 'st
       ...vehicle,
       status: 'Available' as const,
       createdAt: Timestamp.now(),
+      registrationDate: vehicle.registrationDate ? Timestamp.fromDate(vehicle.registrationDate) : null,
+      registrationExpiryDate: vehicle.registrationExpiryDate ? Timestamp.fromDate(vehicle.registrationExpiryDate) : null,
     };
     return await addDoc(collection(db, "vehicles"), vehicleWithDefaults);
   } catch (error) {
@@ -2512,6 +2537,26 @@ export async function addVehicle(vehicle: Omit<Vehicle, 'id' | 'createdAt' | 'st
     throw new Error("Failed to add vehicle.");
   }
 }
+
+export async function updateVehicle(vehicleId: string, data: Partial<Omit<Vehicle, 'id'>>): Promise<void> {
+    try {
+        const vehicleRef = doc(db, "vehicles", vehicleId);
+        const payload: { [key: string]: any } = { ...data };
+
+        if (data.registrationDate) {
+            payload.registrationDate = Timestamp.fromDate(data.registrationDate);
+        }
+        if (data.registrationExpiryDate) {
+            payload.registrationExpiryDate = Timestamp.fromDate(data.registrationExpiryDate);
+        }
+
+        await updateDoc(vehicleRef, payload);
+    } catch (error) {
+        console.error("Error updating vehicle:", error);
+        throw new Error("Failed to update vehicle.");
+    }
+}
+
 
 export async function getTasks(): Promise<Task[]> {
     try {
