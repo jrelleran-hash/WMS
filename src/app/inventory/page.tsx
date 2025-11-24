@@ -63,8 +63,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { CoreFlowLogo } from "@/components/icons";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
+import { useAuthorization } from "@/hooks/use-authorization";
 import Image from 'next/image';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -233,7 +234,9 @@ const CollapsibleCategoryFilterItem = ({ category, level = 0 }: { category: Hier
 
 export default function InventoryPage() {
   const { products, suppliers, productCategories, loading, refetchData } = useData();
-  const { userProfile } = useAuth();
+  const { userProfile, loading: authLoading } = useAuth();
+  const { canView, canManage } = useAuthorization({ page: '/inventory' });
+  const router = useRouter();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -256,10 +259,13 @@ export default function InventoryPage() {
   const searchParams = useSearchParams();
   const [suggestion, setSuggestion] = useState('');
 
-
-  const canEditProduct = userProfile?.role === 'Admin' || userProfile?.role === 'Manager';
-
   const productSchema = useMemo(() => createProductSchema(autoGenerateSku), [autoGenerateSku]);
+
+  useEffect(() => {
+    if (!authLoading && !canView) {
+      router.push('/');
+    }
+  }, [authLoading, canView, router]);
 
   const addForm = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
@@ -610,6 +616,14 @@ export default function InventoryPage() {
     document.body.removeChild(link);
   }
 
+  if (authLoading || !canView) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-8rem)]">
+        <p className="text-muted-foreground">You don't have permission to view this page.</p>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="printable-content">
@@ -683,6 +697,7 @@ export default function InventoryPage() {
                       Print Report
                   </Button>
               </div>
+              {canManage && (
               <div className="flex items-center gap-2">
                   <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                   <DialogTrigger asChild className="print-hidden">
@@ -865,6 +880,7 @@ export default function InventoryPage() {
                   </DialogContent>
                   </Dialog>
               </div>
+              )}
             </div>
           </CardHeader>
           <CardContent>
@@ -880,9 +896,11 @@ export default function InventoryPage() {
                       <TableHead>Status</TableHead>
                       <TableHead>Location</TableHead>
                       <TableHead>Last Updated</TableHead>
+                      {canManage && (
                       <TableHead className="print-hidden">
                         <span className="sr-only">Actions</span>
                       </TableHead>
+                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -897,14 +915,14 @@ export default function InventoryPage() {
                           <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
                           <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                           <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                          <TableCell className="print-hidden"><Skeleton className="h-8 w-8" /></TableCell>
+                          {canManage && <TableCell className="print-hidden"><Skeleton className="h-8 w-8" /></TableCell>}
                         </TableRow>
                       ))
                     ) : (
                       filteredProducts.map((product) => {
                         const status = getStatus(product);
                         return (
-                          <TableRow key={product.id} onClick={() => handleEditClick(product)} className="cursor-pointer">
+                          <TableRow key={product.id} onClick={() => canManage && handleEditClick(product)} className={cn(canManage && "cursor-pointer")}>
                             <TableCell className="font-medium">
                               {product.name}
                             </TableCell>
@@ -917,6 +935,7 @@ export default function InventoryPage() {
                             </TableCell>
                             <TableCell>{formatLocation(product.location)}</TableCell>
                             <TableCell>{formatDate(product.lastUpdated)}</TableCell>
+                            {canManage && (
                             <TableCell className="print-hidden">
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -941,6 +960,7 @@ export default function InventoryPage() {
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </TableCell>
+                            )}
                           </TableRow>
                         )
                       })
@@ -971,7 +991,7 @@ export default function InventoryPage() {
                       filteredProducts.map((product) => {
                           const status = getStatus(product);
                           return (
-                              <Card key={product.id} onClick={() => handleEditClick(product)} className="cursor-pointer">
+                              <Card key={product.id} onClick={() => canManage && handleEditClick(product)} className={cn(canManage && "cursor-pointer")}>
                                   <CardHeader className="flex flex-row items-center justify-between">
                                        <div className="flex items-center gap-4">
                                             <div className="h-12 w-12 rounded-md bg-muted flex items-center justify-center">
@@ -982,6 +1002,7 @@ export default function InventoryPage() {
                                                 <CardDescription>{product.sku}</CardDescription>
                                             </div>
                                        </div>
+                                       {canManage && (
                                       <DropdownMenu>
                                           <DropdownMenuTrigger asChild>
                                               <Button size="icon" variant="ghost" onClick={(e) => e.stopPropagation()}><MoreHorizontal /></Button>
@@ -1001,6 +1022,7 @@ export default function InventoryPage() {
                                               <DropdownMenuItem onClick={() => handleDeleteClick(product.id)} className="text-destructive">Delete</DropdownMenuItem>
                                           </DropdownMenuContent>
                                       </DropdownMenu>
+                                      )}
                                   </CardHeader>
                                   <CardContent className="grid grid-cols-2 gap-4 text-sm">
                                       <div>
@@ -1036,7 +1058,7 @@ export default function InventoryPage() {
         </Card>
       </div>
       
-      {editingProduct && (
+      {canManage && editingProduct && (
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
@@ -1207,6 +1229,7 @@ export default function InventoryPage() {
         </Dialog>
       )}
 
+      {canManage && (
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -1224,7 +1247,9 @@ export default function InventoryPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      )}
       
+       {canManage && (
        <Dialog open={isAddSupplierOpen} onOpenChange={setIsAddSupplierOpen}>
         <DialogContent className="sm:max-w-md">
             <DialogHeader>
@@ -1266,7 +1291,9 @@ export default function InventoryPage() {
             </form>
         </DialogContent>
       </Dialog>
+       )}
       
+       {canManage && (
        <Dialog open={isAdjustmentOpen} onOpenChange={(open) => !open && setAdjustmentProduct(null)}>
         <DialogContent>
             <DialogHeader>
@@ -1312,6 +1339,7 @@ export default function InventoryPage() {
             </form>
         </DialogContent>
       </Dialog>
+       )}
       
       <Dialog open={isHistoryDialogOpen} onOpenChange={setIsHistoryDialogOpen}>
         <DialogContent className="max-w-2xl">

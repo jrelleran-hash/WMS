@@ -46,6 +46,8 @@ import { useToast } from "@/hooks/use-toast";
 import { addClient, updateClient, deleteClient } from "@/services/data-service";
 import { useData } from "@/context/data-context";
 import { useAuth } from "@/hooks/use-auth";
+import { useAuthorization } from "@/hooks/use-authorization";
+import { useRouter } from "next/navigation";
 
 import type { Client } from "@/types";
 
@@ -102,7 +104,9 @@ const toTitleCase = (str: string) => {
 
 export default function ClientsPage() {
   const { clients, loading, refetchData } = useData();
-  const { userProfile } = useAuth();
+  const { userProfile, loading: authLoading } = useAuth();
+  const { canManage } = useAuthorization({ page: '/clients' });
+  const router = useRouter();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
@@ -111,7 +115,12 @@ export default function ClientsPage() {
   const { toast } = useToast();
   const [suggestions, setSuggestions] = useState<{ [key: string]: string }>({});
 
-  const canManage = useMemo(() => userProfile?.role === "Admin" || userProfile?.role === "Manager", [userProfile]);
+  useEffect(() => {
+    if (!authLoading && !userProfile) {
+        router.push('/login');
+    }
+  }, [authLoading, userProfile, router]);
+
 
   // Memoize schemas to avoid re-creating them on every render
   const addClientSchema = useMemo(() => createClientSchema(clients), [clients]);

@@ -44,6 +44,7 @@ import { useToast } from "@/hooks/use-toast";
 import { addProductCategory, updateProductCategory, deleteProductCategory } from "@/services/data-service";
 import { useData } from "@/context/data-context";
 import { useAuth } from "@/hooks/use-auth";
+import { useAuthorization } from "@/hooks/use-authorization";
 import type { ProductCategory } from "@/types";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -133,6 +134,7 @@ function CategoryRow({ category, level = 0, onEdit, onDelete, onAddSubCategory, 
 export default function CategoriesPage() {
   const { productCategories, loading, refetchData } = useData();
   const { userProfile, loading: authLoading } = useAuth();
+  const { canManage } = useAuthorization({ page: '/categories' });
   const router = useRouter();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -143,18 +145,12 @@ export default function CategoriesPage() {
   
   const [suggestion, setSuggestion] = useState('');
 
-  const canManage = useMemo(() => userProfile?.role === "Admin" || userProfile?.role === "Manager", [userProfile]);
-
   useEffect(() => {
-    if (!authLoading && userProfile && !canManage) {
-        toast({
-            variant: "destructive",
-            title: "Unauthorized",
-            description: "You do not have permission to access this page.",
-        });
-        router.push('/');
+    if (!authLoading && !userProfile) {
+        router.push('/login');
     }
-  }, [authLoading, userProfile, canManage, router, toast]);
+  }, [authLoading, userProfile, router]);
+
 
   const hierarchicalCategories = useMemo(() => {
     const categoryMap: Record<string, HierarchicalCategory> = {};
@@ -302,10 +298,10 @@ export default function CategoriesPage() {
     }
   };
   
-  if (authLoading || !userProfile || !canManage) {
+  if (authLoading || !userProfile) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-8rem)]">
-        <p className="text-muted-foreground">You don't have permission to view this page.</p>
+        <p className="text-muted-foreground">Loading...</p>
       </div>
     );
   }
