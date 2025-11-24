@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useMemo } from "react";
@@ -90,7 +89,7 @@ export default function LogisticsPage() {
 
     const [viewMode, setViewMode] = useState<ViewMode>("list");
     const [isCreateShipmentOpen, setIsCreateShipmentOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState("outbound");
+    const [activeTab, setActiveTab] = useState("all");
     const { toast } = useToast();
 
      const shipmentForm = useForm<ShipmentFormValues>({
@@ -213,6 +212,13 @@ export default function LogisticsPage() {
         totalInbound: purchaseOrders.length + returns.length,
     }
 
+    const allTransactions = useMemo(() => {
+    const outbound = shipments.map(s => ({ type: 'Outbound', ...s, date: s.createdAt, entity: s.issuance.client.clientName, number: s.shipmentNumber }));
+    const inbound = purchaseOrders.map(po => ({ type: 'Inbound', ...po, date: po.orderDate, entity: po.supplier.name, number: po.poNumber }));
+
+    return [...outbound, ...inbound].sort((a, b) => b.date.getTime() - a.date.getTime());
+    }, [shipments, purchaseOrders]);
+
     const formatDate = (date?: Date) => {
         if (!date) return 'N/A';
         return format(date, 'PP');
@@ -259,6 +265,7 @@ export default function LogisticsPage() {
              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
                   <TabsList>
+                      <TabsTrigger value="all">All Transactions</TabsTrigger>
                       <TabsTrigger value="outbound">Outbound</TabsTrigger>
                       <TabsTrigger value="inbound">Inbound</TabsTrigger>
                   </TabsList>
@@ -271,6 +278,60 @@ export default function LogisticsPage() {
 
             {viewMode === 'list' ? (
              <Tabs defaultValue={activeTab} value={activeTab} onValueChange={setActiveTab}>
+                <TabsContent value="all">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>All Transactions</CardTitle>
+                            <CardDescription>A consolidated view of all inbound and outbound logistics activities.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Type</TableHead>
+                                        <TableHead>Number</TableHead>
+                                        <TableHead>Entity</TableHead>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Status</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                     {loading ? (
+                                        Array.from({ length: 10 }).map((_, i) => (
+                                            <TableRow key={i}>
+                                                <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                                                <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                                                <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                                                <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                                                <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : allTransactions.length > 0 ? (
+                                        allTransactions.map((tx) => (
+                                            <TableRow key={`${tx.type}-${tx.id}`} className="cursor-pointer" onClick={() => tx.type === 'Outbound' ? setSelectedShipment(tx as Shipment) : setSelectedPO(tx as PurchaseOrder)}>
+                                                <TableCell>
+                                                    <Badge variant={tx.type === 'Outbound' ? 'default' : 'secondary'}>{tx.type}</Badge>
+                                                </TableCell>
+                                                <TableCell className="font-medium">{tx.number}</TableCell>
+                                                <TableCell>{tx.entity}</TableCell>
+                                                <TableCell>{formatDate(tx.date)}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant={tx.type === 'Outbound' ? outboudStatusVariant[tx.status] : inboundStatusVariant[tx.status]}>
+                                                        {tx.status}
+                                                    </Badge>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                     ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="h-24 text-center">No transactions found.</TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
                 <TabsContent value="outbound">
                     <Tabs defaultValue="deliveries">
                         <TabsList className="mb-4">
@@ -800,3 +861,6 @@ export default function LogisticsPage() {
     );
 }
 
+
+
+    
