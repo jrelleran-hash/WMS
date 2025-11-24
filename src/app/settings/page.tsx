@@ -58,7 +58,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { UserRole, PagePermission } from "@/types";
 import { cn } from "@/lib/utils";
-import { Check, MoreHorizontal, X, ChevronsUpDown, User, Eye, EyeOff, List, Building, Users as UsersIcon, Truck } from "lucide-react";
+import { Check, MoreHorizontal, X, ChevronsUpDown, User, Eye, EyeOff, List, Building, Users as UsersIcon, Truck, Wrench, Book } from "lucide-react";
 import { useData } from "@/context/data-context";
 import { Badge } from "@/components/ui/badge";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -86,6 +86,13 @@ const allPermissions: { group: string; permissions: { value: PagePermission; lab
         { value: "/inventory", label: "Warehouse Inventory" },
         { value: "/issuance", label: "Issuance" },
         { value: "/warehouse", label: "Warehouse Map" },
+        { value: "/tasks", label: "Task Management" },
+    ]},
+    { group: "Tools", permissions: [
+        { value: "/tools", label: "Tool Management" },
+        { value: "/tool-accountability", label: "Tool Accountability" },
+        { value: "/tool-booking", label: "Tool Booking" },
+        { value: "/tool-maintenance", label: "Tool Maintenance" },
     ]},
     { group: "Assurance", permissions: [
         { value: "/returns", label: "Returns" },
@@ -858,3 +865,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+    
