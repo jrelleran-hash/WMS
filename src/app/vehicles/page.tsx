@@ -59,6 +59,7 @@ const vehicleSchema = z.object({
   description: z.string().optional(),
   registrationDate: z.date().optional(),
   registrationExpiryDate: z.date().optional(),
+  registrationDuration: z.coerce.number().int().min(1, "Duration must be at least 1 year.").optional(),
 });
 
 
@@ -79,6 +80,9 @@ export default function VehiclesPage() {
 
   const form = useForm<VehicleFormValues>({
     resolver: zodResolver(vehicleSchema),
+     defaultValues: {
+      registrationDuration: 1,
+    }
   });
 
   const editForm = useForm<VehicleFormValues>({
@@ -87,7 +91,9 @@ export default function VehiclesPage() {
 
   useEffect(() => {
     if(isAddDialogOpen) {
-      form.reset();
+      form.reset({
+        registrationDuration: 1,
+      });
     }
   }, [isAddDialogOpen, form]);
   
@@ -97,6 +103,7 @@ export default function VehiclesPage() {
         ...editingVehicle,
         registrationDate: editingVehicle.registrationDate ? new Date(editingVehicle.registrationDate) : undefined,
         registrationExpiryDate: editingVehicle.registrationExpiryDate ? new Date(editingVehicle.registrationExpiryDate) : undefined,
+        registrationDuration: editingVehicle.registrationDuration || 1,
       });
       setIsEditDialogOpen(true);
     } else {
@@ -137,8 +144,18 @@ export default function VehiclesPage() {
 
   const handleRegistrationDateChange = (date: Date | undefined, currentForm: any) => {
     currentForm.setValue("registrationDate", date);
+    const duration = currentForm.getValues("registrationDuration") || 1;
     if(date) {
-        currentForm.setValue("registrationExpiryDate", addYears(date, 1));
+        currentForm.setValue("registrationExpiryDate", addYears(date, duration));
+    }
+  }
+  
+  const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>, currentForm: any) => {
+    const duration = parseInt(e.target.value, 10);
+    currentForm.setValue("registrationDuration", isNaN(duration) ? 1 : duration);
+    const regDate = currentForm.getValues("registrationDate");
+    if(regDate) {
+        currentForm.setValue("registrationExpiryDate", addYears(regDate, isNaN(duration) ? 1 : duration));
     }
   }
   
@@ -161,6 +178,99 @@ export default function VehiclesPage() {
     }
     return null;
   }
+
+  const VehicleFormFields = ({ form: currentForm }: { form: any }) => (
+    <>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="type">Vehicle Type</Label>
+          <Input id="type" {...currentForm.register("type")} placeholder="e.g. Passenger Type, 6-Wheeler Truck" />
+          {currentForm.formState.errors.type && <p className="text-sm text-destructive">{currentForm.formState.errors.type.message}</p>}
+        </div>
+        <div className="space-y-2">
+            <Label htmlFor="plateNumber">Plate Number</Label>
+            <Input id="plateNumber" {...currentForm.register("plateNumber")} />
+            {currentForm.formState.errors.plateNumber && <p className="text-sm text-destructive">{currentForm.formState.errors.plateNumber.message}</p>}
+        </div>
+      </div>
+
+       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+         <div className="space-y-2">
+            <Label htmlFor="make">Make</Label>
+            <Input id="make" {...currentForm.register("make")} />
+            {currentForm.formState.errors.make && <p className="text-sm text-destructive">{currentForm.formState.errors.make.message}</p>}
+        </div>
+         <div className="space-y-2">
+            <Label htmlFor="model">Model</Label>
+            <Input id="model" {...currentForm.register("model")} />
+            {currentForm.formState.errors.model && <p className="text-sm text-destructive">{currentForm.formState.errors.model.message}</p>}
+        </div>
+         <div className="space-y-2">
+            <Label htmlFor="year">Year</Label>
+            <Input id="year" type="number" {...currentForm.register("year")} />
+            {currentForm.formState.errors.year && <p className="text-sm text-destructive">{currentForm.formState.errors.year.message}</p>}
+        </div>
+       </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+                <Label htmlFor="weightLimit">Weight Limit (Optional)</Label>
+                <Input id="weightLimit" {...currentForm.register("weightLimit")} placeholder="e.g. Up to 200 kg" />
+            </div>
+             <div className="space-y-2">
+                <Label htmlFor="sizeLimit">Size Limit (Optional)</Label>
+                <Input id="sizeLimit" {...currentForm.register("sizeLimit")} placeholder="e.g. 3.2 x 1.9 x 2.3 ft" />
+            </div>
+        </div>
+        
+         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="space-y-2">
+                <Label>Registration Date (Optional)</Label>
+                <Controller
+                    control={currentForm.control}
+                    name="registrationDate"
+                    render={({ field }) => (
+                       <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={(d) => handleRegistrationDateChange(d, currentForm)} initialFocus /></PopoverContent>
+                       </Popover>
+                    )}
+                />
+            </div>
+             <div className="space-y-2">
+                <Label>Duration (Years)</Label>
+                <Input type="number" {...currentForm.register("registrationDuration")} onChange={(e) => handleDurationChange(e, currentForm)} />
+            </div>
+             <div className="space-y-2">
+                <Label>Registration Expiry Date</Label>
+                 <Controller
+                    control={currentForm.control}
+                    name="registrationExpiryDate"
+                    render={({ field }) => (
+                       <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")} disabled>
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {field.value ? format(field.value, "PPP") : <span>Calculated...</span>}
+                            </Button>
+                        </PopoverTrigger>
+                       </Popover>
+                    )}
+                />
+            </div>
+        </div>
+
+        <div className="space-y-2">
+            <Label htmlFor="description">Description / Suitable for (Optional)</Label>
+            <Textarea id="description" {...currentForm.register("description")} placeholder="e.g. Cheapest 4-wheel option. Max. of 4 Passengers Only." />
+        </div>
+    </>
+  )
 
   return (
     <div className="space-y-6">
@@ -188,93 +298,7 @@ export default function VehiclesPage() {
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="type">Vehicle Type</Label>
-                  <Input id="type" {...form.register("type")} placeholder="e.g. Passenger Type, 6-Wheeler Truck" />
-                  {form.formState.errors.type && <p className="text-sm text-destructive">{form.formState.errors.type.message}</p>}
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="plateNumber">Plate Number</Label>
-                    <Input id="plateNumber" {...form.register("plateNumber")} />
-                    {form.formState.errors.plateNumber && <p className="text-sm text-destructive">{form.formState.errors.plateNumber.message}</p>}
-                </div>
-              </div>
-
-               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                 <div className="space-y-2">
-                    <Label htmlFor="make">Make</Label>
-                    <Input id="make" {...form.register("make")} />
-                    {form.formState.errors.make && <p className="text-sm text-destructive">{form.formState.errors.make.message}</p>}
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="model">Model</Label>
-                    <Input id="model" {...form.register("model")} />
-                    {form.formState.errors.model && <p className="text-sm text-destructive">{form.formState.errors.model.message}</p>}
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="year">Year</Label>
-                    <Input id="year" type="number" {...form.register("year")} />
-                    {form.formState.errors.year && <p className="text-sm text-destructive">{form.formState.errors.year.message}</p>}
-                </div>
-               </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="weightLimit">Weight Limit (Optional)</Label>
-                        <Input id="weightLimit" {...form.register("weightLimit")} placeholder="e.g. Up to 200 kg" />
-                    </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="sizeLimit">Size Limit (Optional)</Label>
-                        <Input id="sizeLimit" {...form.register("sizeLimit")} placeholder="e.g. 3.2 x 1.9 x 2.3 ft" />
-                    </div>
-                </div>
-                
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label>Registration Date (Optional)</Label>
-                        <Controller
-                            control={form.control}
-                            name="registrationDate"
-                            render={({ field }) => (
-                               <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={(d) => handleRegistrationDateChange(d, form)} initialFocus /></PopoverContent>
-                               </Popover>
-                            )}
-                        />
-                    </div>
-                     <div className="space-y-2">
-                        <Label>Registration Expiry Date</Label>
-                         <Controller
-                            control={form.control}
-                            name="registrationExpiryDate"
-                            render={({ field }) => (
-                               <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
-                               </Popover>
-                            )}
-                        />
-                    </div>
-                </div>
-
-                <div className="space-y-2">
-                    <Label htmlFor="description">Description / Suitable for (Optional)</Label>
-                    <Textarea id="description" {...form.register("description")} placeholder="e.g. Cheapest 4-wheel option. Max. of 4 Passengers Only." />
-                </div>
-
-
+              <VehicleFormFields form={form} />
               <DialogFooter>
                 <Button
                   type="button"
@@ -369,93 +393,7 @@ export default function VehiclesPage() {
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-type">Vehicle Type</Label>
-                  <Input id="edit-type" {...editForm.register("type")} />
-                  {editForm.formState.errors.type && <p className="text-sm text-destructive">{editForm.formState.errors.type.message}</p>}
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="edit-plateNumber">Plate Number</Label>
-                    <Input id="edit-plateNumber" {...editForm.register("plateNumber")} />
-                    {editForm.formState.errors.plateNumber && <p className="text-sm text-destructive">{editForm.formState.errors.plateNumber.message}</p>}
-                </div>
-              </div>
-
-               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                 <div className="space-y-2">
-                    <Label htmlFor="edit-make">Make</Label>
-                    <Input id="edit-make" {...editForm.register("make")} />
-                    {editForm.formState.errors.make && <p className="text-sm text-destructive">{editForm.formState.errors.make.message}</p>}
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="edit-model">Model</Label>
-                    <Input id="edit-model" {...editForm.register("model")} />
-                    {editForm.formState.errors.model && <p className="text-sm text-destructive">{editForm.formState.errors.model.message}</p>}
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="edit-year">Year</Label>
-                    <Input id="edit-year" type="number" {...editForm.register("year")} />
-                    {editForm.formState.errors.year && <p className="text-sm text-destructive">{editForm.formState.errors.year.message}</p>}
-                </div>
-               </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="edit-weightLimit">Weight Limit (Optional)</Label>
-                        <Input id="edit-weightLimit" {...editForm.register("weightLimit")} />
-                    </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="edit-sizeLimit">Size Limit (Optional)</Label>
-                        <Input id="edit-sizeLimit" {...editForm.register("sizeLimit")} />
-                    </div>
-                </div>
-                
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label>Registration Date (Optional)</Label>
-                        <Controller
-                            control={editForm.control}
-                            name="registrationDate"
-                            render={({ field }) => (
-                               <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={(d) => handleRegistrationDateChange(d, editForm)} initialFocus /></PopoverContent>
-                               </Popover>
-                            )}
-                        />
-                    </div>
-                     <div className="space-y-2">
-                        <Label>Registration Expiry Date</Label>
-                         <Controller
-                            control={editForm.control}
-                            name="registrationExpiryDate"
-                            render={({ field }) => (
-                               <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
-                               </Popover>
-                            )}
-                        />
-                    </div>
-                </div>
-
-                <div className="space-y-2">
-                    <Label htmlFor="edit-description">Description / Suitable for (Optional)</Label>
-                    <Textarea id="edit-description" {...editForm.register("description")} />
-                </div>
-
-
+              <VehicleFormFields form={editForm} />
               <DialogFooter>
                 <Button
                   type="button"

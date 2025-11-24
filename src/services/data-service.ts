@@ -2524,12 +2524,13 @@ export async function getVehicles(): Promise<Vehicle[]> {
 
 export async function addVehicle(vehicle: Omit<Vehicle, 'id' | 'createdAt' | 'status'>): Promise<DocumentReference> {
   try {
-    const vehicleWithDefaults = {
+    const vehicleWithDefaults: any = {
       ...vehicle,
       status: 'Available' as const,
       createdAt: Timestamp.now(),
       registrationDate: vehicle.registrationDate ? Timestamp.fromDate(vehicle.registrationDate) : null,
       registrationExpiryDate: vehicle.registrationExpiryDate ? Timestamp.fromDate(vehicle.registrationExpiryDate) : null,
+      registrationDuration: vehicle.registrationDuration || 1,
     };
     return await addDoc(collection(db, "vehicles"), vehicleWithDefaults);
   } catch (error) {

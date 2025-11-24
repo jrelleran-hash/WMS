@@ -321,6 +321,7 @@ export interface Vehicle {
     description?: string;
     registrationDate?: Timestamp;
     registrationExpiryDate?: Timestamp;
+    registrationDuration?: number;
 }
 
 export interface Subtask {
