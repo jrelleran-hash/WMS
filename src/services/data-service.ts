@@ -2557,10 +2557,11 @@ export async function updateVehicle(vehicleId: string, data: Partial<Omit<Vehicl
         const vehicleRef = doc(db, "vehicles", vehicleId);
         const payload: { [key: string]: any } = { ...data };
 
-        // Handle optional dates: convert to Timestamp or null
+        // Handle optional dates and other fields
         payload.crDate = data.crDate ? Timestamp.fromDate(data.crDate) : null;
         payload.registrationDate = data.registrationDate ? Timestamp.fromDate(data.registrationDate) : null;
         payload.registrationExpiryDate = data.registrationExpiryDate ? Timestamp.fromDate(data.registrationExpiryDate) : null;
+        payload.fuelType = data.fuelType || null;
         
         await updateDoc(vehicleRef, payload);
     } catch (error) {
@@ -2849,4 +2850,5 @@ export async function addWorker(worker: Omit<Worker, 'id'>): Promise<DocumentRef
     throw new Error("Failed to add worker.");
   }
 }
+
 
