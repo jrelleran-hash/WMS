@@ -69,6 +69,7 @@ const warehouseNavItems: NavSectionItem[] = [
     {
         title: "Tools",
         items: [
+            { href: "/my-tools", label: "My Tools", icon: Wrench },
             { href: "/tools", label: "Tool Management", icon: Wrench },
             { href: "/tool-accountability", label: "Tool Accountability", icon: UserCheck },
             { href: "/tool-booking", label: "Tool Booking", icon: Book },
