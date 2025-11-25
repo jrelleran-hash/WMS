@@ -342,7 +342,7 @@ export default function VehiclesPage() {
             </div>
              <div className="space-y-2">
                 <Label htmlFor="fuelConsumption">Avg. Consumption (km/L)</Label>
-                <Input id="fuelConsumption" type="number" {...currentForm.register("fuelConsumption")} />
+                <Input id="fuelConsumption" type="number" step="0.01" {...currentForm.register("fuelConsumption")} />
             </div>
             <div className="space-y-2">
                 <Label htmlFor="odometer">Odometer (km)</Label>
