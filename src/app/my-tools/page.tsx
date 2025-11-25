@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
@@ -32,13 +33,25 @@ const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | 
     "Under Maintenance": "destructive",
 };
 
+const conditionVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
+  Good: "default",
+  "Needs Repair": "secondary",
+  Damaged: "destructive",
+};
+
+
 export default function MyToolsPage() {
     const { tools, loading } = useData();
     const { userProfile } = useAuth();
 
-    const myTools = useMemo(() => {
+    const assignedTools = useMemo(() => {
         if (!userProfile) return [];
-        return tools.filter(t => t.assignedToUserId === userProfile.uid || t.currentBorrowRecord?.borrowedBy === userProfile.uid);
+        return tools.filter(t => t.assignedToUserId === userProfile.uid);
+    }, [tools, userProfile]);
+    
+    const borrowedTools = useMemo(() => {
+        if (!userProfile) return [];
+        return tools.filter(t => t.status === 'In Use' && t.currentBorrowRecord?.borrowedBy === userProfile.uid);
     }, [tools, userProfile]);
 
     const formatDate = (date?: Date | Timestamp) => {
@@ -61,58 +74,114 @@ export default function MyToolsPage() {
                 </div>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Your Tools ({myTools.length})</CardTitle>
-                    <CardDescription>
-                        You are responsible for the following tools. Please ensure they are returned on time and in good condition.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                        <TableRow>
-                            <TableHead>Tool</TableHead>
-                            <TableHead>Serial #</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Due Date</TableHead>
-                        </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                        {loading ? (
-                            Array.from({ length: 3 }).map((_, i) => (
-                            <TableRow key={i}>
-                                <TableCell colSpan={4}>
-                                <Skeleton className="h-8 w-full" />
-                                </TableCell>
-                            </TableRow>
-                            ))
-                        ) : myTools.length > 0 ? (
-                            myTools.map((tool) => (
-                            <TableRow key={tool.id}>
-                                <TableCell className="font-medium">{tool.name}</TableCell>
-                                <TableCell>{tool.serialNumber}</TableCell>
-                                <TableCell>
-                                <Badge variant={statusVariant[tool.status]}>
-                                    {tool.status}
-                                </Badge>
-                                </TableCell>
-                                <TableCell>
-                                {tool.status === 'In Use' ? formatDate(tool.currentBorrowRecord?.dueDate) : 'N/A'}
-                                </TableCell>
-                            </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                            <TableCell colSpan={4} className="h-24 text-center">
-                                You do not have any tools assigned or borrowed.
-                            </TableCell>
-                            </TableRow>
-                        )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
+            <Tabs defaultValue="accountability">
+                <TabsList>
+                    <TabsTrigger value="accountability">Accountability ({assignedTools.length})</TabsTrigger>
+                    <TabsTrigger value="borrowed">Borrowed ({borrowedTools.length})</TabsTrigger>
+                </TabsList>
+                <TabsContent value="accountability">
+                     <Card>
+                        <CardHeader>
+                            <CardTitle>Accountable Tools</CardTitle>
+                            <CardDescription>
+                                These tools are under your long-term care.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                <TableRow>
+                                    <TableHead>Tool</TableHead>
+                                    <TableHead>Serial #</TableHead>
+                                    <TableHead>Condition</TableHead>
+                                </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                {loading ? (
+                                    Array.from({ length: 3 }).map((_, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell colSpan={3}>
+                                        <Skeleton className="h-8 w-full" />
+                                        </TableCell>
+                                    </TableRow>
+                                    ))
+                                ) : assignedTools.length > 0 ? (
+                                    assignedTools.map((tool) => (
+                                    <TableRow key={tool.id}>
+                                        <TableCell className="font-medium">{tool.name}</TableCell>
+                                        <TableCell>{tool.serialNumber}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={conditionVariant[tool.condition]}>
+                                                {tool.condition}
+                                            </Badge>
+                                        </TableCell>
+                                    </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow>
+                                    <TableCell colSpan={3} className="h-24 text-center">
+                                        You do not have any tools assigned to you.
+                                    </TableCell>
+                                    </TableRow>
+                                )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                <TabsContent value="borrowed">
+                      <Card>
+                        <CardHeader>
+                            <CardTitle>Borrowed Tools</CardTitle>
+                            <CardDescription>
+                                Tools you have temporarily checked out. Please return them on time.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                <TableRow>
+                                    <TableHead>Tool</TableHead>
+                                    <TableHead>Serial #</TableHead>
+                                    <TableHead>Date Borrowed</TableHead>
+                                    <TableHead>Due Date</TableHead>
+                                </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                {loading ? (
+                                    Array.from({ length: 3 }).map((_, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell colSpan={4}>
+                                        <Skeleton className="h-8 w-full" />
+                                        </TableCell>
+                                    </TableRow>
+                                    ))
+                                ) : borrowedTools.length > 0 ? (
+                                    borrowedTools.map((tool) => (
+                                    <TableRow key={tool.id}>
+                                        <TableCell className="font-medium">{tool.name}</TableCell>
+                                        <TableCell>{tool.serialNumber}</TableCell>
+                                        <TableCell>
+                                            {formatDate(tool.currentBorrowRecord?.dateBorrowed)}
+                                        </TableCell>
+                                        <TableCell>
+                                            {formatDate(tool.currentBorrowRecord?.dueDate)}
+                                        </TableCell>
+                                    </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow>
+                                    <TableCell colSpan={4} className="h-24 text-center">
+                                        You have not borrowed any tools.
+                                    </TableCell>
+                                    </TableRow>
+                                )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }
