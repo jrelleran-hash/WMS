@@ -2,10 +2,10 @@
 "use client";
 
 import { useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { PlusCircle, Calendar as CalendarIcon, Truck, ArrowRight, Package } from "lucide-react";
+import { PlusCircle, Calendar as CalendarIcon, Truck, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 
 import { Button } from "@/components/ui/button";
@@ -53,83 +53,55 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useData } from "@/context/data-context";
 
-const bookingSchema = z.object({
-  bookingType: z.enum(["Inbound", "Outbound", "Demobilization"]),
+const segmentSchema = z.object({
   serviceType: z.enum(["Standard", "Express", "Bulk"]),
-  vehicleId: z.string().min(1, "Vehicle is required."),
   pickupAddress: z.string().min(1, "Pickup address is required."),
   deliveryAddress: z.string().min(1, "Delivery address is required."),
-  pickupDate: z.date({ required_error: "Pickup date is required." }),
   itemDescription: z.string().min(1, "Item description is required."),
   specialInstructions: z.string().optional(),
 });
 
-const backloadSchema = z.object({
-    hasBackload: z.boolean().default(false),
-    serviceType: z.string().optional(),
-    pickupAddress: z.string().optional(),
-    deliveryAddress: z.string().optional(),
-    itemDescription: z.string().optional(),
-    specialInstructions: z.string().optional(),
-}).refine(data => {
-    if (data.hasBackload) {
-        return data.pickupAddress && data.deliveryAddress && data.itemDescription && data.serviceType;
-    }
-    return true;
-}, {
-    message: "Please fill all backload fields if selected.",
-    path: ["pickupAddress"],
+const bookingSchema = z.object({
+  bookingType: z.enum(["Inbound", "Outbound", "Demobilization"]),
+  vehicleId: z.string().min(1, "Vehicle is required."),
+  pickupDate: z.date({ required_error: "Pickup date is required." }),
+  segments: z.array(segmentSchema).min(1, "At least one segment is required."),
 });
 
-
 type BookingFormValues = z.infer<typeof bookingSchema>;
-type BackloadFormValues = z.infer<typeof backloadSchema>;
+
 
 export default function LogisticsBookingPage() {
   const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
-  const [isBackloadDialogOpen, setIsBackloadDialogOpen] = useState(false);
   const { toast } = useToast();
   const { vehicles, loading } = useData();
-  const [mainBookingData, setMainBookingData] = useState<BookingFormValues | null>(null);
-
-  const mainForm = useForm<BookingFormValues>({
+  
+  const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingSchema),
-  });
-
-  const backloadForm = useForm<BackloadFormValues>({
-    resolver: zodResolver(backloadSchema),
     defaultValues: {
-        hasBackload: false,
-    },
+      segments: [{
+        serviceType: 'Standard',
+        pickupAddress: '',
+        deliveryAddress: '',
+        itemDescription: '',
+        specialInstructions: '',
+      }]
+    }
   });
 
-  const handleNext = async () => {
-    const isValid = await mainForm.trigger();
-    if (isValid) {
-      setMainBookingData(mainForm.getValues());
-      setIsBookingDialogOpen(false);
-      setIsBackloadDialogOpen(true);
-    }
-  };
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "segments",
+  });
 
-  const handleBack = () => {
-      setIsBackloadDialogOpen(false);
-      setIsBookingDialogOpen(true);
-  }
-
-  const onSubmit = (backloadData: BackloadFormValues) => {
-    const finalData = {
-        mainBooking: mainBookingData,
-        backload: backloadData.hasBackload ? backloadData : null,
-    }
-    console.log(finalData);
+  const onSubmit = (data: BookingFormValues) => {
+    console.log(data);
     toast({
       title: "Booking Created",
       description: "Your logistics booking has been successfully created.",
     });
-    setIsBackloadDialogOpen(false);
-    mainForm.reset();
-    backloadForm.reset();
+    setIsBookingDialogOpen(false);
+    form.reset();
   };
 
   return (
@@ -146,7 +118,7 @@ export default function LogisticsBookingPage() {
         <Dialog
           open={isBookingDialogOpen}
           onOpenChange={(open) => {
-              if(!open) mainForm.reset();
+              if(!open) form.reset();
               setIsBookingDialogOpen(open);
           }}
         >
@@ -156,20 +128,20 @@ export default function LogisticsBookingPage() {
               New Booking
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-2xl">
+          <DialogContent className="sm:max-w-3xl">
             <DialogHeader>
-              <DialogTitle>Create New Logistics Booking (Step 1 of 2)</DialogTitle>
+              <DialogTitle>Create New Logistics Booking</DialogTitle>
               <DialogDescription>
-                Fill in the details for the primary shipment.
+                Fill in the details for the shipment, adding segments for each leg of the journey.
               </DialogDescription>
             </DialogHeader>
-            <form className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-2">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-4">
+               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                 <div className="space-y-2">
                   <Label>Booking Type</Label>
                   <Controller
                     name="bookingType"
-                    control={mainForm.control}
+                    control={form.control}
                     render={({ field }) => (
                       <Select
                         onValueChange={field.onChange}
@@ -186,34 +158,13 @@ export default function LogisticsBookingPage() {
                       </Select>
                     )}
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label>Service Type</Label>
-                  <Controller
-                    name="serviceType"
-                    control={mainForm.control}
-                    render={({ field }) => (
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select service type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Standard">Standard</SelectItem>
-                          <SelectItem value="Express">Express</SelectItem>
-                          <SelectItem value="Bulk">Bulk</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
+                  {form.formState.errors.bookingType && <p className="text-sm text-destructive">{form.formState.errors.bookingType.message}</p>}
                 </div>
                  <div className="space-y-2">
                   <Label>Vehicle</Label>
                   <Controller
                     name="vehicleId"
-                    control={mainForm.control}
+                    control={form.control}
                     render={({ field }) => (
                       <Select
                         onValueChange={field.onChange}
@@ -234,32 +185,12 @@ export default function LogisticsBookingPage() {
                       </Select>
                     )}
                   />
-                   {mainForm.formState.errors.vehicleId && <p className="text-sm text-destructive">{mainForm.formState.errors.vehicleId.message}</p>}
+                   {form.formState.errors.vehicleId && <p className="text-sm text-destructive">{form.formState.errors.vehicleId.message}</p>}
                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="pickupAddress">Pickup Address</Label>
-                  <Textarea
-                    id="pickupAddress"
-                    {...mainForm.register("pickupAddress")}
-                  />
-                  {mainForm.formState.errors.pickupAddress && <p className="text-sm text-destructive">{mainForm.formState.errors.pickupAddress.message}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="deliveryAddress">Delivery Address</Label>
-                  <Textarea
-                    id="deliveryAddress"
-                    {...mainForm.register("deliveryAddress")}
-                  />
-                   {mainForm.formState.errors.deliveryAddress && <p className="text-sm text-destructive">{mainForm.formState.errors.deliveryAddress.message}</p>}
-                </div>
-              </div>
                 <div className="space-y-2">
                     <Label>Preferred Pickup Date</Label>
                      <Controller
-                        control={mainForm.control}
+                        control={form.control}
                         name="pickupDate"
                         render={({ field }) => (
                            <Popover>
@@ -286,29 +217,87 @@ export default function LogisticsBookingPage() {
                             </Popover>
                         )}
                      />
-                    {mainForm.formState.errors.pickupDate && <p className="text-sm text-destructive">{mainForm.formState.errors.pickupDate.message}</p>}
+                    {form.formState.errors.pickupDate && <p className="text-sm text-destructive">{form.formState.errors.pickupDate.message}</p>}
                 </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="itemDescription">Item Description</Label>
-                <Textarea
-                  id="itemDescription"
-                  placeholder="e.g., 2 boxes of construction materials, 50kg total"
-                  {...mainForm.register("itemDescription")}
-                />
-                 {mainForm.formState.errors.itemDescription && <p className="text-sm text-destructive">{mainForm.formState.errors.itemDescription.message}</p>}
+              </div>
+              
+              <div className="space-y-4">
+                <Label className="text-base font-semibold">Booking Segments</Label>
+                {fields.map((field, index) => (
+                  <div key={field.id} className="space-y-4 rounded-md border p-4 relative">
+                    <div className="flex justify-between items-center">
+                      <h4 className="font-semibold">Segment {index + 1}</h4>
+                       {fields.length > 1 && (
+                         <Button type="button" variant="ghost" size="icon" className="h-7 w-7 absolute top-2 right-2" onClick={() => remove(index)}>
+                            <Trash2 className="text-destructive" />
+                        </Button>
+                       )}
+                    </div>
+                     <div className="space-y-2">
+                      <Label>Service Type</Label>
+                      <Controller
+                        name={`segments.${index}.serviceType`}
+                        control={form.control}
+                        render={({ field }) => (
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select service type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Standard">Standard</SelectItem>
+                              <SelectItem value="Express">Express</SelectItem>
+                              <SelectItem value="Bulk">Bulk</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor={`pickupAddress-${index}`}>Pickup Address</Label>
+                            <Textarea
+                                id={`pickupAddress-${index}`}
+                                {...form.register(`segments.${index}.pickupAddress`)}
+                            />
+                            {form.formState.errors.segments?.[index]?.pickupAddress && <p className="text-sm text-destructive">{form.formState.errors.segments[index]?.pickupAddress?.message}</p>}
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor={`deliveryAddress-${index}`}>Delivery Address</Label>
+                            <Textarea
+                                id={`deliveryAddress-${index}`}
+                                {...form.register(`segments.${index}.deliveryAddress`)}
+                            />
+                            {form.formState.errors.segments?.[index]?.deliveryAddress && <p className="text-sm text-destructive">{form.formState.errors.segments[index]?.deliveryAddress?.message}</p>}
+                        </div>
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor={`itemDescription-${index}`}>Item Description</Label>
+                        <Textarea
+                        id={`itemDescription-${index}`}
+                        placeholder="e.g., 2 boxes of construction materials, 50kg total"
+                        {...form.register(`segments.${index}.itemDescription`)}
+                        />
+                        {form.formState.errors.segments?.[index]?.itemDescription && <p className="text-sm text-destructive">{form.formState.errors.segments[index]?.itemDescription?.message}</p>}
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor={`specialInstructions-${index}`}>Special Instructions</Label>
+                        <Textarea
+                        id={`specialInstructions-${index}`}
+                        placeholder="e.g., Handle with care, contact person on site is..."
+                        {...form.register(`segments.${index}.specialInstructions`)}
+                        />
+                    </div>
+                  </div>
+                ))}
+                 <Button type="button" variant="outline" size="sm" onClick={() => append({ serviceType: 'Standard', pickupAddress: '', deliveryAddress: '', itemDescription: '' })}>
+                    <PlusCircle className="mr-2" /> Add Segment
+                </Button>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="specialInstructions">Special Instructions</Label>
-                <Textarea
-                  id="specialInstructions"
-                  placeholder="e.g., Handle with care, contact person on site is..."
-                  {...mainForm.register("specialInstructions")}
-                />
-              </div>
-
-              <DialogFooter>
+              <DialogFooter className="pt-4">
                 <Button
                   type="button"
                   variant="outline"
@@ -316,97 +305,12 @@ export default function LogisticsBookingPage() {
                 >
                   Cancel
                 </Button>
-                <Button type="button" onClick={handleNext}>Next <ArrowRight className="ml-2 h-4 w-4" /></Button>
+                <Button type="submit">Create Booking</Button>
               </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
       </div>
-
-       <Dialog open={isBackloadDialogOpen} onOpenChange={(open) => {
-            if(!open) backloadForm.reset();
-            setIsBackloadDialogOpen(open);
-        }}>
-        <DialogContent className="sm:max-w-xl">
-          <DialogHeader>
-            <DialogTitle>Backload Booking (Step 2 of 2)</DialogTitle>
-            <DialogDescription>
-              Optional: Add delivery details for a backload to maximize this trip.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={backloadForm.handleSubmit(onSubmit)} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Service Type</Label>
-                  <Controller
-                    name="serviceType"
-                    control={backloadForm.control}
-                    render={({ field }) => (
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select service type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Standard">Standard</SelectItem>
-                          <SelectItem value="Express">Express</SelectItem>
-                          <SelectItem value="Bulk">Bulk</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="backloadPickupAddress">Backload Pickup Address</Label>
-                  <Textarea
-                    id="backloadPickupAddress"
-                    {...backloadForm.register("pickupAddress")}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="backloadDeliveryAddress">Backload Delivery Address</Label>
-                  <Textarea
-                    id="backloadDeliveryAddress"
-                    {...backloadForm.register("deliveryAddress")}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="backloadItemDescription">Backload Item Description</Label>
-                <Textarea
-                  id="backloadItemDescription"
-                  {...backloadForm.register("itemDescription")}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="backloadSpecialInstructions">Backload Special Instructions</Label>
-                <Textarea
-                  id="backloadSpecialInstructions"
-                  {...backloadForm.register("specialInstructions")}
-                />
-              </div>
-
-               {backloadForm.formState.errors.root && <p className="text-sm text-destructive">{backloadForm.formState.errors.root.message}</p>}
-
-              <DialogFooter className="!justify-between">
-                 <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleBack}
-                >
-                  Back
-                </Button>
-                <div className="flex gap-2">
-                    <Button type="submit" variant="secondary" onClick={() => backloadForm.setValue('hasBackload', false)}>Skip & Create</Button>
-                    <Button type="submit" onClick={() => backloadForm.setValue('hasBackload', true)}>Create Booking</Button>
-                </div>
-              </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
 
       <Card>
         <CardHeader>
