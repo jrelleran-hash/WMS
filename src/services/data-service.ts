@@ -2502,26 +2502,28 @@ export async function getVehicles(): Promise<Vehicle[]> {
         const vehicles = vehicleSnapshot.docs.map(doc => {
             const data = doc.data() as Omit<Vehicle, 'id'>;
 
-            if (data.registrationExpiryDate) {
-                const expiryDate = data.registrationExpiryDate.toDate();
-                if (expiryDate < notificationThreshold) {
-                    const daysUntilExpiry = differenceInDays(expiryDate, today);
-                    const title = daysUntilExpiry < 0 ? `Vehicle Registration Expired` : `Vehicle Registration Expiring Soon`;
-                    const description = `${data.make} ${data.model} (Plate: ${data.plateNumber}) registration ${daysUntilExpiry < 0 ? 'has expired' : `expires in ${daysUntilExpiry} days`}.`;
-                    
-                     createNotification({
-                        title: title,
-                        description: description,
-                        details: description + " Please renew the registration.",
-                        href: "/vehicles",
-                        icon: "Wrench",
-                    });
-                }
+            const registrationExpiryDate = data.registrationExpiryDate ? data.registrationExpiryDate.toDate() : null;
+
+            if (registrationExpiryDate && registrationExpiryDate < notificationThreshold) {
+                const daysUntilExpiry = differenceInDays(registrationExpiryDate, today);
+                const title = daysUntilExpiry < 0 ? `Vehicle Registration Expired` : `Vehicle Registration Expiring Soon`;
+                const description = `${data.make} ${data.model} (Plate: ${data.plateNumber}) registration ${daysUntilExpiry < 0 ? 'has expired' : `expires in ${daysUntilExpiry} days`}.`;
+                
+                 createNotification({
+                    title: title,
+                    description: description,
+                    details: description + " Please renew the registration.",
+                    href: "/vehicles",
+                    icon: "Wrench",
+                });
             }
 
             return {
                 id: doc.id,
                 ...data,
+                crDate: data.crDate ? (data.crDate as Timestamp).toDate() : undefined,
+                registrationDate: data.registrationDate ? (data.registrationDate as Timestamp).toDate() : undefined,
+                registrationExpiryDate: registrationExpiryDate || undefined,
             } as Vehicle;
         });
 
