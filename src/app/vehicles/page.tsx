@@ -106,22 +106,39 @@ const statusVariant: { [key: string]: "default" | "secondary" | "destructive" } 
 };
 
 const DatePickerInput = ({ field, placeholder, onDateChange, disabled }: { field: any, placeholder: string, onDateChange?: (date?: Date) => void, disabled?: boolean }) => {
-    const [inputValue, setInputValue] = useState(field.value ? format(new Date(field.value), 'MM/dd/yyyy') : '');
+    const [inputValue, setInputValue] = useState('');
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
     useEffect(() => {
-        setInputValue(field.value ? format(new Date(field.value), 'MM/dd/yyyy') : '');
+        if (field.value) {
+            try {
+                const date = new Date(field.value);
+                if (!isNaN(date.getTime())) {
+                    setInputValue(format(date, 'MM/dd/yyyy'));
+                } else {
+                    setInputValue('');
+                }
+            } catch (e) {
+                setInputValue('');
+            }
+        } else {
+            setInputValue('');
+        }
     }, [field.value]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newInputValue = e.target.value;
         setInputValue(newInputValue);
-        const parsedDate = parse(newInputValue, 'MM/dd/yyyy', new Date());
-        if (!isNaN(parsedDate.getTime())) {
-            field.onChange(parsedDate);
-            if (onDateChange) {
-                onDateChange(parsedDate);
+        try {
+            const parsedDate = parse(newInputValue, 'MM/dd/yyyy', new Date());
+            if (!isNaN(parsedDate.getTime())) {
+                field.onChange(parsedDate);
+                if (onDateChange) {
+                    onDateChange(parsedDate);
+                }
             }
+        } catch(e) {
+            // Ignore parse errors while typing
         }
     };
 
@@ -130,7 +147,11 @@ const DatePickerInput = ({ field, placeholder, onDateChange, disabled }: { field
         if (onDateChange) {
             onDateChange(date);
         }
-        setInputValue(date ? format(date, 'MM/dd/yyyy') : '');
+        if (date) {
+             setInputValue(format(date, 'MM/dd/yyyy'));
+        } else {
+            setInputValue('');
+        }
         setIsPopoverOpen(false);
     };
 
