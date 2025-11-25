@@ -4,7 +4,7 @@ import { db, storage, auth } from "@/lib/firebase";
 import { collection, getDocs, getDoc, doc, orderBy, query, limit, Timestamp, where, DocumentReference, addDoc, updateDoc, deleteDoc, arrayUnion, runTransaction, writeBatch, setDoc } from "firebase/firestore";
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import type { Activity, Notification, Order, Product, Client, Issuance, Supplier, PurchaseOrder, Shipment, Return, ReturnItem, OutboundReturn, OutboundReturnItem, UserProfile, OrderItem, PurchaseOrderItem, IssuanceItem, Backorder, UserRole, PagePermission, ProductCategory, ProductLocation, Tool, ToolBorrowRecord, SalvagedPart, DisposalRecord, ToolMaintenanceRecord, ToolBookingRequest, Vehicle, Task, Subtask, Worker } from "@/types";
+import type { Activity, Notification, Order, Product, Client, Issuance, Supplier, PurchaseOrder, Shipment, Return, ReturnItem, OutboundReturn, OutboundReturnItem, UserProfile, OrderItem, PurchaseOrderItem, IssuanceItem, Backorder, UserRole, PagePermission, ProductCategory, ProductLocation, Tool, ToolBorrowRecord, SalvagedPart, DisposalRecord, ToolMaintenanceRecord, ToolBookingRequest, Vehicle, Task, Subtask, Worker, FuelLog } from "@/types";
 import { format, subDays, addDays, differenceInDays } from 'date-fns';
 
 function timeSince(date: Date) {
@@ -2580,6 +2580,31 @@ export async function deleteVehicle(vehicleId: string): Promise<void> {
         console.error("Error deleting vehicle:", error);
         throw new Error("Failed to delete vehicle.");
     }
+}
+
+export async function addFuelLog(vehicleId: string, logData: Omit<FuelLog, 'date'> & { date: Date }): Promise<void> {
+    const vehicleRef = doc(db, "vehicles", vehicleId);
+    
+    await runTransaction(db, async (transaction) => {
+        const vehicleDoc = await transaction.get(vehicleRef);
+        if (!vehicleDoc.exists()) {
+            throw new Error("Vehicle not found.");
+        }
+        const vehicleData = vehicleDoc.data();
+        if (logData.odometer <= (vehicleData.odometer || 0)) {
+            throw new Error("Odometer reading must be greater than the current reading.");
+        }
+        
+        const newLog = {
+            ...logData,
+            date: Timestamp.fromDate(logData.date)
+        };
+
+        transaction.update(vehicleRef, {
+            odometer: logData.odometer,
+            fuelHistory: arrayUnion(newLog)
+        });
+    });
 }
 
 
