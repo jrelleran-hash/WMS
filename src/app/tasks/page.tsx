@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
@@ -12,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { addTask, updateTask, deleteTask } from "@/services/data-service";
 import type { Task, Subtask } from "@/types";
 import { format } from "date-fns";
-import { ResponsiveContainer, XAxis, YAxis, Bar, PieChart, Pie, Cell, Legend } from "recharts";
+import { ResponsiveContainer, XAxis, YAxis, Bar, BarChart, PieChart, Pie, Cell, Legend } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -662,6 +661,3 @@ function TaskTable({ tasks, loading, onStatusChange, onProgressChange, onEdit, o
         </Card>
     )
 }
-
-
-    
