@@ -16,7 +16,7 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
 import { useEffect, useState } from "react";
 import { ThemeToggle } from "./theme-toggle";
-import { User } from "lucide-react";
+import { User, Wrench } from "lucide-react";
 
 export function UserNav() {
   const { user, userProfile, logout } = useAuth();
@@ -49,6 +49,12 @@ export function UserNav() {
           <Link href="/settings?tab=profile">
             <DropdownMenuItem>
               Profile
+            </DropdownMenuItem>
+          </Link>
+          <Link href="/my-tools">
+            <DropdownMenuItem>
+              <Wrench className="mr-2 h-4 w-4" />
+              My Tools
             </DropdownMenuItem>
           </Link>
           <Link href="/settings">
