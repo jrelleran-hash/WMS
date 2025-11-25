@@ -105,6 +105,56 @@ const statusVariant: { [key: string]: "default" | "secondary" | "destructive" } 
     "Under Maintenance": "destructive",
 };
 
+const DatePickerInput = ({ field, placeholder, onDateChange, disabled }: { field: any, placeholder: string, onDateChange?: (date?: Date) => void, disabled?: boolean }) => {
+    const [inputValue, setInputValue] = useState(field.value ? format(new Date(field.value), 'MM/dd/yyyy') : '');
+    const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+
+    useEffect(() => {
+        setInputValue(field.value ? format(new Date(field.value), 'MM/dd/yyyy') : '');
+    }, [field.value]);
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newInputValue = e.target.value;
+        setInputValue(newInputValue);
+        const parsedDate = parse(newInputValue, 'MM/dd/yyyy', new Date());
+        if (!isNaN(parsedDate.getTime())) {
+            field.onChange(parsedDate);
+            if (onDateChange) {
+                onDateChange(parsedDate);
+            }
+        }
+    };
+
+    const handleSelect = (date: Date | undefined) => {
+        field.onChange(date);
+        if (onDateChange) {
+            onDateChange(date);
+        }
+        setInputValue(date ? format(date, 'MM/dd/yyyy') : '');
+        setIsPopoverOpen(false);
+    };
+
+    return (
+        <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+            <div className="relative">
+                <Input
+                    value={inputValue}
+                    onChange={handleInputChange}
+                    placeholder={placeholder}
+                    className="pr-10"
+                    disabled={disabled}
+                />
+                <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon" className="absolute inset-y-0 right-0 h-full px-3" disabled={disabled}>
+                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                </PopoverTrigger>
+            </div>
+            <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value ? new Date(field.value) : undefined} onSelect={handleSelect} initialFocus /></PopoverContent>
+        </Popover>
+    );
+};
+
 export default function VehiclesPage() {
   const { vehicles, loading, refetchData } = useData();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -247,7 +297,7 @@ export default function VehiclesPage() {
     currentForm.setValue("registrationDuration", isNaN(duration) ? 1 : duration);
     const regDate = currentForm.getValues("registrationDate");
     if(regDate) {
-        currentForm.setValue("registrationExpiryDate", addYears(regDate, isNaN(duration) ? 1 : duration));
+        currentForm.setValue("registrationExpiryDate", addYears(new Date(regDate), isNaN(duration) ? 1 : duration));
     }
   }
   
@@ -274,50 +324,6 @@ export default function VehiclesPage() {
     }
     return null;
   }
-
-  const DatePickerInput = ({ field, placeholder, onDateChange, disabled }: { field: any, placeholder: string, onDateChange?: (date: Date | undefined) => void, disabled?: boolean }) => {
-    const [inputValue, setInputValue] = useState(field.value ? format(field.value, 'MM/dd/yyyy') : '');
-
-    useEffect(() => {
-        setInputValue(field.value ? format(field.value, 'MM/dd/yyyy') : '');
-    }, [field.value]);
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setInputValue(e.target.value);
-        const parsedDate = parse(e.target.value, 'MM/dd/yyyy', new Date());
-        if (!isNaN(parsedDate.getTime())) {
-            field.onChange(parsedDate);
-            if (onDateChange) onDateChange(parsedDate);
-        }
-    };
-    
-    const handleSelect = (date: Date | undefined) => {
-        field.onChange(date);
-        if (onDateChange) onDateChange(date);
-        setInputValue(date ? format(date, 'MM/dd/yyyy') : '');
-    };
-
-    return (
-        <Popover>
-            <div className="relative">
-                <Input
-                    value={inputValue}
-                    onChange={handleInputChange}
-                    placeholder={placeholder}
-                    className="pr-10"
-                    disabled={disabled}
-                />
-                <PopoverTrigger asChild>
-                    <Button variant="ghost" size="icon" className="absolute inset-y-0 right-0 h-full px-3" disabled={disabled}>
-                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                </PopoverTrigger>
-            </div>
-            <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={handleSelect} initialFocus /></PopoverContent>
-        </Popover>
-    );
-};
-
 
   const VehicleFormFields = ({ form: currentForm }: { form: any }) => (
     <>
@@ -372,7 +378,7 @@ export default function VehiclesPage() {
                     control={currentForm.control}
                     name="fuelType"
                     render={({ field }) => (
-                       <Select onValueChange={field.onChange} defaultValue={field.value}>
+                       <Select onValueChange={field.onChange} value={field.value}>
                             <SelectTrigger><SelectValue placeholder="Select fuel type..." /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="Gasoline">Gasoline</SelectItem>
