@@ -17,10 +17,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Book, Calendar as CalendarIcon, CheckCircle } from "lucide-react";
+import { Book, Calendar as CalendarIcon, CheckCircle, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createToolBookingRequest } from "@/services/data-service";
 import { DateRange } from "react-day-picker";
+import { Input } from "@/components/ui/input";
 
 const bookingSchema = z.object({
   toolId: z.string().min(1, "Please select a tool."),
@@ -134,20 +135,16 @@ export default function ToolBookingPage() {
              </div>
               <div className="space-y-2">
                 <Label>Requested By</Label>
-                 <Controller
-                    name="requestedBy"
-                    control={control}
-                    render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <SelectTrigger><SelectValue placeholder="Select user..." /></SelectTrigger>
-                            <SelectContent>
-                                {users.map(user => (
-                                    <SelectItem key={user.uid} value={user.uid}>{user.firstName} {user.lastName}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    )}
-                />
+                 <div className="relative">
+                     <User className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        value={`${userProfile?.firstName || ''} ${userProfile?.lastName || ''}`.trim()}
+                        readOnly
+                        disabled
+                        className="pl-8"
+                    />
+                </div>
+                <input type="hidden" {...register("requestedBy")} />
                 {errors.requestedBy && <p className="text-sm text-destructive">{errors.requestedBy.message}</p>}
              </div>
              <div className="space-y-2">
