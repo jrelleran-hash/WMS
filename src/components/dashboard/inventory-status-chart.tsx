@@ -15,7 +15,7 @@ import { subDays, format, parseISO, startOfDay, endOfDay } from 'date-fns';
 
 const chartConfig = {
   quantity: {
-    label: "Total Quantity",
+    label: "Total Items",
     color: "hsl(var(--chart-1))",
   },
    inStock: {
@@ -54,8 +54,8 @@ export function InventoryStatusChart({ products, filter }: InventoryStatusChartP
 
     // Summary data for 'all' view
     const summary = {
-      "in-stock": products.filter(p => getStatusForProduct(p) === 'in-stock').reduce((sum, p) => sum + p.stock, 0),
-      "low-stock": products.filter(p => getStatusForProduct(p) === 'low-stock').reduce((sum, p) => sum + p.stock, 0),
+      "in-stock": products.filter(p => getStatusForProduct(p) === 'in-stock').length,
+      "low-stock": products.filter(p => getStatusForProduct(p) === 'low-stock').length,
       "out-of-stock": products.filter(p => getStatusForProduct(p) === 'out-of-stock').length,
     };
     
@@ -82,9 +82,9 @@ export function InventoryStatusChart({ products, filter }: InventoryStatusChartP
 
             if (stockOnDate > 0) {
               if (status === 'low-stock') {
-                  dailyTotals['low-stock'] += stockOnDate;
+                  dailyTotals['low-stock']++;
               } else if (status === 'in-stock') {
-                  dailyTotals['in-stock'] += stockOnDate;
+                  dailyTotals['in-stock']++;
               }
             } else if (status === 'out-of-stock') {
                 dailyTotals['out-of-stock']++;
@@ -124,7 +124,7 @@ export function InventoryStatusChart({ products, filter }: InventoryStatusChartP
            />
           <XAxis type="number" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
           <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" formatter={(value, name, props) => {
-            const label = props.payload.status === "Out of Stock" ? "Total Items" : "Total Quantity";
+            const label = "Total Items";
             return (
                 <div className="flex justify-between">
                     <span className="text-muted-foreground">{label}:</span>
@@ -160,7 +160,7 @@ export function InventoryStatusChart({ products, filter }: InventoryStatusChartP
             formatter={(value, name, props) => {
               const config = chartConfig[name as keyof typeof chartConfig];
               const date = props.payload.date;
-              const unit = name === 'outOfStock' ? 'items' : 'units';
+              const unit = 'items';
               return [`${date}: ${value} ${unit}`, config?.label || name];
             }}
           />} 
