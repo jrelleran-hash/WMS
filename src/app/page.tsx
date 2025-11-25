@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { WelcomeCard } from "@/components/dashboard/welcome-card";
@@ -184,28 +183,14 @@ export default function DashboardPage() {
     }
   }, [tools, toolFilter]);
 
-  const newClientsData = useMemo(() => {
-    const now = new Date();
-    const last30DaysStart = subDays(now, 30);
-    const prev30DaysStart = subDays(now, 60);
-
-    const newClientsLast30Days = clients.filter(c => c.createdAt && c.createdAt.toDate() > last30DaysStart).length;
-    const newClientsPrev30Days = clients.filter(c => c.createdAt && c.createdAt.toDate() > prev30DaysStart && c.createdAt.toDate() <= last30DaysStart).length;
-
-    let changePercentage = 0;
-    if (newClientsPrev30Days > 0) {
-      changePercentage = ((newClientsLast30Days - newClientsPrev30Days) / newClientsPrev30Days) * 100;
-    } else if (newClientsLast30Days > 0) {
-      changePercentage = 100; // Or Infinity, depending on how you want to represent it
-    }
-
-    const changeText = `${changePercentage >= 0 ? '+' : ''}${changePercentage.toFixed(1)}% from last month`;
-
+  const clientContractData = useMemo(() => {
+    const totalClients = clients.length;
+    const completedContracts = orders.filter(order => order.status === 'Completed').length;
     return {
-      count: newClientsLast30Days,
-      change: changeText,
+      total: totalClients,
+      completed: completedContracts,
     };
-  }, [clients]);
+  }, [clients, orders]);
 
   if (authLoading || !user) {
     return <StartupAnimation />;
@@ -261,7 +246,7 @@ export default function DashboardPage() {
             }
           />
           <KpiCard
-            key={`tool-${toolFilter}`}
+            key={toolFilter}
             title={toolTitle}
             value={toolCount}
             change={toolChangeText}
@@ -286,9 +271,9 @@ export default function DashboardPage() {
             }
           />
           <KpiCard
-            title="New Clients"
-            value={`+${newClientsData.count}`}
-            change={newClientsData.change}
+            title="Total Clients"
+            value={clientContractData.total.toString()}
+            change={`${clientContractData.completed} contracts completed`}
             icon={<Users className="size-5 text-primary" />}
             loading={dataLoading}
             href="/clients"
