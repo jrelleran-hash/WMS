@@ -145,6 +145,15 @@ export default function ToolManagementPage() {
   const returnForm = useForm<ReturnFormValues>();
   const assignForm = useForm<AssignFormValues>();
   const recallForm = useForm<RecallFormValues>();
+  
+  const canManage = userProfile?.role === 'Admin' || userProfile?.role === 'Manager';
+  const [activeTab, setActiveTab] = useState(canManage ? 'inventory' : 'my-tools');
+
+
+  const myTools = useMemo(() => {
+    if (!userProfile) return [];
+    return tools.filter(t => t.assignedToUserId === userProfile.uid || t.currentBorrowRecord?.borrowedBy === userProfile.uid);
+  }, [tools, userProfile]);
 
   const assignedTools = useMemo(() => tools.filter(t => t.status === "Assigned"), [tools]);
   const borrowedTools = useMemo(() => tools.filter(t => t.status === "In Use"), [tools]);
@@ -442,12 +451,51 @@ export default function ToolManagementPage() {
             </DialogContent>
         </Dialog>
       </div>
-      <Tabs defaultValue="inventory">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-            <TabsTrigger value="inventory">Tool Inventory</TabsTrigger>
-            <TabsTrigger value="requests">Request Queue <Badge variant="secondary" className="ml-2">{pendingRequests.length}</Badge></TabsTrigger>
-            <TabsTrigger value="history">Borrow History</TabsTrigger>
+            <TabsTrigger value="my-tools">My Tools</TabsTrigger>
+            {canManage && <TabsTrigger value="inventory">Tool Inventory</TabsTrigger>}
+            {canManage && <TabsTrigger value="requests">Request Queue <Badge variant="secondary" className="ml-2">{pendingRequests.length}</Badge></TabsTrigger>}
+            {canManage && <TabsTrigger value="history">Borrow History</TabsTrigger>}
         </TabsList>
+         <TabsContent value="my-tools">
+            <Card>
+                <CardHeader>
+                    <CardTitle>My Tools</CardTitle>
+                    <CardDescription>Tools currently assigned to you or borrowed by you.</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Tool</TableHead>
+                                <TableHead>Serial #</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Due Date</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {loading ? (
+                                Array.from({length: 3}).map((_, i) => (
+                                    <TableRow key={i}><TableCell colSpan={4}><Skeleton className="h-8 w-full" /></TableCell></TableRow>
+                                ))
+                            ) : myTools.length > 0 ? (
+                                myTools.map(tool => (
+                                    <TableRow key={tool.id}>
+                                        <TableCell>{tool.name}</TableCell>
+                                        <TableCell>{tool.serialNumber}</TableCell>
+                                        <TableCell><Badge variant={statusVariant[tool.status]}>{tool.status}</Badge></TableCell>
+                                        <TableCell>{tool.status === 'In Use' ? formatDate(tool.currentBorrowRecord?.dueDate) : 'N/A'}</TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow><TableCell colSpan={4} className="h-24 text-center">You have no tools assigned or borrowed.</TableCell></TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+        </TabsContent>
         <TabsContent value="inventory">
             <Card>
                 <CardContent className="pt-6">
