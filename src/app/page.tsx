@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { WelcomeCard } from "@/components/dashboard/welcome-card";
@@ -191,21 +192,6 @@ export default function DashboardPage() {
       change: changeText,
     };
   }, [clients]);
-
-  const activeOrdersData = useMemo(() => {
-    const activeStatuses: Order['status'][] = ["Processing", "Awaiting Purchase", "Ready for Issuance"];
-    const activeOrders = orders.filter(o => activeStatuses.includes(o.status));
-
-    const now = new Date();
-    const oneHourAgo = subDays(now, 1); // Changed to subDays for more realistic "recent" data
-
-    const recentActiveOrders = orders.filter(o => o.date > oneHourAgo).length;
-
-    return {
-      count: activeOrders.length,
-      change: `+${recentActiveOrders} in the last 24 hours`,
-    };
-  }, [orders]);
 
   if (authLoading || !user) {
     return <StartupAnimation />;
