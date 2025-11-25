@@ -341,7 +341,7 @@ export default function VehiclesPage() {
                 />
             </div>
              <div className="space-y-2">
-                <Label htmlFor="fuelConsumption">Avg. Consumption (km/L)</Label>
+                <Label htmlFor="fuelConsumption">Avg. Consumption (L/km)</Label>
                 <Input id="fuelConsumption" type="number" step="0.01" {...currentForm.register("fuelConsumption")} />
             </div>
             <div className="space-y-2">
@@ -511,7 +511,7 @@ export default function VehiclesPage() {
                         <div className="text-sm text-muted-foreground">{vehicle.type}</div>
                     </TableCell>
                     <TableCell>{vehicle.plateNumber}</TableCell>
-                    <TableCell className="hidden md:table-cell">{vehicle.fuelConsumption ? `${vehicle.fuelConsumption} km/L` : 'N/A'}</TableCell>
+                    <TableCell className="hidden md:table-cell">{vehicle.fuelConsumption ? `${vehicle.fuelConsumption} L/km` : 'N/A'}</TableCell>
                     <TableCell className="hidden md:table-cell">
                       <div className="flex items-center gap-2">
                         <span>{formatDate(vehicle.registrationExpiryDate)}</span>
