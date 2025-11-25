@@ -1,16 +1,17 @@
 
+
 "use client";
 
 import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { PlusCircle, MoreHorizontal, Truck, Calendar as CalendarIcon, AlertTriangle } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Truck, Calendar as CalendarIcon, AlertTriangle, Droplet } from 'lucide-react';
 import { format, addYears, isBefore, startOfToday, differenceInDays } from 'date-fns';
 
 import { useData } from '@/context/data-context';
 import { useToast } from '@/hooks/use-toast';
-import { addVehicle, updateVehicle, deleteVehicle } from '@/services/data-service';
+import { addVehicle, updateVehicle, deleteVehicle, addFuelLog } from '@/services/data-service';
 import type { Vehicle } from '@/types';
 
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -65,6 +66,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const vehicleSchema = z.object({
   type: z.string().min(1, "Vehicle type is required."),
@@ -81,10 +83,21 @@ const vehicleSchema = z.object({
   registrationDate: z.date().optional(),
   registrationExpiryDate: z.date().optional(),
   registrationDuration: z.coerce.number().int().min(1, "Duration must be at least 1 year.").optional(),
+  fuelType: z.enum(["Gasoline", "Diesel", "Electric", "Other"]).optional(),
+  fuelConsumption: z.coerce.number().nonnegative("Must be a positive number").optional(),
+  odometer: z.coerce.number().nonnegative("Must be a positive number").optional(),
+});
+
+const fuelLogSchema = z.object({
+    date: z.date({ required_error: "Date is required." }),
+    liters: z.coerce.number().min(0.1, "Liters must be greater than 0."),
+    cost: z.coerce.number().min(1, "Cost must be greater than 0."),
+    odometer: z.coerce.number().min(1, "Odometer reading is required."),
 });
 
 
 type VehicleFormValues = z.infer<typeof vehicleSchema>;
+type FuelLogFormValues = z.infer<typeof fuelLogSchema>;
 
 const statusVariant: { [key: string]: "default" | "secondary" | "destructive" } = {
     Available: "default",
@@ -97,7 +110,9 @@ export default function VehiclesPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isFuelLogOpen, setIsFuelLogOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
+  const [loggingFuelForVehicle, setLoggingFuelForVehicle] = useState<Vehicle | null>(null);
   const [deletingVehicleId, setDeletingVehicleId] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -110,6 +125,10 @@ export default function VehiclesPage() {
 
   const editForm = useForm<VehicleFormValues>({
     resolver: zodResolver(vehicleSchema),
+  });
+
+  const fuelLogForm = useForm<FuelLogFormValues>({
+    resolver: zodResolver(fuelLogSchema),
   });
 
   useEffect(() => {
@@ -134,6 +153,18 @@ export default function VehiclesPage() {
       setIsEditDialogOpen(false);
     }
   }, [editingVehicle, editForm]);
+
+  useEffect(() => {
+    if(loggingFuelForVehicle) {
+        fuelLogForm.reset({
+            date: new Date(),
+            odometer: loggingFuelForVehicle.odometer,
+        });
+        setIsFuelLogOpen(true);
+    } else {
+        setIsFuelLogOpen(false);
+    }
+  }, [loggingFuelForVehicle, fuelLogForm]);
 
 
   const onSubmit = async (data: VehicleFormValues) => {
@@ -164,6 +195,19 @@ export default function VehiclesPage() {
     } catch (error) {
         toast({ variant: "destructive", title: "Error", description: "Failed to update vehicle."});
     }
+  }
+  
+  const onFuelLogSubmit = async (data: FuelLogFormValues) => {
+      if (!loggingFuelForVehicle) return;
+      try {
+          await addFuelLog(loggingFuelForVehicle.id, data);
+          toast({ title: "Success", description: "Fuel log added successfully." });
+          setLoggingFuelForVehicle(null);
+          await refetchData();
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Failed to add fuel log.";
+        toast({ variant: "destructive", title: "Error", description: errorMessage });
+      }
   }
 
   const handleDeleteClick = (vehicleId: string) => {
@@ -273,6 +317,38 @@ export default function VehiclesPage() {
                 <Label htmlFor="sizeLimit">Size Limit (Optional)</Label>
                 <Input id="sizeLimit" {...currentForm.register("sizeLimit")} placeholder="e.g. 3.2 x 1.9 x 2.3 ft" />
             </div>
+        </div>
+        
+        <div className="space-y-4 rounded-md border p-4">
+          <h3 className="text-sm font-medium">Fuel & Odometer</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="space-y-2">
+                <Label htmlFor="fuelType">Fuel Type</Label>
+                <Controller
+                    control={currentForm.control}
+                    name="fuelType"
+                    render={({ field }) => (
+                       <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <SelectTrigger><SelectValue placeholder="Select fuel type..." /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Gasoline">Gasoline</SelectItem>
+                                <SelectItem value="Diesel">Diesel</SelectItem>
+                                <SelectItem value="Electric">Electric</SelectItem>
+                                <SelectItem value="Other">Other</SelectItem>
+                            </SelectContent>
+                       </Select>
+                    )}
+                />
+            </div>
+             <div className="space-y-2">
+                <Label htmlFor="fuelConsumption">Avg. Consumption (km/L)</Label>
+                <Input id="fuelConsumption" type="number" {...currentForm.register("fuelConsumption")} />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="odometer">Odometer (km)</Label>
+                <Input id="odometer" type="number" {...currentForm.register("odometer")} />
+            </div>
+          </div>
         </div>
 
          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -407,7 +483,7 @@ export default function VehiclesPage() {
               <TableRow>
                 <TableHead>Vehicle</TableHead>
                 <TableHead>Plate Number</TableHead>
-                <TableHead className="hidden md:table-cell">CR Number</TableHead>
+                <TableHead className="hidden md:table-cell">Consumption</TableHead>
                 <TableHead className="hidden md:table-cell">Expiry Date</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -435,7 +511,7 @@ export default function VehiclesPage() {
                         <div className="text-sm text-muted-foreground">{vehicle.type}</div>
                     </TableCell>
                     <TableCell>{vehicle.plateNumber}</TableCell>
-                    <TableCell className="hidden md:table-cell">{vehicle.crNumber || 'N/A'}</TableCell>
+                    <TableCell className="hidden md:table-cell">{vehicle.fuelConsumption ? `${vehicle.fuelConsumption} km/L` : 'N/A'}</TableCell>
                     <TableCell className="hidden md:table-cell">
                       <div className="flex items-center gap-2">
                         <span>{formatDate(vehicle.registrationExpiryDate)}</span>
@@ -467,6 +543,10 @@ export default function VehiclesPage() {
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
                               <DropdownMenuItem onSelect={() => setEditingVehicle(vehicle)}>
                                 Edit
+                              </DropdownMenuItem>
+                               <DropdownMenuItem onSelect={() => setLoggingFuelForVehicle(vehicle)}>
+                                <Droplet className="mr-2 h-4 w-4" />
+                                Log Fuel
                               </DropdownMenuItem>
                                <DropdownMenuSeparator />
                               <DropdownMenuItem
@@ -526,6 +606,56 @@ export default function VehiclesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={isFuelLogOpen} onOpenChange={(open) => !open && setLoggingFuelForVehicle(null)}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Log Fuel for {loggingFuelForVehicle?.make} {loggingFuelForVehicle?.model}</DialogTitle>
+                <DialogDescription>Enter the details of the fuel purchase to calculate consumption.</DialogDescription>
+            </DialogHeader>
+            <form onSubmit={fuelLogForm.handleSubmit(onFuelLogSubmit)} className="space-y-4">
+                <div className="space-y-2">
+                    <Label>Date</Label>
+                     <Controller
+                        control={fuelLogForm.control}
+                        name="date"
+                        render={({ field }) => (
+                           <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
+                           </Popover>
+                        )}
+                    />
+                </div>
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="liters">Liters</Label>
+                        <Input id="liters" type="number" step="0.01" {...fuelLogForm.register("liters")} />
+                        {fuelLogForm.formState.errors.liters && <p className="text-sm text-destructive">{fuelLogForm.formState.errors.liters.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="cost">Total Cost</Label>
+                        <Input id="cost" type="number" step="0.01" {...fuelLogForm.register("cost")} />
+                        {fuelLogForm.formState.errors.cost && <p className="text-sm text-destructive">{fuelLogForm.formState.errors.cost.message}</p>}
+                    </div>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="odometer-log">Odometer Reading (km)</Label>
+                    <Input id="odometer-log" type="number" {...fuelLogForm.register("odometer")} />
+                    {fuelLogForm.formState.errors.odometer && <p className="text-sm text-destructive">{fuelLogForm.formState.errors.odometer.message}</p>}
+                </div>
+                <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setLoggingFuelForVehicle(null)}>Cancel</Button>
+                    <Button type="submit">Add Log</Button>
+                </DialogFooter>
+            </form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

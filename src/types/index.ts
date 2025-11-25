@@ -315,6 +315,13 @@ export interface ToolBookingRequest {
     createdAt: Date;
 }
 
+export interface FuelLog {
+    date: Timestamp;
+    liters: number;
+    cost: number;
+    odometer: number;
+}
+
 export interface Vehicle {
     id: string;
     type: string;
@@ -333,6 +340,10 @@ export interface Vehicle {
     registrationDate?: Timestamp;
     registrationExpiryDate?: Timestamp;
     registrationDuration?: number;
+    fuelType?: 'Gasoline' | 'Diesel' | 'Electric' | 'Other';
+    fuelConsumption?: number; // km/L
+    odometer?: number;
+    fuelHistory?: FuelLog[];
 }
 
 export interface Subtask {
