@@ -41,7 +41,7 @@ interface ToolStatusChartProps {
 export function ToolStatusChart({ tools, filter }: ToolStatusChartProps) {
   
   const chartData = useMemo(() => {
-    const summary: { [key in Tool['status']]: number } = {
+    const summary: { [key in Tool['status'] | 'Assigned']: number } = {
       "Available": 0,
       "In Use": 0,
       "Under Maintenance": 0,
@@ -53,9 +53,9 @@ export function ToolStatusChart({ tools, filter }: ToolStatusChartProps) {
         }
     });
     
-    return Object.entries(summary).map(([status, count]) => ({
+    return (Object.keys(chartConfig) as (keyof typeof chartConfig)[]).map((status) => ({
         status,
-        count,
+        count: summary[status as Tool['status']],
         fill: `var(--color-${status.replace(/ /g, '')})`,
         opacity: filter === 'all' || filter === status ? 1 : 0.3,
     }));
