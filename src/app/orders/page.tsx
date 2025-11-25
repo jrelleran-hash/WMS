@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { PlusCircle, MoreHorizontal, ChevronsUpDown, Check, Printer, X } from "lucide-react";
+import { PlusCircle, MoreHorizontal, ChevronsUpDown, Check, Printer, X, FilterX } from "lucide-react";
 import { Timestamp } from "firebase/firestore";
 import { format } from "date-fns";
 import { useRouter } from "next/navigation";
@@ -97,11 +97,20 @@ export default function OrdersPage() {
   // Data states
   const [autoGenerateSku, setAutoGenerateSku] = useState(true);
   const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
+  const [clientFilter, setClientFilter] = useState<string | null>(null);
   
   // Popover states
   const [orderClientPopover, setOrderClientPopover] = useState(false);
   const [orderProductPopovers, setOrderProductPopovers] = useState<Record<number, boolean>>({});
   const [isSupplierPopoverOpen, setIsSupplierPopoverOpen] = useState(false);
+  const [isClientFilterPopoverOpen, setIsClientFilterPopoverOpen] = useState(false);
+
+  const filteredOrders = useMemo(() => {
+    if (!clientFilter) {
+      return orders;
+    }
+    return orders.filter(order => order.client.id === clientFilter);
+  }, [orders, clientFilter]);
   
   const productSchema = useMemo(() => createProductSchema(autoGenerateSku), [autoGenerateSku]);
 
@@ -548,7 +557,58 @@ export default function OrdersPage() {
     <Card>
       <CardHeader>
         <CardTitle>All Orders</CardTitle>
-        <CardDescription>A complete history of all requisitions, new and old.</CardDescription>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <CardDescription>A complete history of all requisitions, new and old.</CardDescription>
+          <div className="flex items-center gap-2">
+            <Popover open={isClientFilterPopoverOpen} onOpenChange={setIsClientFilterPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  className={cn("w-[200px] justify-between", !clientFilter && "text-muted-foreground")}
+                >
+                  {clientFilter
+                    ? clients.find((client) => client.id === clientFilter)?.clientName
+                    : "Filter by client..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[200px] p-0">
+                <Command>
+                  <CommandInput placeholder="Search client..." />
+                  <CommandEmpty>No client found.</CommandEmpty>
+                  <CommandList>
+                    <CommandGroup>
+                      {clients.map((client) => (
+                        <CommandItem
+                          key={client.id}
+                          value={client.clientName}
+                          onSelect={() => {
+                            setClientFilter(client.id);
+                            setIsClientFilterPopoverOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              client.id === clientFilter ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {client.clientName}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            {clientFilter && (
+              <Button variant="ghost" size="icon" onClick={() => setClientFilter(null)}>
+                <FilterX className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
           <Table>
@@ -577,7 +637,7 @@ export default function OrdersPage() {
                   </TableRow>
                 ))
               ) : (
-                orders.map((order) => (
+                filteredOrders.map((order) => (
                   <TableRow key={order.id} onClick={() => setSelectedOrder(order)} className="cursor-pointer">
                     <TableCell>
                       <div className="font-medium">{order.id.substring(0, 7)}</div>
