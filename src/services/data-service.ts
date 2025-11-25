@@ -2367,7 +2367,8 @@ export async function deleteMaintenanceRecords(recordIds: string[]): Promise<voi
 
 type NewBookingRequestData = {
     toolId: string;
-    requestedById: string;
+    requestedById: string; // The user CREATING the request
+    requestedForId: string; // The user the tool IS FOR
     startDate: Date;
     endDate: Date;
     notes?: string;
@@ -2376,7 +2377,7 @@ type NewBookingRequestData = {
 export async function createToolBookingRequest(data: NewBookingRequestData): Promise<void> {
     try {
         const toolRef = doc(db, "tools", data.toolId);
-        const userRef = doc(db, "users", data.requestedById);
+        const userRef = doc(db, "users", data.requestedForId);
 
         const [toolDoc, userDoc] = await Promise.all([getDoc(toolRef), getDoc(userRef)]);
 
@@ -2390,8 +2391,9 @@ export async function createToolBookingRequest(data: NewBookingRequestData): Pro
         const newRequest = {
             toolId: data.toolId,
             toolName: toolData.name,
-            requestedById: data.requestedById,
-            requestedByName: `${userData.firstName} ${userData.lastName}`,
+            createdById: data.requestedById, // ID of the supervisor creating the request
+            requestedForId: data.requestedForId, // ID of the worker
+            requestedForName: `${userData.firstName} ${userData.lastName}`, // Name of the worker
             startDate: Timestamp.fromDate(data.startDate),
             endDate: Timestamp.fromDate(data.endDate),
             notes: data.notes || "",
@@ -2403,7 +2405,7 @@ export async function createToolBookingRequest(data: NewBookingRequestData): Pro
 
         await createNotification({
             title: "New Tool Request",
-            description: `${newRequest.requestedByName} requested to borrow the ${newRequest.toolName}.`,
+            description: `${newRequest.requestedForName} needs to borrow the ${newRequest.toolName}.`,
             details: `A new tool booking request has been submitted for approval.`,
             href: "/tools",
             icon: "Package",
@@ -2457,8 +2459,8 @@ export async function approveToolBookingRequest(requestId: string, approvedBy: s
         const borrowRecordRef = doc(collection(db, "toolBorrowRecords"));
         transaction.set(borrowRecordRef, {
             toolId: requestData.toolId,
-            borrowedBy: requestData.requestedById,
-            borrowedByName: requestData.requestedByName,
+            borrowedBy: requestData.requestedForId,
+            borrowedByName: requestData.requestedForName,
             dateBorrowed: requestData.startDate, // Use the requested start date
             dueDate: requestData.endDate, // Use the requested end date
             dateReturned: null,
@@ -2794,4 +2796,5 @@ export async function deleteProductCategory(categoryId: string): Promise<void> {
     throw new Error("Failed to delete category.");
   }
 }
+
 

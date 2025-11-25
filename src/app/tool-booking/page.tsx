@@ -17,15 +17,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Book, Calendar as CalendarIcon, CheckCircle, User } from "lucide-react";
+import { Book, Calendar as CalendarIcon, CheckCircle, User, ChevronsUpDown, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createToolBookingRequest } from "@/services/data-service";
 import { DateRange } from "react-day-picker";
 import { Input } from "@/components/ui/input";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 const bookingSchema = z.object({
   toolId: z.string().min(1, "Please select a tool."),
-  requestedBy: z.string().min(1, "Requester must be specified."),
+  requestedForId: z.string().min(1, "Please select the user this tool is for."),
   dateRange: z.object({
     from: z.date({ required_error: "A start date is required." }),
     to: z.date({ required_error: "An end date is required." }),
@@ -43,6 +44,8 @@ export default function ToolBookingPage() {
   const { userProfile } = useAuth();
   const { toast } = useToast();
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [userPopoverOpen, setUserPopoverOpen] = useState(false);
+
 
   const availableTools = useMemo(() => tools.filter(t => t.status === "Available"), [tools]);
 
@@ -52,22 +55,26 @@ export default function ToolBookingPage() {
   
   const { control, handleSubmit, register, formState: { errors }, watch, setValue } = form;
 
-  useEffect(() => {
-    if (userProfile) {
-      setValue("requestedBy", userProfile.uid);
-    }
-  }, [userProfile, setValue]);
-
   const onSubmit = async (data: BookingFormValues) => {
+    if (!userProfile) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "You must be logged in to create a request."
+        });
+        return;
+    }
     try {
       await createToolBookingRequest({
         toolId: data.toolId,
-        requestedById: data.requestedBy,
+        requestedById: userProfile.uid, // The person creating the request
+        requestedForId: data.requestedForId, // The person who will use the tool
         startDate: data.dateRange.from,
         endDate: data.dateRange.to,
         notes: data.notes,
       });
       setIsSubmitted(true);
+      form.reset();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to submit booking request.";
       toast({
@@ -134,18 +141,53 @@ export default function ToolBookingPage() {
                 {errors.toolId && <p className="text-sm text-destructive">{errors.toolId.message}</p>}
              </div>
               <div className="space-y-2">
-                <Label>Requested By</Label>
-                 <div className="relative">
-                     <User className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        value={`${userProfile?.firstName || ''} ${userProfile?.lastName || ''}`.trim()}
-                        readOnly
-                        disabled
-                        className="pl-8"
+                <Label>Requested For (Worker)</Label>
+                 <Controller
+                    name="requestedForId"
+                    control={control}
+                    render={({ field }) => (
+                         <Popover open={userPopoverOpen} onOpenChange={setUserPopoverOpen}>
+                            <PopoverTrigger asChild>
+                                <Button
+                                variant="outline"
+                                role="combobox"
+                                className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
+                                >
+                                {field.value
+                                    ? users.find((user) => user.uid === field.value)?.firstName + ' ' + users.find((user) => user.uid === field.value)?.lastName
+                                    : "Select a user..."}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                <Command>
+                                    <CommandInput placeholder="Search user..." />
+                                    <CommandEmpty>No user found.</CommandEmpty>
+                                    <CommandList>
+                                        <CommandGroup>
+                                        {users.map((user) => (
+                                            <CommandItem
+                                                value={`${user.firstName} ${user.lastName}`}
+                                                key={user.uid}
+                                                onSelect={() => {
+                                                    field.onChange(user.uid)
+                                                    setUserPopoverOpen(false)
+                                                }}
+                                                >
+                                                <Check
+                                                    className={cn("mr-2 h-4 w-4", field.value === user.uid ? "opacity-100" : "opacity-0")}
+                                                />
+                                                {user.firstName} {user.lastName}
+                                            </CommandItem>
+                                        ))}
+                                        </CommandGroup>
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
+                    )}
                     />
-                </div>
-                <input type="hidden" {...register("requestedBy")} />
-                {errors.requestedBy && <p className="text-sm text-destructive">{errors.requestedBy.message}</p>}
+                {errors.requestedForId && <p className="text-sm text-destructive">{errors.requestedForId.message}</p>}
              </div>
              <div className="space-y-2">
                 <Label>Booking Dates</Label>
