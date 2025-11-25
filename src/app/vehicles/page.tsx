@@ -503,7 +503,7 @@ export default function VehiclesPage() {
                 ))
               ) : (
                 vehicles.map((vehicle) => {
-                  const expiryStatus = getExpiryStatus(vehicle.registrationExpiryDate?.toDate());
+                  const expiryStatus = getExpiryStatus(vehicle.registrationExpiryDate);
                   return (
                   <TableRow key={vehicle.id}>
                     <TableCell>
