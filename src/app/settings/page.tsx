@@ -89,6 +89,7 @@ const allPermissions: { group: string; permissions: { value: PagePermission; lab
         { value: "/tasks", label: "Task Management" },
     ]},
     { group: "Tools", permissions: [
+        { value: "/my-tools", label: "My Tools" },
         { value: "/tools", label: "Tool Management" },
         { value: "/tool-accountability", label: "Tool Accountability" },
         { value: "/tool-booking", label: "Tool Booking" },
@@ -866,4 +867,3 @@ export default function SettingsPage() {
   );
 }
 
-    
