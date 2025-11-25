@@ -5,8 +5,8 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { getProducts, getClients, getOrders, getIssuances, getSuppliers, getPurchaseOrders, getShipments, getUnshippedIssuances, getReturns, getOutboundReturns, getBackorders, getAllUsers, getTools, getToolBookingRequests, getVehicles, getTasks, getProductCategories } from "@/services/data-service";
-import type { Product, Client, Order, Issuance, Supplier, PurchaseOrder, Shipment, Return, OutboundReturn, Backorder, UserProfile, Tool, ToolBookingRequest, Vehicle, Task, ProductCategory } from "@/types";
+import { getProducts, getClients, getOrders, getIssuances, getSuppliers, getPurchaseOrders, getShipments, getUnshippedIssuances, getReturns, getOutboundReturns, getBackorders, getAllUsers, getTools, getToolBookingRequests, getVehicles, getTasks, getProductCategories, getWorkers } from "@/services/data-service";
+import type { Product, Client, Order, Issuance, Supplier, PurchaseOrder, Shipment, Return, OutboundReturn, Backorder, UserProfile, Tool, ToolBookingRequest, Vehicle, Task, ProductCategory, Worker } from "@/types";
 
 interface DataContextType {
   products: Product[];
@@ -21,6 +21,7 @@ interface DataContextType {
   outboundReturns: OutboundReturn[];
   backorders: Backorder[];
   users: UserProfile[];
+  workers: Worker[];
   tools: Tool[];
   toolBookingRequests: ToolBookingRequest[];
   vehicles: Vehicle[];
@@ -45,6 +46,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [outboundReturns, setOutboundReturns] = useState<OutboundReturn[]>([]);
   const [backorders, setBackorders] = useState<Backorder[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [workers, setWorkers] = useState<Worker[]>([]);
   const [tools, setTools] = useState<Tool[]>([]);
   const [toolBookingRequests, setToolBookingRequests] = useState<ToolBookingRequest[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -76,6 +78,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setOutboundReturns([]);
       setBackorders([]);
       setUsers([]);
+      setWorkers([]);
       setTools([]);
       setToolBookingRequests([]);
       setVehicles([]);
@@ -100,6 +103,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         fetchedOutboundReturns,
         fetchedBackorders,
         fetchedUsers,
+        fetchedWorkers,
         fetchedTools,
         fetchedToolBookingRequests,
         fetchedVehicles,
@@ -118,6 +122,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         getOutboundReturns(),
         getBackorders(),
         getAllUsers(),
+        getWorkers(),
         getTools(),
         getToolBookingRequests(),
         getVehicles(),
@@ -136,6 +141,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setOutboundReturns(fetchedOutboundReturns);
       setBackorders(fetchedBackorders);
       setUsers(fetchedUsers);
+      setWorkers(fetchedWorkers);
       setTools(fetchedTools);
       setToolBookingRequests(fetchedToolBookingRequests);
       setVehicles(fetchedVehicles);
@@ -166,6 +172,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     outboundReturns,
     backorders,
     users,
+    workers,
     tools,
     toolBookingRequests,
     vehicles,
@@ -173,7 +180,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     productCategories,
     loading,
     refetchData: fetchData,
-  }), [products, clients, orders, issuances, suppliers, purchaseOrders, shipments, unshippedIssuances, returns, outboundReturns, backorders, users, tools, toolBookingRequests, vehicles, tasks, productCategories, loading, fetchData]);
+  }), [products, clients, orders, issuances, suppliers, purchaseOrders, shipments, unshippedIssuances, returns, outboundReturns, backorders, users, workers, tools, toolBookingRequests, vehicles, tasks, productCategories, loading, fetchData]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }

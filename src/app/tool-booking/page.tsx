@@ -17,16 +17,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Book, Calendar as CalendarIcon, CheckCircle, User, ChevronsUpDown, Check } from "lucide-react";
+import { Book, Calendar as CalendarIcon, CheckCircle, User, ChevronsUpDown, Check, PlusCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { createToolBookingRequest } from "@/services/data-service";
+import { createToolBookingRequest, addWorker } from "@/services/data-service";
 import { DateRange } from "react-day-picker";
 import { Input } from "@/components/ui/input";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 const bookingSchema = z.object({
   toolId: z.string().min(1, "Please select a tool."),
-  requestedForId: z.string().min(1, "Please select the user this tool is for."),
+  requestedForId: z.string().min(1, "Please select the worker this tool is for."),
   dateRange: z.object({
     from: z.date({ required_error: "A start date is required." }),
     to: z.date({ required_error: "An end date is required." }),
@@ -39,18 +40,30 @@ const bookingSchema = z.object({
 
 type BookingFormValues = z.infer<typeof bookingSchema>;
 
+const workerSchema = z.object({
+    name: z.string().min(1, "Worker name is required."),
+    role: z.string().min(1, "Worker role/position is required."),
+});
+
+type WorkerFormValues = z.infer<typeof workerSchema>;
+
+
 export default function ToolBookingPage() {
-  const { tools, users, loading, refetchData } = useData();
+  const { tools, workers, loading, refetchData } = useData();
   const { userProfile } = useAuth();
   const { toast } = useToast();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [userPopoverOpen, setUserPopoverOpen] = useState(false);
-
+  const [isAddWorkerOpen, setIsAddWorkerOpen] = useState(false);
 
   const availableTools = useMemo(() => tools.filter(t => t.status === "Available"), [tools]);
 
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingSchema),
+  });
+
+  const workerForm = useForm<WorkerFormValues>({
+      resolver: zodResolver(workerSchema),
   });
   
   const { control, handleSubmit, register, formState: { errors }, watch, setValue } = form;
@@ -67,8 +80,8 @@ export default function ToolBookingPage() {
     try {
       await createToolBookingRequest({
         toolId: data.toolId,
-        requestedById: userProfile.uid, // The person creating the request
-        requestedForId: data.requestedForId, // The person who will use the tool
+        requestedById: userProfile.uid,
+        requestedForId: data.requestedForId,
         startDate: data.dateRange.from,
         endDate: data.dateRange.to,
         notes: data.notes,
@@ -84,6 +97,24 @@ export default function ToolBookingPage() {
       });
     }
   };
+  
+  const onAddWorkerSubmit = async (data: WorkerFormValues) => {
+      try {
+          const newWorker = await addWorker(data);
+          toast({
+              title: "Worker Added",
+              description: `${data.name} has been added to the list.`,
+          });
+          await refetchData();
+          setIsAddWorkerOpen(false);
+          workerForm.reset();
+          setValue("requestedForId", newWorker.id); // Auto-select the new worker
+      } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : "Failed to add worker.";
+          toast({ variant: "destructive", title: "Error", description: errorMessage });
+      }
+  }
+
 
   if (isSubmitted) {
     return (
@@ -140,7 +171,7 @@ export default function ToolBookingPage() {
                 />
                 {errors.toolId && <p className="text-sm text-destructive">{errors.toolId.message}</p>}
              </div>
-              <div className="space-y-2">
+             <div className="space-y-2">
                 <Label>Requested For (Worker)</Label>
                  <Controller
                     name="requestedForId"
@@ -154,30 +185,34 @@ export default function ToolBookingPage() {
                                 className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
                                 >
                                 {field.value
-                                    ? users.find((user) => user.uid === field.value)?.firstName + ' ' + users.find((user) => user.uid === field.value)?.lastName
-                                    : "Select a user..."}
+                                    ? workers.find((worker) => worker.id === field.value)?.name
+                                    : "Select a worker..."}
                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                                 <Command>
-                                    <CommandInput placeholder="Search user..." />
-                                    <CommandEmpty>No user found.</CommandEmpty>
+                                    <CommandInput placeholder="Search worker..." />
+                                    <CommandEmpty>
+                                        <Button variant="ghost" className="w-full" onClick={() => {setUserPopoverOpen(false); setIsAddWorkerOpen(true);}}>
+                                            <PlusCircle className="mr-2 h-4 w-4" /> Add New Worker
+                                        </Button>
+                                    </CommandEmpty>
                                     <CommandList>
                                         <CommandGroup>
-                                        {users.map((user) => (
+                                        {workers.map((worker) => (
                                             <CommandItem
-                                                value={`${user.firstName} ${user.lastName}`}
-                                                key={user.uid}
+                                                value={worker.name}
+                                                key={worker.id}
                                                 onSelect={() => {
-                                                    field.onChange(user.uid)
+                                                    field.onChange(worker.id)
                                                     setUserPopoverOpen(false)
                                                 }}
                                                 >
                                                 <Check
-                                                    className={cn("mr-2 h-4 w-4", field.value === user.uid ? "opacity-100" : "opacity-0")}
+                                                    className={cn("mr-2 h-4 w-4", field.value === worker.id ? "opacity-100" : "opacity-0")}
                                                 />
-                                                {user.firstName} {user.lastName}
+                                                {worker.name}
                                             </CommandItem>
                                         ))}
                                         </CommandGroup>
@@ -245,6 +280,35 @@ export default function ToolBookingPage() {
           </form>
         </CardContent>
       </Card>
+      
+       <Dialog open={isAddWorkerOpen} onOpenChange={setIsAddWorkerOpen}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Add New Worker</DialogTitle>
+                    <DialogDescription>
+                        Add a new worker to the list for tool assignments.
+                    </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={workerForm.handleSubmit(onAddWorkerSubmit)} className="space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="worker-name">Worker Name</Label>
+                        <Input id="worker-name" {...workerForm.register("name")} />
+                        {workerForm.formState.errors.name && <p className="text-sm text-destructive">{workerForm.formState.errors.name.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="worker-role">Role / Position</Label>
+                        <Input id="worker-role" {...workerForm.register("role")} />
+                        {workerForm.formState.errors.role && <p className="text-sm text-destructive">{workerForm.formState.errors.role.message}</p>}
+                    </div>
+                    <DialogFooter>
+                        <Button type="button" variant="ghost" onClick={() => setIsAddWorkerOpen(false)}>Cancel</Button>
+                        <Button type="submit" disabled={workerForm.formState.isSubmitting}>
+                            {workerForm.formState.isSubmitting ? "Adding..." : "Add Worker"}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }

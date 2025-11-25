@@ -4,7 +4,7 @@ import { db, storage, auth } from "@/lib/firebase";
 import { collection, getDocs, getDoc, doc, orderBy, query, limit, Timestamp, where, DocumentReference, addDoc, updateDoc, deleteDoc, arrayUnion, runTransaction, writeBatch, setDoc } from "firebase/firestore";
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import type { Activity, Notification, Order, Product, Client, Issuance, Supplier, PurchaseOrder, Shipment, Return, ReturnItem, OutboundReturn, OutboundReturnItem, UserProfile, OrderItem, PurchaseOrderItem, IssuanceItem, Backorder, UserRole, PagePermission, ProductCategory, ProductLocation, Tool, ToolBorrowRecord, SalvagedPart, DisposalRecord, ToolMaintenanceRecord, ToolBookingRequest, Vehicle, Task, Subtask } from "@/types";
+import type { Activity, Notification, Order, Product, Client, Issuance, Supplier, PurchaseOrder, Shipment, Return, ReturnItem, OutboundReturn, OutboundReturnItem, UserProfile, OrderItem, PurchaseOrderItem, IssuanceItem, Backorder, UserRole, PagePermission, ProductCategory, ProductLocation, Tool, ToolBorrowRecord, SalvagedPart, DisposalRecord, ToolMaintenanceRecord, ToolBookingRequest, Vehicle, Task, Subtask, Worker } from "@/types";
 import { format, subDays, addDays, differenceInDays } from 'date-fns';
 
 function timeSince(date: Date) {
@@ -2378,22 +2378,30 @@ export async function createToolBookingRequest(data: NewBookingRequestData): Pro
     try {
         const toolRef = doc(db, "tools", data.toolId);
         const userRef = doc(db, "users", data.requestedForId);
+        const workerRef = doc(db, "workers", data.requestedForId);
 
-        const [toolDoc, userDoc] = await Promise.all([getDoc(toolRef), getDoc(userRef)]);
+        const [toolDoc, userDoc, workerDoc] = await Promise.all([getDoc(toolRef), getDoc(userRef), getDoc(workerRef)]);
 
         if (!toolDoc.exists()) throw new Error("Tool not found.");
         if (toolDoc.data().status !== 'Available') throw new Error("Tool is not currently available for booking.");
-        if (!userDoc.exists()) throw new Error("Requesting user not found.");
-
-        const toolData = toolDoc.data() as Tool;
-        const userData = userDoc.data() as UserProfile;
+        
+        let requestedForName = "Unknown";
+        if (userDoc.exists()) {
+             const userData = userDoc.data() as UserProfile;
+             requestedForName = `${userData.firstName} ${userData.lastName}`;
+        } else if (workerDoc.exists()) {
+            const workerData = workerDoc.data() as Worker;
+            requestedForName = workerData.name;
+        } else {
+            throw new Error("Worker/User not found.");
+        }
 
         const newRequest = {
             toolId: data.toolId,
-            toolName: toolData.name,
-            createdById: data.requestedById, // ID of the supervisor creating the request
-            requestedForId: data.requestedForId, // ID of the worker
-            requestedForName: `${userData.firstName} ${userData.lastName}`, // Name of the worker
+            toolName: toolDoc.data().name,
+            createdById: data.requestedById,
+            requestedForId: data.requestedForId,
+            requestedForName: requestedForName,
             startDate: Timestamp.fromDate(data.startDate),
             endDate: Timestamp.fromDate(data.endDate),
             notes: data.notes || "",
@@ -2798,3 +2806,24 @@ export async function deleteProductCategory(categoryId: string): Promise<void> {
 }
 
 
+export async function getWorkers(): Promise<Worker[]> {
+  try {
+    const workersCol = collection(db, "workers");
+    const q = query(workersCol, orderBy("name", "asc"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Worker));
+  } catch (error) {
+    console.error("Error fetching workers:", error);
+    return [];
+  }
+}
+
+export async function addWorker(worker: Omit<Worker, 'id'>): Promise<DocumentReference> {
+  try {
+    const workersCol = collection(db, "workers");
+    return await addDoc(workersCol, worker);
+  } catch (error) {
+    console.error("Error adding worker:", error);
+    throw new Error("Failed to add worker.");
+  }
+}

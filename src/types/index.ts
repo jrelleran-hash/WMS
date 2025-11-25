@@ -1,4 +1,5 @@
 
+
 import { Timestamp, DocumentReference } from "firebase/firestore";
 
 export interface Activity {
@@ -231,6 +232,13 @@ export interface UserProfile {
     permissions: PagePermission[];
 }
 
+export interface Worker {
+    id: string;
+    name: string;
+    role: string;
+}
+
+
 export interface Tool {
     id: string;
     name: string;
@@ -297,8 +305,9 @@ export interface ToolBookingRequest {
     id: string;
     toolId: string;
     toolName: string;
-    requestedById: string;
-    requestedByName: string;
+    createdById: string; // Supervisor
+    requestedForId: string; // Worker
+    requestedForName: string;
     startDate: Date;
     endDate: Date;
     status: 'Pending' | 'Approved' | 'Rejected';
