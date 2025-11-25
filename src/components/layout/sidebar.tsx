@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import Link from "next/link";
@@ -71,7 +70,6 @@ const warehouseNavItems: NavSectionItem[] = [
         items: [
             { href: "/my-tools", label: "My Tools", icon: Wrench },
             { href: "/tools", label: "Tool Management", icon: Wrench },
-            { href: "/tool-accountability", label: "Tool Accountability", icon: UserCheck },
             { href: "/tool-booking", label: "Tool Booking", icon: Book },
             { href: "/tool-maintenance", label: "Tool Maintenance", icon: Wrench },
         ]
