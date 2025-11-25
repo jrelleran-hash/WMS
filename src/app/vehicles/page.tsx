@@ -7,7 +7,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { PlusCircle, MoreHorizontal, Truck, Calendar as CalendarIcon, AlertTriangle, Droplet } from 'lucide-react';
-import { format, addYears, isBefore, startOfToday, differenceInDays } from 'date-fns';
+import { format, addYears, isBefore, startOfToday, differenceInDays, parse } from 'date-fns';
 
 import { useData } from '@/context/data-context';
 import { useToast } from '@/hooks/use-toast';
@@ -275,6 +275,50 @@ export default function VehiclesPage() {
     return null;
   }
 
+  const DatePickerInput = ({ field, placeholder, onDateChange, disabled }: { field: any, placeholder: string, onDateChange?: (date: Date | undefined) => void, disabled?: boolean }) => {
+    const [inputValue, setInputValue] = useState(field.value ? format(field.value, 'MM/dd/yyyy') : '');
+
+    useEffect(() => {
+        setInputValue(field.value ? format(field.value, 'MM/dd/yyyy') : '');
+    }, [field.value]);
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setInputValue(e.target.value);
+        const parsedDate = parse(e.target.value, 'MM/dd/yyyy', new Date());
+        if (!isNaN(parsedDate.getTime())) {
+            field.onChange(parsedDate);
+            if (onDateChange) onDateChange(parsedDate);
+        }
+    };
+    
+    const handleSelect = (date: Date | undefined) => {
+        field.onChange(date);
+        if (onDateChange) onDateChange(date);
+        setInputValue(date ? format(date, 'MM/dd/yyyy') : '');
+    };
+
+    return (
+        <Popover>
+            <div className="relative">
+                <Input
+                    value={inputValue}
+                    onChange={handleInputChange}
+                    placeholder={placeholder}
+                    className="pr-10"
+                    disabled={disabled}
+                />
+                <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon" className="absolute inset-y-0 right-0 h-full px-3" disabled={disabled}>
+                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                </PopoverTrigger>
+            </div>
+            <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={handleSelect} initialFocus /></PopoverContent>
+        </Popover>
+    );
+};
+
+
   const VehicleFormFields = ({ form: currentForm }: { form: any }) => (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -362,15 +406,7 @@ export default function VehiclesPage() {
                     control={currentForm.control}
                     name="crDate"
                     render={({ field }) => (
-                       <Popover>
-                        <PopoverTrigger asChild>
-                            <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
-                       </Popover>
+                       <DatePickerInput field={field} placeholder="MM/DD/YYYY" />
                     )}
                 />
             </div>
@@ -387,15 +423,11 @@ export default function VehiclesPage() {
                     control={currentForm.control}
                     name="registrationDate"
                     render={({ field }) => (
-                       <Popover>
-                        <PopoverTrigger asChild>
-                            <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={(d) => handleRegistrationDateChange(d, currentForm)} initialFocus /></PopoverContent>
-                       </Popover>
+                       <DatePickerInput 
+                            field={field} 
+                            placeholder="MM/DD/YYYY" 
+                            onDateChange={(date) => handleRegistrationDateChange(date, currentForm)} 
+                        />
                     )}
                 />
             </div>
@@ -409,14 +441,7 @@ export default function VehiclesPage() {
                     control={currentForm.control}
                     name="registrationExpiryDate"
                     render={({ field }) => (
-                       <Popover>
-                        <PopoverTrigger asChild>
-                            <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")} disabled>
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {field.value ? format(field.value, "PPP") : <span>Calculated...</span>}
-                            </Button>
-                        </PopoverTrigger>
-                       </Popover>
+                       <DatePickerInput field={field} placeholder="Calculated..." disabled />
                     )}
                 />
             </div>
