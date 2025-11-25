@@ -248,7 +248,7 @@ export default function DashboardPage() {
               <div className="flex justify-end gap-1 mt-2">
                 {(["all", "in-stock", "low-stock", "out-of-stock"] as InventoryFilterType[]).map((f) => (
                   <Button 
-                    key={f} 
+                    key={`inventory-${f}`} 
                     variant={inventoryFilter === f ? "secondary" : "ghost"} 
                     size="sm" 
                     className="capitalize h-7 px-2 text-xs" 
@@ -261,7 +261,7 @@ export default function DashboardPage() {
             }
           />
           <KpiCard
-            key={toolFilter}
+            key={`tool-${toolFilter}`}
             title={toolTitle}
             value={toolCount}
             change={toolChangeText}
@@ -273,7 +273,7 @@ export default function DashboardPage() {
                  <div className="flex justify-end gap-1 mt-2">
                 {(["all", "Available", "In Use", "Under Maintenance", "Assigned"] as ToolFilterType[]).map((f) => (
                   <Button 
-                    key={f} 
+                    key={`tool-${f}`} 
                     variant={toolFilter === f ? "secondary" : "ghost"} 
                     size="sm" 
                     className="capitalize h-7 px-2 text-xs" 
