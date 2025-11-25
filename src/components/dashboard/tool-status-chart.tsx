@@ -10,6 +10,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import type { Tool } from "@/types";
+import { cn } from "@/lib/utils";
 
 const chartConfig = {
   Available: {
@@ -56,8 +57,9 @@ export function ToolStatusChart({ tools, filter }: ToolStatusChartProps) {
         status,
         count,
         fill: `var(--color-${status.replace(/ /g, '')})`,
+        opacity: filter === 'all' || filter === status ? 1 : 0.3,
     }));
-  }, [tools]);
+  }, [tools, filter]);
 
   const renderChart = () => {
     return (
@@ -71,7 +73,15 @@ export function ToolStatusChart({ tools, filter }: ToolStatusChartProps) {
             cursor={false} 
             content={<ChartTooltipContent 
                 indicator="dot" 
-                formatter={(value) => `${value} tools`} 
+                formatter={(value, name, props) => {
+                  const { status } = props.payload;
+                  return (
+                      <div className="flex items-center justify-between gap-4">
+                          <span className="text-muted-foreground">{status}</span>
+                          <span className="font-medium">{value} tools</span>
+                      </div>
+                  )
+                }} 
             />} 
         />
         <Bar dataKey="count" radius={4} />

@@ -17,7 +17,7 @@ import { useData } from "@/context/data-context";
 import { formatCurrency } from "@/lib/currency";
 import { PesoSign } from "@/components/icons";
 import { subDays, subWeeks, subMonths, subYears, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, format, isWithinInterval, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval } from "date-fns";
-import type { Order } from "@/types";
+import type { Order, Tool } from "@/types";
 import { Button } from "@/components/ui/button";
 import { StartupAnimation } from "@/components/layout/startup-animation";
 import { ToolStatusChart, type ToolFilterType } from "@/components/dashboard/tool-status-chart";
@@ -161,14 +161,28 @@ export default function DashboardPage() {
 
   }, [products, inventoryFilter]);
   
-  const { toolCount, toolChangeText } = useMemo(() => {
-    const totalTools = tools.length;
-    const maintenanceCount = tools.filter(t => t.status === 'Under Maintenance').length;
-    return {
-        toolCount: totalTools.toString(),
-        toolChangeText: `${maintenanceCount} under maintenance`
+  const { toolCount, toolChangeText, toolTitle } = useMemo(() => {
+    let filteredTools: Tool[];
+    if(toolFilter === 'all') {
+        filteredTools = tools;
+    } else {
+        filteredTools = tools.filter(t => t.status === toolFilter);
     }
-  }, [tools]);
+    
+    const titleMap: Record<ToolFilterType, string> = {
+        'all': 'Total Tools',
+        'Available': 'Available Tools',
+        'In Use': 'Tools In Use',
+        'Under Maintenance': 'In Maintenance',
+        'Assigned': 'Assigned Tools'
+    };
+
+    return {
+        toolCount: filteredTools.length.toString(),
+        toolChangeText: `out of ${tools.length} total tools`,
+        toolTitle: titleMap[toolFilter],
+    }
+  }, [tools, toolFilter]);
 
   const newClientsData = useMemo(() => {
     const now = new Date();
@@ -245,7 +259,7 @@ export default function DashboardPage() {
             }
           />
           <KpiCard
-            title="Tool Status"
+            title={toolTitle}
             value={toolCount}
             change={toolChangeText}
             icon={<Wrench className="size-5 text-primary" />}
