@@ -13,7 +13,7 @@ import type { Tool } from "@/types";
 import { cn } from "@/lib/utils";
 
 const chartConfig = {
-  Available: {
+  "Available": {
     label: "Available",
     color: "hsl(var(--chart-1))",
   },
@@ -41,7 +41,8 @@ interface ToolStatusChartProps {
 export function ToolStatusChart({ tools, filter }: ToolStatusChartProps) {
   
   const chartData = useMemo(() => {
-    const summary: { [key in Tool['status'] | 'Assigned']: number } = {
+    const summary: { [key in ToolFilterType]: number } = {
+      "all": 0,
       "Available": 0,
       "In Use": 0,
       "Under Maintenance": 0,
