@@ -273,38 +273,41 @@ export async function addProduct(product: Partial<Omit<Product, 'id' | 'lastUpda
 
 
 export async function updateProduct(productId: string, productData: Partial<Omit<Product, 'id' | 'sku'>>): Promise<void> {
+  const productRef = doc(db, "inventory", productId);
+  const now = Timestamp.now();
+
   try {
-    const productRef = doc(db, "inventory", productId);
-    const originalDoc = await getDoc(productRef);
-    if (!originalDoc.exists()) throw new Error("Product not found");
-    const originalData = originalDoc.data() as Product;
+    await runTransaction(db, async (transaction) => {
+        const productDoc = await transaction.get(productRef);
+        if (!productDoc.exists()) throw new Error("Product not found");
 
-    const now = Timestamp.now();
-    const updatePayload: any = { ...productData, lastUpdated: now };
+        const originalData = productDoc.data() as Product;
 
-    if (productData.stock !== undefined && productData.stock !== originalData?.stock) {
-        const newHistoryEntry = {
-            date: format(now.toDate(), 'yyyy-MM-dd'),
-            stock: productData.stock,
-            dateUpdated: now
-        };
-        updatePayload.history = arrayUnion(newHistoryEntry);
-    }
+        const updatePayload: any = { ...productData, lastUpdated: now };
 
+        if (productData.stock !== undefined && productData.stock !== originalData.stock) {
+            const newHistoryEntry = {
+                date: format(now.toDate(), 'yyyy-MM-dd'),
+                stock: productData.stock,
+                dateUpdated: now,
+                changeReason: "Manual Edit"
+            };
+            updatePayload.history = arrayUnion(newHistoryEntry);
+        }
 
-    await updateDoc(productRef, updatePayload);
+        transaction.update(productRef, updatePayload);
+    });
 
     const updatedDoc = await getDoc(productRef);
     if(updatedDoc.exists()) {
-        const fullProduct = updatedDoc.data() as Product;
-        await checkStockAndCreateNotification(fullProduct, productId);
+        await checkStockAndCreateNotification(updatedDoc.data() as Product, productId);
     }
-    
   } catch (error) {
     console.error("Error updating product:", error);
     throw new Error("Failed to update product.");
   }
 }
+
 
 export async function deleteProduct(productId: string): Promise<void> {
   try {
@@ -1232,6 +1235,7 @@ export async function getShipments(): Promise<Shipment[]> {
                 actualDeliveryDate: shipmentData.actualDeliveryDate ? (shipmentData.actualDeliveryDate as Timestamp).toDate() : undefined,
                 createdAt: (shipmentData.createdAt as Timestamp).toDate(),
                 deliveryProof: shipmentData.deliveryProof,
+                issuance: resolvedIssuance,
             } as Shipment;
         }));
 
@@ -1931,14 +1935,20 @@ export async function addTool(tool: Partial<Omit<Tool, 'id' | 'status' | 'curren
   }
 }
 
-export async function updateTool(toolId: string, data: Partial<Omit<Tool, 'id'>>): Promise<void> {
-  try {
+export async function updateTool(toolId: string, toolData: Partial<Omit<Tool, 'id'>>): Promise<void> {
     const toolRef = doc(db, "tools", toolId);
-    await updateDoc(toolRef, data);
-  } catch (error) {
-    console.error("Error updating tool:", error);
-    throw new Error("Failed to update tool.");
-  }
+    const payload: { [key: string]: any } = { ...toolData };
+
+    if (toolData.purchaseDate) {
+        payload.purchaseDate = Timestamp.fromDate(new Date(toolData.purchaseDate));
+    }
+
+    try {
+        await updateDoc(toolRef, payload);
+    } catch (error) {
+        console.error("Error updating tool:", error);
+        throw new Error("Failed to update tool.");
+    }
 }
 
 export async function deleteTool(toolId: string): Promise<void> {
@@ -2558,9 +2568,9 @@ export async function updateVehicle(vehicleId: string, data: Partial<Omit<Vehicl
         const payload: { [key: string]: any } = { ...data };
 
         // Handle optional dates and other fields
-        payload.crDate = data.crDate ? Timestamp.fromDate(data.crDate) : null;
-        payload.registrationDate = data.registrationDate ? Timestamp.fromDate(data.registrationDate) : null;
-        payload.registrationExpiryDate = data.registrationExpiryDate ? Timestamp.fromDate(data.registrationExpiryDate) : null;
+        payload.crDate = data.crDate ? Timestamp.fromDate(new Date(data.crDate)) : null;
+        payload.registrationDate = data.registrationDate ? Timestamp.fromDate(new Date(data.registrationDate)) : null;
+        payload.registrationExpiryDate = data.registrationExpiryDate ? Timestamp.fromDate(new Date(data.registrationExpiryDate)) : null;
         payload.fuelType = data.fuelType || null;
         
         await updateDoc(vehicleRef, payload);
@@ -2850,5 +2860,7 @@ export async function addWorker(worker: Omit<Worker, 'id'>): Promise<DocumentRef
     throw new Error("Failed to add worker.");
   }
 }
+
+
 
 
