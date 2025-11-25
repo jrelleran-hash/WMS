@@ -2521,8 +2521,8 @@ export async function getVehicles(): Promise<Vehicle[]> {
             return {
                 id: doc.id,
                 ...data,
-                crDate: data.crDate ? (data.crDate as Timestamp).toDate() : undefined,
-                registrationDate: data.registrationDate ? (data.registrationDate as Timestamp).toDate() : undefined,
+                crDate: data.crDate ? data.crDate.toDate() : undefined,
+                registrationDate: data.registrationDate ? data.registrationDate.toDate() : undefined,
                 registrationExpiryDate: registrationExpiryDate || undefined,
             } as Vehicle;
         });
@@ -2557,16 +2557,11 @@ export async function updateVehicle(vehicleId: string, data: Partial<Omit<Vehicl
         const vehicleRef = doc(db, "vehicles", vehicleId);
         const payload: { [key: string]: any } = { ...data };
 
-        if (data.crDate) {
-            payload.crDate = Timestamp.fromDate(data.crDate);
-        }
-        if (data.registrationDate) {
-            payload.registrationDate = Timestamp.fromDate(data.registrationDate);
-        }
-        if (data.registrationExpiryDate) {
-            payload.registrationExpiryDate = Timestamp.fromDate(data.registrationExpiryDate);
-        }
-
+        // Handle optional dates: convert to Timestamp or null
+        payload.crDate = data.crDate ? Timestamp.fromDate(data.crDate) : null;
+        payload.registrationDate = data.registrationDate ? Timestamp.fromDate(data.registrationDate) : null;
+        payload.registrationExpiryDate = data.registrationExpiryDate ? Timestamp.fromDate(data.registrationExpiryDate) : null;
+        
         await updateDoc(vehicleRef, payload);
     } catch (error) {
         console.error("Error updating vehicle:", error);
@@ -2854,3 +2849,4 @@ export async function addWorker(worker: Omit<Worker, 'id'>): Promise<DocumentRef
     throw new Error("Failed to add worker.");
   }
 }
+
