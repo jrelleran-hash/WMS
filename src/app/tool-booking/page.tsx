@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -46,12 +47,15 @@ export default function ToolBookingPage() {
 
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingSchema),
-    defaultValues: {
-        requestedBy: userProfile?.uid,
-    }
   });
   
-  const { control, handleSubmit, register, formState: { errors }, watch } = form;
+  const { control, handleSubmit, register, formState: { errors }, watch, setValue } = form;
+
+  useEffect(() => {
+    if (userProfile) {
+      setValue("requestedBy", userProfile.uid);
+    }
+  }, [userProfile, setValue]);
 
   const onSubmit = async (data: BookingFormValues) => {
     try {
@@ -134,7 +138,7 @@ export default function ToolBookingPage() {
                     name="requestedBy"
                     control={control}
                     render={({ field }) => (
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                             <SelectTrigger><SelectValue placeholder="Select user..." /></SelectTrigger>
                             <SelectContent>
                                 {users.map(user => (
