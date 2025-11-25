@@ -23,7 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
-import type { Timestamp } from "firebase/firestore";
+import { Timestamp } from "firebase/firestore";
 import { Wrench } from "lucide-react";
 
 const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
