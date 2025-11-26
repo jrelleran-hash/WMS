@@ -2654,6 +2654,8 @@ type NewTaskData = {
     supervisorNotes?: string;
 }
 export async function addTask(taskData: NewTaskData): Promise<void> {
+    const batch = writeBatch(db);
+
     const userRef = doc(db, "users", taskData.assignedToId);
     const userDoc = await getDoc(userRef);
 
@@ -2661,16 +2663,18 @@ export async function addTask(taskData: NewTaskData): Promise<void> {
         throw new Error("Assigned user not found.");
     }
     const userData = userDoc.data() as UserProfile;
-
-    const date = new Date();
-    const taskId = `TSK-${format(date, 'yyyyMMdd')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+    
+    const now = Timestamp.now();
+    const taskId = `TSK-${format(now.toDate(), 'yyyyMMdd')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
     
     let progress = 0;
     if (taskData.subtasks && taskData.subtasks.length > 0) {
         const completedCount = taskData.subtasks.filter(st => st.completed).length;
         progress = Math.round((completedCount / taskData.subtasks.length) * 100);
     }
-
+    
+    const taskRef = doc(collection(db, "tasks"));
+    
     const newTask: Omit<Task, 'id'> = {
         title: taskData.title,
         description: taskData.description || null,
@@ -2682,7 +2686,7 @@ export async function addTask(taskData: NewTaskData): Promise<void> {
         taskId,
         assignedToName: `${userData.firstName} ${userData.lastName}`,
         status: 'Pending',
-        createdAt: Timestamp.now(),
+        createdAt: now,
         progress: progress || 0,
         completedAt: null,
         subtasks: (taskData.subtasks || []).map(st => {
@@ -2694,16 +2698,34 @@ export async function addTask(taskData: NewTaskData): Promise<void> {
                 linkedTaskId: st.linkedTaskId || null,
             };
         }),
+        parentTaskId: null,
+        parentTaskTitle: null,
     };
-    await addDoc(collection(db, "tasks"), newTask);
+    batch.set(taskRef, newTask);
+
+    // If there are linked tasks, update their parentTaskId
+    if (taskData.subtasks) {
+        for (const subtask of taskData.subtasks) {
+            if (subtask.linkedTaskId) {
+                const linkedTaskRef = doc(db, "tasks", subtask.linkedTaskId);
+                batch.update(linkedTaskRef, { 
+                    parentTaskId: taskRef.id,
+                    parentTaskTitle: taskData.title
+                });
+            }
+        }
+    }
+    
+    await batch.commit();
 }
 
 
-export async function updateTask(taskId: string, data: Partial<Omit<Task, 'id'>>): Promise<void> {
+export async function updateTask(taskId: string, data: Partial<Omit<Task, 'id'>>, originalTitle?: string): Promise<void> {
+    const batch = writeBatch(db);
     const taskRef = doc(db, "tasks", taskId);
+    
     const payload: { [key: string]: any } = { ...data };
     
-    // Auto-update progress if subtasks are being updated
     if (data.subtasks) {
         const completedCount = data.subtasks.filter(st => st.completed).length;
         payload.progress = data.subtasks.length > 0 ? Math.round((completedCount / data.subtasks.length) * 100) : 0;
@@ -2730,14 +2752,64 @@ export async function updateTask(taskId: string, data: Partial<Omit<Task, 'id'>>
                 linkedTaskId: st.linkedTaskId || null,
             }
         });
-    }
 
-    await updateDoc(taskRef, payload);
+        // Handle parent task updates for linked subtasks
+        const originalSubtasks = (await getDoc(taskRef)).data()?.subtasks || [];
+        const newLinkedIds = new Set(data.subtasks.map(st => st.linkedTaskId).filter(Boolean));
+        const oldLinkedIds = new Set(originalSubtasks.map((st: Subtask) => st.linkedTaskId).filter(Boolean));
+
+        // Set parent on newly linked tasks
+        for (const subtask of data.subtasks) {
+            if (subtask.linkedTaskId && !oldLinkedIds.has(subtask.linkedTaskId)) {
+                const linkedTaskRef = doc(db, "tasks", subtask.linkedTaskId);
+                batch.update(linkedTaskRef, { parentTaskId: taskId, parentTaskTitle: data.title || originalTitle });
+            }
+        }
+
+        // Remove parent from unlinked tasks
+        for (const oldId of Array.from(oldLinkedIds)) {
+            if (!newLinkedIds.has(oldId)) {
+                const unlinkedTaskRef = doc(db, "tasks", oldId);
+                batch.update(unlinkedTaskRef, { parentTaskId: null, parentTaskTitle: null });
+            }
+        }
+    }
+    
+    batch.update(taskRef, payload);
+    await batch.commit();
 }
 
 export async function deleteTask(taskId: string): Promise<void> {
     const taskRef = doc(db, "tasks", taskId);
-    await deleteDoc(taskRef);
+    const taskDoc = await getDoc(taskRef);
+
+    if (taskDoc.exists()) {
+        const batch = writeBatch(db);
+        const taskData = taskDoc.data() as Task;
+        // If this task has a parent, remove it from the parent's subtasks
+        if (taskData.parentTaskId) {
+            const parentTaskRef = doc(db, "tasks", taskData.parentTaskId);
+            const parentDoc = await getDoc(parentTaskRef);
+            if (parentDoc.exists()) {
+                const parentData = parentDoc.data() as Task;
+                const updatedSubtasks = parentData.subtasks?.filter(st => st.linkedTaskId !== taskId);
+                batch.update(parentTaskRef, { subtasks: updatedSubtasks });
+            }
+        }
+        
+        // If this task is a parent, nullify the parent fields on its children
+        if (taskData.subtasks) {
+            for(const subtask of taskData.subtasks) {
+                if (subtask.linkedTaskId) {
+                    const childTaskRef = doc(db, "tasks", subtask.linkedTaskId);
+                    batch.update(childTaskRef, { parentTaskId: null, parentTaskTitle: null });
+                }
+            }
+        }
+        
+        batch.delete(taskRef);
+        await batch.commit();
+    }
 }
 
 export async function getProductCategories(): Promise<ProductCategory[]> {

@@ -37,6 +37,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import type { DateRange } from "react-day-picker";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import Link from 'next/link';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 
 const subtaskSchema = z.object({
@@ -59,6 +60,8 @@ const taskSchema = z.object({
   supervisorNotes: z.string().optional(),
   progress: z.number().min(0).max(100).optional(),
   subtasks: z.array(subtaskSchema).optional(),
+  parentTaskId: z.string().optional(),
+  parentTaskTitle: z.string().optional(),
 });
 
 type TaskFormValues = z.infer<typeof taskSchema>;
@@ -201,13 +204,8 @@ export default function TasksPage() {
     useEffect(() => {
         if(selectedTask) {
             form.reset({
-                title: selectedTask.title,
-                description: selectedTask.description,
-                priority: selectedTask.priority,
-                assignedToId: selectedTask.assignedToId,
+                ...selectedTask,
                 dueDate: selectedTask.dueDate ? selectedTask.dueDate.toDate() : undefined,
-                supervisorNotes: selectedTask.supervisorNotes,
-                progress: selectedTask.progress,
                 subtasks: selectedTask.subtasks?.map(st => ({...st, dateRange: { from: st.startDate?.toDate(), to: st.dueDate?.toDate()}})) || [],
             });
         }
@@ -227,7 +225,7 @@ export default function TasksPage() {
 
         try {
             if(selectedTask) {
-                await updateTask(selectedTask.id, taskData);
+                await updateTask(selectedTask.id, taskData, selectedTask.title);
                 toast({ title: "Success", description: "Task has been updated." });
                 setSelectedTask(null);
             } else {
@@ -375,7 +373,7 @@ function TaskForm({ form, onSubmit, users, tasks, onClose, onEdit }: { form: any
     
     const availableTasksToLink = useMemo(() => {
         const existingSubtaskIds = subtasks.map((st: Subtask) => st.linkedTaskId).filter(Boolean);
-        return tasks.filter(task => task.id !== taskId && !existingSubtaskIds.includes(task.id));
+        return tasks.filter(task => task.id !== taskId && !existingSubtaskIds.includes(task.id) && !task.parentTaskId);
     }, [tasks, subtasks, taskId]);
 
     
@@ -476,7 +474,7 @@ function TaskForm({ form, onSubmit, users, tasks, onClose, onEdit }: { form: any
                             />
                             
                             {isLinked ? (
-                                <div onClick={() => handleSubtaskClick(subtask)} className="flex-1">
+                                <div onClick={() => handleSubtaskClick(subtask)} className="flex-1 cursor-pointer">
                                     {subtaskButton}
                                 </div>
                             ) : (
@@ -678,7 +676,25 @@ function TaskTable({ tasks, loading, onStatusChange, onProgressChange, onEdit, o
                         ) : sortedTasks.length > 0 ? (
                             sortedTasks.map(task => (
                                 <TableRow key={task.id} onClick={() => onEdit(task)} className="cursor-pointer">
-                                    <TableCell className="font-medium">{task.title}</TableCell>
+                                    <TableCell className="font-medium">
+                                        <div className="flex items-center gap-2">
+                                            {task.parentTaskId && (
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <div className="cursor-default" onClick={(e) => { e.stopPropagation(); onEdit(tasks.find(t => t.id === task.parentTaskId) as Task)}}>
+                                                                <LinkIcon className="h-4 w-4 text-muted-foreground" />
+                                                            </div>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>Subtask of: {task.parentTaskTitle}</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            )}
+                                            <span>{task.title}</span>
+                                        </div>
+                                    </TableCell>
                                     <TableCell><Badge variant={priorityVariant[task.priority]}>{task.priority}</Badge></TableCell>
                                     <TableCell>{task.assignedToName}</TableCell>
                                     <TableCell>{task.dueDate ? format(task.dueDate.toDate(), 'PPP') : 'N/A'}</TableCell>

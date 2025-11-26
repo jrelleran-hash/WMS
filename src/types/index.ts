@@ -371,4 +371,6 @@ export interface Task {
     progress: number;
     supervisorNotes: string | null;
     completedAt: Timestamp | null;
+    parentTaskId?: string | null;
+    parentTaskTitle?: string | null;
 }
