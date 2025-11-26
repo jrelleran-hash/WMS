@@ -64,6 +64,7 @@ import { Badge } from "@/components/ui/badge";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { navItemsPermissions } from "@/components/layout/sidebar";
+import { useAuthorization } from "@/hooks/use-authorization";
 
 
 const allPermissions: { group: string; permissions: { value: PagePermission; label: string }[] }[] = [
@@ -630,7 +631,8 @@ function GeneralSettingsTab() {
 }
 
 export default function SettingsPage() {
-  const { user, userProfile, refetchUserProfile } = useAuth();
+  const { user, userProfile, loading: authLoading, refetchUserProfile } = useAuth();
+  const { canView } = useAuthorization({ page: '/settings' });
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -644,6 +646,17 @@ export default function SettingsPage() {
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
   });
+
+  useEffect(() => {
+    if (!authLoading && !canView) {
+      toast({
+        variant: "destructive",
+        title: "Unauthorized",
+        description: "You do not have permission to view this page.",
+      });
+      router.push('/');
+    }
+  }, [authLoading, canView, router, toast]);
   
   useEffect(() => {
     const tab = searchParams.get("tab");
@@ -716,6 +729,14 @@ export default function SettingsPage() {
     setActiveTab(value);
     router.push(`/settings?tab=${value}`, { scroll: false });
   };
+  
+  if (authLoading || !canView) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-8rem)]">
+        <p className="text-muted-foreground">Access Denied. Redirecting...</p>
+      </div>
+    );
+  }
 
 
   return (
