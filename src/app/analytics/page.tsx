@@ -1,6 +1,8 @@
 
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { DollarSign, ShoppingCart, Users, Package } from "lucide-react";
 import { KpiCard } from "@/components/analytics/kpi-card";
 import { SalesChart } from "@/components/analytics/sales-chart";
@@ -9,11 +11,38 @@ import { TopProducts } from "@/components/analytics/top-products";
 import { ActiveClients } from "@/components/analytics/active-clients";
 import { useData } from "@/context/data-context";
 import { formatCurrency } from "@/lib/currency";
+import { useAuthorization } from "@/hooks/use-authorization";
+import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
+
 
 export default function AnalyticsPage() {
   const { orders, clients, products, issuances, loading } = useData();
+  const { canView } = useAuthorization({ page: '/analytics' });
+  const { loading: authLoading } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (!authLoading && !canView) {
+      toast({
+        variant: "destructive",
+        title: "Unauthorized",
+        description: "You do not have permission to view this page.",
+      });
+      router.push('/');
+    }
+  }, [authLoading, canView, router, toast]);
 
   const totalRevenue = orders.reduce((acc, order) => acc + order.total, 0);
+  
+  if (authLoading || !canView) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-8rem)]">
+        <p className="text-muted-foreground">Access Denied. Redirecting...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">

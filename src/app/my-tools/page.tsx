@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { useData } from "@/context/data-context";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -25,6 +25,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { Timestamp } from "firebase/firestore";
 import { Wrench } from "lucide-react";
+import { useAuthorization } from "@/hooks/use-authorization";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
 
 const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
     Available: "default",
@@ -42,7 +45,21 @@ const conditionVariant: { [key: string]: "default" | "secondary" | "destructive"
 
 export default function MyToolsPage() {
     const { tools, loading } = useData();
-    const { userProfile } = useAuth();
+    const { userProfile, loading: authLoading } = useAuth();
+    const { canView } = useAuthorization({ page: '/my-tools' });
+    const router = useRouter();
+    const { toast } = useToast();
+
+    useEffect(() => {
+        if (!authLoading && !canView) {
+          toast({
+            variant: "destructive",
+            title: "Unauthorized",
+            description: "You do not have permission to view this page.",
+          });
+          router.push('/');
+        }
+    }, [authLoading, canView, router, toast]);
 
     const assignedTools = useMemo(() => {
         if (!userProfile) return [];
@@ -58,6 +75,14 @@ export default function MyToolsPage() {
         if (!date) return 'N/A';
         const jsDate = date instanceof Timestamp ? date.toDate() : date;
         return format(jsDate, 'PP');
+    }
+    
+    if (authLoading || !canView) {
+        return (
+          <div className="flex items-center justify-center h-[calc(100vh-8rem)]">
+            <p className="text-muted-foreground">Access Denied. Redirecting...</p>
+          </div>
+        );
     }
 
     return (

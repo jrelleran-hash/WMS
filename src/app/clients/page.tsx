@@ -105,7 +105,7 @@ const toTitleCase = (str: string) => {
 export default function ClientsPage() {
   const { clients, loading, refetchData } = useData();
   const { userProfile, loading: authLoading } = useAuth();
-  const { canManage } = useAuthorization({ page: '/clients' });
+  const { canView, canManage } = useAuthorization({ page: '/clients' });
   const router = useRouter();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -116,10 +116,15 @@ export default function ClientsPage() {
   const [suggestions, setSuggestions] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
-    if (!authLoading && !userProfile) {
-        router.push('/login');
+    if (!authLoading && !canView) {
+      toast({
+        variant: "destructive",
+        title: "Unauthorized",
+        description: "You do not have permission to view this page.",
+      });
+      router.push('/');
     }
-  }, [authLoading, userProfile, router]);
+  }, [authLoading, canView, router, toast]);
 
 
   // Memoize schemas to avoid re-creating them on every render
@@ -242,6 +247,14 @@ export default function ClientsPage() {
   const formatDate = (timestamp?: Timestamp) => {
     if (!timestamp) return 'N/A';
     return format(timestamp.toDate(), 'PPpp');
+  }
+  
+  if (authLoading || !canView) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-8rem)]">
+        <p className="text-muted-foreground">Access Denied. Redirecting...</p>
+      </div>
+    );
   }
 
   return (

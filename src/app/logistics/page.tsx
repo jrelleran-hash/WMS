@@ -1,13 +1,15 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { format, addDays } from "date-fns";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useAuthorization } from "@/hooks/use-authorization";
+import { useAuth } from "@/hooks/use-auth";
 
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -80,6 +82,8 @@ export default function LogisticsPage() {
     const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
     const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null);
     const [selectedOutboundReturn, setSelectedOutboundReturn] = useState<OutboundReturn | null>(null);
+    const { canView } = useAuthorization({ page: '/logistics' });
+    const { loading: authLoading } = useAuth();
     
     // Filter states
     const [shipmentStatusFilter, setShipmentStatusFilter] = useState<ShipmentStatusFilter>("all");
@@ -101,6 +105,17 @@ export default function LogisticsPage() {
             estimatedDeliveryDate: addDays(new Date(), 7),
         },
     });
+
+    useEffect(() => {
+        if (!authLoading && !canView) {
+          toast({
+            variant: "destructive",
+            title: "Unauthorized",
+            description: "You do not have permission to view this page.",
+          });
+          router.push('/');
+        }
+    }, [authLoading, canView, router, toast]);
 
 
     useState(() => {
@@ -223,6 +238,14 @@ export default function LogisticsPage() {
         if (!date) return 'N/A';
         return format(date, 'PP');
     };
+    
+    if (authLoading || !canView) {
+        return (
+          <div className="flex items-center justify-center h-[calc(100vh-8rem)]">
+            <p className="text-muted-foreground">Access Denied. Redirecting...</p>
+          </div>
+        );
+    }
 
     return (
         <div className="flex flex-col gap-6">
@@ -862,5 +885,3 @@ export default function LogisticsPage() {
 }
 
 
-
-    

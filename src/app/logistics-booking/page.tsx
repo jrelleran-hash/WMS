@@ -1,12 +1,13 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { PlusCircle, Calendar as CalendarIcon, Truck, Trash2 } from "lucide-react";
 import { format } from "date-fns";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -52,6 +53,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useData } from "@/context/data-context";
+import { useAuthorization } from "@/hooks/use-authorization";
+import { useAuth } from "@/hooks/use-auth";
 
 const segmentSchema = z.object({
   serviceType: z.enum(["Standard", "Express", "Bulk"]),
@@ -75,6 +78,20 @@ export default function LogisticsBookingPage() {
   const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
   const { toast } = useToast();
   const { vehicles, loading } = useData();
+  const { canView } = useAuthorization({ page: '/logistics-booking' });
+  const { loading: authLoading } = useAuth();
+  const router = useRouter();
+  
+  useEffect(() => {
+    if (!authLoading && !canView) {
+      toast({
+        variant: "destructive",
+        title: "Unauthorized",
+        description: "You do not have permission to view this page.",
+      });
+      router.push('/');
+    }
+  }, [authLoading, canView, router, toast]);
   
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingSchema),
@@ -103,6 +120,14 @@ export default function LogisticsBookingPage() {
     setIsBookingDialogOpen(false);
     form.reset();
   };
+  
+  if (authLoading || !canView) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-8rem)]">
+        <p className="text-muted-foreground">Access Denied. Redirecting...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
