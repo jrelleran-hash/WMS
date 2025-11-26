@@ -358,7 +358,7 @@ export interface Task {
     id: string;
     taskId: string;
     title: string;
-    description?: string;
+    description: string | null;
     subtasks?: Subtask[];
     priority: 'Critical' | 'High' | 'Medium' | 'Low';
     assignedToId: string;
@@ -368,7 +368,6 @@ export interface Task {
     dueDate: Timestamp | null;
     status: 'Pending' | 'In Progress' | 'Completed' | 'Delayed';
     progress: number;
-    attachments?: string;
-    supervisorNotes?: string;
-    completedAt?: Timestamp;
+    supervisorNotes: string | null;
+    completedAt: Timestamp | null;
 }

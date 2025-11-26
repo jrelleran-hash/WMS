@@ -1983,7 +1983,7 @@ export async function borrowTool(toolId: string, borrowedBy: string, releasedBy:
         const newBorrowRecord = {
             toolId: toolId,
             borrowedBy: borrowedBy,
-            borrowedByName: `${userData.firstName} ${userData.lastName}`,
+            borrowedByName: `${'userData.firstName'} ${'userData.lastName'}`,
             releasedBy,
             dateBorrowed: Timestamp.fromDate(dateBorrowed),
             dueDate: Timestamp.fromDate(dueDate),
@@ -2088,7 +2088,7 @@ export async function assignToolForAccountability(toolId: string, userId: string
         transaction.update(toolRef, {
             status: "Assigned",
             assignedToUserId: userId,
-            assignedToUserName: `${userData.firstName} ${userData.lastName}`
+            assignedToUserName: `${'userData.firstName'} ${'userData.lastName'}`
         });
     });
 }
@@ -2651,7 +2651,6 @@ type NewTaskData = {
     assignedToId: string;
     createdBy: string;
     dueDate?: Date;
-    attachments?: string;
     supervisorNotes?: string;
 }
 export async function addTask(taskData: NewTaskData): Promise<void> {
@@ -2679,7 +2678,6 @@ export async function addTask(taskData: NewTaskData): Promise<void> {
         assignedToId: taskData.assignedToId,
         createdBy: taskData.createdBy,
         dueDate: taskData.dueDate ? Timestamp.fromDate(taskData.dueDate) : null,
-        attachments: taskData.attachments || null,
         supervisorNotes: taskData.supervisorNotes || null,
         taskId,
         assignedToName: `${userData.firstName} ${userData.lastName}`,
@@ -2867,6 +2865,7 @@ export async function addWorker(worker: Omit<Worker, 'id'>): Promise<DocumentRef
     throw new Error("Failed to add worker.");
   }
 }
+
 
 
 

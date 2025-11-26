@@ -52,7 +52,6 @@ const taskSchema = z.object({
   priority: z.enum(["Critical", "High", "Medium", "Low"]),
   assignedToId: z.string().min(1, "Please assign this task to a staff member."),
   dueDate: z.date().optional(),
-  attachments: z.string().url("Must be a valid URL.").optional().or(z.literal('')),
   supervisorNotes: z.string().optional(),
   progress: z.number().min(0).max(100).optional(),
   subtasks: z.array(subtaskSchema).optional(),
@@ -93,7 +92,7 @@ function StaffKpiDashboard() {
             
             return {
                 userId: user.uid,
-                name: `${user.firstName} ${user.lastName}`,
+                name: `${'user.firstName'} ${'user.lastName'}`,
                 total: userTasks.length,
                 completed,
                 overdue,
@@ -188,7 +187,6 @@ export default function TasksPage() {
                 description: "",
                 assignedToId: "",
                 dueDate: undefined,
-                attachments: "",
                 supervisorNotes: "",
                 progress: 0,
                 subtasks: [],
@@ -204,7 +202,6 @@ export default function TasksPage() {
                 priority: selectedTask.priority,
                 assignedToId: selectedTask.assignedToId,
                 dueDate: selectedTask.dueDate ? selectedTask.dueDate.toDate() : undefined,
-                attachments: selectedTask.attachments,
                 supervisorNotes: selectedTask.supervisorNotes,
                 progress: selectedTask.progress,
                 subtasks: selectedTask.subtasks?.map(st => ({...st, dateRange: { from: st.startDate?.toDate(), to: st.dueDate?.toDate()}})) || [],
@@ -552,11 +549,6 @@ function TaskForm({ form, onSubmit, users, onClose }: { form: any, onSubmit: (da
                         </Popover>
                     )}
                 />
-            </div>
-             <div className="space-y-2">
-                <Label htmlFor="attachments">Attachments (URL, Optional)</Label>
-                <Input id="attachments" {...register("attachments")} placeholder="https://example.com/file.pdf" />
-                {form.formState.errors.attachments && <p className="text-sm text-destructive">{form.formState.errors.attachments.message}</p>}
             </div>
              <div className="space-y-2">
                 <Label htmlFor="supervisorNotes">Supervisor Notes (Optional)</Label>
