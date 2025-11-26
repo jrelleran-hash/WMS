@@ -202,7 +202,7 @@ export default function DashboardPage() {
         <WelcomeCard />
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           <KpiCard
-            key={revenueFilter}
+            key={`revenue-${revenueFilter}`}
             title={revenueTitle}
             value={totalRevenue}
             change={revenueChangeText}
@@ -221,7 +221,7 @@ export default function DashboardPage() {
             }
           />
           <KpiCard
-            key={inventoryFilter}
+            key={`inventory-${inventoryFilter}`}
             title={inventoryTitle}
             value={inventoryValue}
             change={inventoryChangeText}
@@ -246,7 +246,7 @@ export default function DashboardPage() {
             }
           />
           <KpiCard
-            key={toolFilter}
+            key={`tool-${toolFilter}`}
             title={toolTitle}
             value={toolCount}
             change={toolChangeText}
