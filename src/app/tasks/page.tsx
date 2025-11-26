@@ -37,6 +37,7 @@ import type { DateRange } from "react-day-picker";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 
 const subtaskSchema = z.object({
@@ -638,81 +639,89 @@ interface HierarchicalTask extends Task {
 }
 
 function TaskRow({ task, level, onStatusChange, onProgressChange, onEdit, onDelete, tasks }: { task: HierarchicalTask, level: number, onStatusChange: any, onProgressChange: any, onEdit: any, onDelete: any, tasks: Task[] }) {
-    const [isOpen, setIsOpen] = useState(true);
-
     return (
-        <React.Fragment>
-            <TableRow onClick={() => onEdit(task)} className="cursor-pointer">
-                <TableCell style={{ paddingLeft: `${level * 1.5 + 1}rem` }}>
-                    <div className="flex items-center gap-2">
-                        {task.children.length > 0 ? (
-                           <Button variant="ghost" size="icon" className="h-6 w-6 -ml-2" onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}>
-                                <ChevronRight className={cn("h-4 w-4 transition-transform", isOpen && "rotate-90")} />
-                            </Button>
-                        ) : (
-                           <div className="w-6 h-6" /> 
-                        )}
-                        {task.parentTaskId && (
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <div className="cursor-default" onClick={(e) => { e.stopPropagation(); onEdit(tasks.find(t => t.id === task.parentTaskId) as Task)}}>
-                                            <LinkIcon className="h-4 w-4 text-muted-foreground" />
-                                        </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>Subtask of: {task.parentTaskTitle}</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        )}
-                        <span className="font-medium">{task.title}</span>
-                    </div>
-                </TableCell>
-                <TableCell><Badge variant={priorityVariant[task.priority]}>{task.priority}</Badge></TableCell>
-                <TableCell>{task.assignedToName}</TableCell>
-                <TableCell>{task.dueDate ? format(task.dueDate.toDate(), 'PPP') : 'N/A'}</TableCell>
-                <TableCell>
-                    <div className="flex items-center gap-2">
-                        <Progress value={task.progress || 0} />
-                        <span className="text-xs font-mono w-8 text-right">{task.progress || 0}%</span>
-                    </div>
-                </TableCell>
-                <TableCell>
-                    <div onClick={(e) => e.stopPropagation()}>
-                        <Select 
-                            defaultValue={task.status}
-                            onValueChange={(value) => onStatusChange(task.id, value as Task['status'])}
-                        >
-                            <SelectTrigger className="w-[120px] h-8 text-xs">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                    {(["Pending", "In Progress", "Completed", "Delayed"] as Task['status'][]).map(s => (
-                                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                                    ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </TableCell>
-                <TableCell className="text-right">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}><MoreHorizontal /></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onSelect={() => onEdit(task)}>Edit Details</DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive" onSelect={() => onDelete(task.id)}>Delete Task</DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </TableCell>
-            </TableRow>
-             {isOpen && task.children.map(child => (
-                <TaskRow key={child.id} task={child} level={level + 1} onStatusChange={onStatusChange} onProgressChange={onProgressChange} onEdit={onEdit} onDelete={onDelete} tasks={tasks}/>
-            ))}
-        </React.Fragment>
+        <Collapsible asChild>
+            <>
+                <TableRow>
+                    <TableCell style={{ paddingLeft: `${level * 1.5 + 1}rem` }}>
+                        <div className="flex items-center gap-2">
+                            {task.children.length > 0 ? (
+                               <CollapsibleTrigger asChild>
+                                   <Button variant="ghost" size="icon" className="h-6 w-6 -ml-2">
+                                        <ChevronRight className="h-4 w-4 transition-transform data-[state=open]:rotate-90" />
+                                    </Button>
+                               </CollapsibleTrigger>
+                            ) : (
+                               <div className="w-6 h-6" /> 
+                            )}
+                            <div className="cursor-pointer" onClick={() => onEdit(task)}>
+                                {task.parentTaskId && (
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <div className="cursor-default inline-block mr-2" onClick={(e) => { e.stopPropagation(); onEdit(tasks.find(t => t.id === task.parentTaskId) as Task)}}>
+                                                    <LinkIcon className="h-4 w-4 text-muted-foreground" />
+                                                </div>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p>Subtask of: {task.parentTaskTitle}</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                )}
+                                <span className="font-medium">{task.title}</span>
+                            </div>
+                        </div>
+                    </TableCell>
+                    <TableCell><Badge variant={priorityVariant[task.priority]}>{task.priority}</Badge></TableCell>
+                    <TableCell>{task.assignedToName}</TableCell>
+                    <TableCell>{task.dueDate ? format(task.dueDate.toDate(), 'PPP') : 'N/A'}</TableCell>
+                    <TableCell>
+                        <div className="flex items-center gap-2">
+                            <Progress value={task.progress || 0} />
+                            <span className="text-xs font-mono w-8 text-right">{task.progress || 0}%</span>
+                        </div>
+                    </TableCell>
+                    <TableCell>
+                        <div onClick={(e) => e.stopPropagation()}>
+                            <Select 
+                                defaultValue={task.status}
+                                onValueChange={(value) => onStatusChange(task.id, value as Task['status'])}
+                            >
+                                <SelectTrigger className="w-[120px] h-8 text-xs">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                        {(["Pending", "In Progress", "Completed", "Delayed"] as Task['status'][]).map(s => (
+                                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                                        ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}><MoreHorizontal /></Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuItem onSelect={() => onEdit(task)}>Edit Details</DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="text-destructive" onSelect={() => onDelete(task.id)}>Delete Task</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </TableCell>
+                </TableRow>
+                 <CollapsibleContent asChild>
+                    <>
+                        {task.children.map(child => (
+                           <TaskRow key={child.id} task={child} level={level + 1} onStatusChange={onStatusChange} onProgressChange={onProgressChange} onEdit={onEdit} onDelete={onDelete} tasks={tasks}/>
+                       ))}
+                   </>
+                </CollapsibleContent>
+            </>
+        </Collapsible>
     )
 }
 
