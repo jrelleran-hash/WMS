@@ -16,7 +16,7 @@ import { useData } from "@/context/data-context";
 import { formatCurrency } from "@/lib/currency";
 import { PesoSign } from "@/components/icons";
 import { subDays, subWeeks, subMonths, subYears, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, format, isWithinInterval, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval } from "date-fns";
-import type { Order, Tool } from "@/types";
+import type { Order, Tool, PagePermission } from "@/types";
 import { Button } from "@/components/ui/button";
 import { StartupAnimation } from "@/components/layout/startup-animation";
 import { ToolStatusChart, type ToolFilterType } from "@/components/dashboard/tool-status-chart";
@@ -109,13 +109,24 @@ const getRevenueData = (orders: Order[], filter: FilterType) => {
 
 
 export default function DashboardPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, userProfile, loading: authLoading } = useAuth();
   const router = useRouter();
   const { products, clients, orders, tools, loading: dataLoading } = useData();
   
   const [revenueFilter, setRevenueFilter] = useState<FilterType>("month");
   const [inventoryFilter, setInventoryFilter] = useState<InventoryFilterType>("all");
   const [toolFilter, setToolFilter] = useState<ToolFilterType>("all");
+
+  const userPermissions = useMemo(() => {
+    if (!userProfile) return new Set();
+    if (userProfile.role === 'Admin' || userProfile.role === 'Manager') {
+        const allPermissions: PagePermission[] = ["/analytics", "/inventory", "/tools", "/clients"];
+        return new Set(allPermissions);
+    }
+    return new Set(userProfile.permissions || []);
+  }, [userProfile]);
+
+  const canAccess = (page: PagePermission) => userPermissions.has(page);
 
 
   useEffect(() => {
@@ -202,13 +213,13 @@ export default function DashboardPage() {
         <WelcomeCard />
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           <KpiCard
-            key={`revenue-${revenueFilter}`}
+            key={`revenue-card-${revenueFilter}`}
             title={revenueTitle}
             value={totalRevenue}
             change={revenueChangeText}
             icon={<PesoSign className="size-5 text-primary" />}
             loading={dataLoading}
-            href="/analytics"
+            href={canAccess("/analytics") ? "/analytics" : undefined}
             children={<RevenueChart data={revenueChartData} />}
             footer={
               <div className="flex justify-end gap-1 mt-2">
@@ -221,13 +232,13 @@ export default function DashboardPage() {
             }
           />
           <KpiCard
-            key={`inventory-${inventoryFilter}`}
+            key={`inventory-card-${inventoryFilter}`}
             title={inventoryTitle}
             value={inventoryValue}
             change={inventoryChangeText}
             icon={<Package className="size-5 text-primary" />}
             loading={dataLoading}
-            href="/inventory"
+            href={canAccess("/inventory") ? "/inventory" : undefined}
             children={<InventoryStatusChart products={products} filter={inventoryFilter} />}
             footer={
               <div className="flex justify-end gap-1 mt-2">
@@ -246,13 +257,13 @@ export default function DashboardPage() {
             }
           />
           <KpiCard
-            key={`tool-${toolFilter}`}
+            key={`tool-card-${toolFilter}`}
             title={toolTitle}
             value={toolCount}
             change={toolChangeText}
             icon={<Wrench className="size-5 text-primary" />}
             loading={dataLoading}
-            href="/tools"
+            href={canAccess("/tools") ? "/tools" : undefined}
             children={<ToolStatusChart tools={tools} filter={toolFilter} />}
             footer={
                  <div className="flex justify-end gap-1 mt-2">
@@ -271,12 +282,13 @@ export default function DashboardPage() {
             }
           />
           <KpiCard
+            key="clients-card"
             title="Total Clients"
             value={clientContractData.total.toString()}
             change={`${clientContractData.completed} contracts completed`}
             icon={<Users className="size-5 text-primary" />}
             loading={dataLoading}
-            href="/clients"
+            href={canAccess("/clients") ? "/clients" : undefined}
           />
         </div>
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -292,3 +304,5 @@ export default function DashboardPage() {
     </>
   );
 }
+
+    
