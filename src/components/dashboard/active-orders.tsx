@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
@@ -27,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { useData } from "@/context/data-context";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
 import { orderSchema, createProductSchema, supplierSchema, type OrderFormValues, type ProductFormValues, type SupplierFormValues } from "@/lib/schemas";
+import { useAuthorization } from "@/hooks/use-authorization";
 
 
 const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
@@ -48,6 +48,7 @@ const toTitleCase = (str: string) => {
 
 export function ActiveOrders() {
   const { orders, clients, products, suppliers, loading, refetchData } = useData();
+  const { canManage } = useAuthorization({ page: '/orders' });
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   const [isAddOrderOpen, setIsAddOrderOpen] = useState(false);
@@ -284,6 +285,7 @@ export function ActiveOrders() {
             A list of all orders currently in progress.
           </CardDescription>
         </div>
+        {canManage && (
         <Dialog open={isAddOrderOpen} onOpenChange={setIsAddOrderOpen}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1">
@@ -471,6 +473,7 @@ export function ActiveOrders() {
             </form>
           </DialogContent>
         </Dialog>
+        )}
       </CardHeader>
       <CardContent>
         <Table>
@@ -543,7 +546,7 @@ export function ActiveOrders() {
               </ul>
             </div>
           </div>
-          <DialogFooter className="!justify-between">
+          <DialogFooter className="!justify-between flex-col-reverse sm:flex-row gap-2">
             <div>
                 <Button
                     variant="destructive"
@@ -587,7 +590,7 @@ export function ActiveOrders() {
               }}/>
               {productForm.formState.errors.name && <p className="text-sm text-destructive">{productForm.formState.errors.name.message}</p>}
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="sku-dash">SKU</Label>
@@ -608,7 +611,7 @@ export function ActiveOrders() {
                 {productForm.formState.errors.price && <p className="text-sm text-destructive">{productForm.formState.errors.price.message}</p>}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                <div className="space-y-2">
                 <Label htmlFor="reorderLimit-dash">Reorder Limit</Label>
                 <Input id="reorderLimit-dash" type="number" {...productForm.register("reorderLimit")} />
