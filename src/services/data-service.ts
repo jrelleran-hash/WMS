@@ -2673,12 +2673,18 @@ export async function addTask(taskData: NewTaskData): Promise<void> {
     }
 
     const newTask: Omit<Task, 'id'> = {
-        ...taskData,
+        title: taskData.title,
+        description: taskData.description || null,
+        priority: taskData.priority,
+        assignedToId: taskData.assignedToId,
+        createdBy: taskData.createdBy,
+        dueDate: taskData.dueDate ? Timestamp.fromDate(taskData.dueDate) : null,
+        attachments: taskData.attachments || null,
+        supervisorNotes: taskData.supervisorNotes || null,
         taskId,
         assignedToName: `${userData.firstName} ${userData.lastName}`,
         status: 'Pending',
         createdAt: Timestamp.now(),
-        dueDate: taskData.dueDate ? Timestamp.fromDate(taskData.dueDate) : null,
         progress: progress,
         subtasks: taskData.subtasks?.map(st => ({
             ...st,
@@ -2860,6 +2866,7 @@ export async function addWorker(worker: Omit<Worker, 'id'>): Promise<DocumentRef
     throw new Error("Failed to add worker.");
   }
 }
+
 
 
 
