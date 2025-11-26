@@ -641,10 +641,10 @@ interface HierarchicalTask extends Task {
 
 function TaskRow({ task, level, onStatusChange, onProgressChange, onEdit, onDelete, tasks }: { task: HierarchicalTask, level: number, onStatusChange: any, onProgressChange: any, onEdit: any, onDelete: any, tasks: Task[] }) {
     return (
-      <Collapsible asChild>
-        <React.Fragment>
-          <TableRow>
-            <TableCell style={{ paddingLeft: `${level * 1.5 + 1}rem` }}>
+      <React.Fragment>
+        <TableRow>
+          <TableCell style={{ paddingLeft: `${level * 1.5 + 1}rem` }}>
+            <Collapsible>
               <div className="flex items-center gap-2">
                 {task.children.length > 0 ? (
                   <CollapsibleTrigger asChild>
@@ -673,56 +673,56 @@ function TaskRow({ task, level, onStatusChange, onProgressChange, onEdit, onDele
                   <span className="font-medium">{task.title}</span>
                 </div>
               </div>
-            </TableCell>
-            <TableCell><Badge variant={priorityVariant[task.priority]}>{task.priority}</Badge></TableCell>
-            <TableCell>{task.assignedToName}</TableCell>
-            <TableCell>{task.dueDate ? format(task.dueDate.toDate(), 'PPP') : 'N/A'}</TableCell>
-            <TableCell>
-              <div className="flex items-center gap-2">
-                <Progress value={task.progress || 0} />
-                <span className="text-xs font-mono w-8 text-right">{task.progress || 0}%</span>
-              </div>
-            </TableCell>
-            <TableCell>
-              <div onClick={(e) => e.stopPropagation()}>
-                <Select
-                  defaultValue={task.status}
-                  onValueChange={(value) => onStatusChange(task.id, value as Task['status'])}
-                >
-                  <SelectTrigger className="w-[120px] h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(["Pending", "In Progress", "Completed", "Delayed"] as Task['status'][]).map(s => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </TableCell>
-            <TableCell className="text-right">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}><MoreHorizontal /></Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                  <DropdownMenuItem onSelect={() => onEdit(task)}>Edit Details</DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-destructive" onSelect={() => onDelete(task.id)}>Delete Task</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </TableCell>
-          </TableRow>
-          <CollapsibleContent asChild>
-            <>
-              {task.children.map(child => (
-                <TaskRow key={child.id} task={child} level={level + 1} onStatusChange={onStatusChange} onProgressChange={onProgressChange} onEdit={onEdit} onDelete={onDelete} tasks={tasks} />
-              ))}
-            </>
-          </CollapsibleContent>
-        </React.Fragment>
-      </Collapsible>
+              <CollapsibleContent>
+                  <div className="pl-6 pt-2 space-y-2">
+                      {task.children.map(child => (
+                          <TaskRow key={child.id} task={child} level={level + 1} onStatusChange={onStatusChange} onProgressChange={onProgressChange} onEdit={onEdit} onDelete={onDelete} tasks={tasks}/>
+                      ))}
+                  </div>
+              </CollapsibleContent>
+            </Collapsible>
+          </TableCell>
+          <TableCell><Badge variant={priorityVariant[task.priority]}>{task.priority}</Badge></TableCell>
+          <TableCell>{task.assignedToName}</TableCell>
+          <TableCell>{task.dueDate ? format(task.dueDate.toDate(), 'PPP') : 'N/A'}</TableCell>
+          <TableCell>
+            <div className="flex items-center gap-2">
+              <Progress value={task.progress || 0} />
+              <span className="text-xs font-mono w-8 text-right">{task.progress || 0}%</span>
+            </div>
+          </TableCell>
+          <TableCell>
+            <div onClick={(e) => e.stopPropagation()}>
+              <Select
+                defaultValue={task.status}
+                onValueChange={(value) => onStatusChange(task.id, value as Task['status'])}
+              >
+                <SelectTrigger className="w-[120px] h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(["Pending", "In Progress", "Completed", "Delayed"] as Task['status'][]).map(s => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </TableCell>
+          <TableCell className="text-right">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}><MoreHorizontal /></Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuItem onSelect={() => onEdit(task)}>Edit Details</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-destructive" onSelect={() => onDelete(task.id)}>Delete Task</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </TableCell>
+        </TableRow>
+      </React.Fragment>
     )
 }
 
@@ -797,6 +797,7 @@ function TaskTable({ tasks, loading, onStatusChange, onProgressChange, onEdit, o
 
 
     
+
 
 
 
