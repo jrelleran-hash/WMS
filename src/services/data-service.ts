@@ -2685,12 +2685,15 @@ export async function addTask(taskData: NewTaskData): Promise<void> {
         createdAt: Timestamp.now(),
         progress: progress || 0,
         completedAt: null,
-        subtasks: taskData.subtasks?.map(st => ({
-            ...st,
-            startDate: (st as any).dateRange?.from ? Timestamp.fromDate((st as any).dateRange.from) : null,
-            dueDate: (st as any).dateRange?.to ? Timestamp.fromDate((st as any).dateRange.to) : null,
-            linkedTaskId: st.linkedTaskId || null,
-        })) || [],
+        subtasks: (taskData.subtasks || []).map(st => {
+            const { dateRange, ...rest } = st as any; // Handle the transient 'dateRange' property
+            return {
+                ...rest,
+                startDate: dateRange?.from ? Timestamp.fromDate(dateRange.from) : null,
+                dueDate: dateRange?.to ? Timestamp.fromDate(dateRange.to) : null,
+                linkedTaskId: st.linkedTaskId || null,
+            };
+        }),
     };
     await addDoc(collection(db, "tasks"), newTask);
 }
