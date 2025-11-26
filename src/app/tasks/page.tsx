@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
@@ -26,7 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PlusCircle, MoreHorizontal, Calendar as CalendarIcon, Trash2, X, Edit2 } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Calendar as CalendarIcon, Trash2, X, Edit2, Link as LinkIcon, ChevronsUpDown, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { Slider } from "@/components/ui/slider";
@@ -34,6 +35,7 @@ import { Progress } from "@/components/ui/progress";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { DateRange } from "react-day-picker";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 
 const subtaskSchema = z.object({
@@ -44,6 +46,7 @@ const subtaskSchema = z.object({
     from: z.date().optional(),
     to: z.date().optional(),
   }).optional(),
+  linkedTaskId: z.string().optional(),
 });
 
 const taskSchema = z.object({
@@ -298,7 +301,7 @@ export default function TasksPage() {
                                 <DialogTitle>Create New Task</DialogTitle>
                                 <DialogDescription>Fill in the details and assign the task to a staff member.</DialogDescription>
                             </DialogHeader>
-                            <TaskForm form={form} onSubmit={onSubmit} users={users} onClose={() => setIsAddDialogOpen(false)} />
+                            <TaskForm form={form} onSubmit={onSubmit} users={users} tasks={tasks} onClose={() => setIsAddDialogOpen(false)} />
                         </DialogContent>
                     </Dialog>
                 )}
@@ -331,7 +334,7 @@ export default function TasksPage() {
                         <DialogTitle>Edit Task</DialogTitle>
                         <DialogDescription>Update the details for this task.</DialogDescription>
                     </DialogHeader>
-                    <TaskForm form={form} onSubmit={onSubmit} users={users} onClose={() => setSelectedTask(null)} />
+                    <TaskForm form={form} onSubmit={onSubmit} users={users} tasks={tasks} onClose={() => setSelectedTask(null)} />
                 </DialogContent>
             </Dialog>
 
@@ -355,10 +358,11 @@ export default function TasksPage() {
     )
 }
 
-function TaskForm({ form, onSubmit, users, onClose }: { form: any, onSubmit: (data: TaskFormValues) => Promise<void>, users: any[], onClose: () => void }) {
+function TaskForm({ form, onSubmit, users, tasks, onClose }: { form: any, onSubmit: (data: TaskFormValues) => Promise<void>, users: any[], tasks: Task[], onClose: () => void }) {
     const { watch, control, register, setValue } = form;
-    const [newSubtask, setNewSubtask] = useState("");
+    const [subtaskInput, setSubtaskInput] = useState("");
     const [openSubtaskPopovers, setOpenSubtaskPopovers] = useState<Record<number, boolean>>({});
+    const [isTaskPopoverOpen, setIsTaskPopoverOpen] = useState(false);
     
     const { fields, append, remove } = useFieldArray({
       control,
@@ -366,6 +370,13 @@ function TaskForm({ form, onSubmit, users, onClose }: { form: any, onSubmit: (da
     });
 
     const subtasks = watch("subtasks", []);
+    const taskId = watch("id");
+    
+    const availableTasksToLink = useMemo(() => {
+        const existingSubtaskIds = subtasks.map((st: Subtask) => st.linkedTaskId).filter(Boolean);
+        return tasks.filter(task => task.id !== taskId && !existingSubtaskIds.includes(task.id));
+    }, [tasks, subtasks, taskId]);
+
     
     const progress = useMemo(() => {
         if (!subtasks || subtasks.length === 0) return watch('progress') || 0;
@@ -384,12 +395,23 @@ function TaskForm({ form, onSubmit, users, onClose }: { form: any, onSubmit: (da
 
 
     const handleAddSubtask = () => {
-        if (newSubtask.trim() !== "") {
-            append({ id: `new-${Date.now()}`, title: newSubtask.trim(), completed: false, dateRange: { from: undefined, to: undefined } });
-            setNewSubtask("");
+        if (subtaskInput.trim() !== "") {
+            append({ id: `new-${Date.now()}`, title: subtaskInput.trim(), completed: false, dateRange: { from: undefined, to: undefined } });
+            setSubtaskInput("");
         }
     };
     
+    const handleLinkTask = (task: Task) => {
+        append({
+            id: `linked-${task.id}`,
+            title: task.title,
+            completed: task.status === 'Completed',
+            dateRange: { from: task.startDate?.toDate(), to: task.dueDate?.toDate() },
+            linkedTaskId: task.id,
+        });
+        setIsTaskPopoverOpen(false);
+    };
+
     return (
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-4">
             <div className="space-y-2">
@@ -419,13 +441,16 @@ function TaskForm({ form, onSubmit, users, onClose }: { form: any, onSubmit: (da
                             <Popover open={openSubtaskPopovers[index]} onOpenChange={(open) => setOpenSubtaskPopovers(prev => ({...prev, [index]: open}))}>
                                 <PopoverTrigger asChild>
                                     <Button variant="outline" className={cn("flex-1 justify-start font-normal h-auto", form.watch(`subtasks.${index}.completed`) && "line-through text-muted-foreground")}>
-                                        <div className="flex flex-col items-start">
-                                            <span>{watch(`subtasks.${index}.title`)}</span>
-                                            {watch(`subtasks.${index}.dateRange.from`) && (
-                                                 <span className="text-xs text-muted-foreground">
-                                                    {format(watch(`subtasks.${index}.dateRange.from`), 'PP')} - {watch(`subtasks.${index}.dateRange.to`) ? format(watch(`subtasks.${index}.dateRange.to`), 'PP') : ''}
-                                                </span>
-                                            )}
+                                        <div className="flex items-center gap-2">
+                                            {watch(`subtasks.${index}.linkedTaskId`) && <LinkIcon className="h-4 w-4 text-primary" />}
+                                            <div className="flex flex-col items-start">
+                                                <span>{watch(`subtasks.${index}.title`)}</span>
+                                                {watch(`subtasks.${index}.dateRange.from`) && (
+                                                    <span className="text-xs text-muted-foreground">
+                                                        {format(watch(`subtasks.${index}.dateRange.from`), 'PP')} - {watch(`subtasks.${index}.dateRange.to`) ? format(watch(`subtasks.${index}.dateRange.to`), 'PP') : ''}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                     </Button>
                                 </PopoverTrigger>
@@ -464,9 +489,9 @@ function TaskForm({ form, onSubmit, users, onClose }: { form: any, onSubmit: (da
                 </div>
                 <div className="flex items-center gap-2">
                     <Input
-                        value={newSubtask}
-                        onChange={(e) => setNewSubtask(e.target.value)}
-                        placeholder="Add a new subtask..."
+                        value={subtaskInput}
+                        onChange={(e) => setSubtaskInput(e.target.value)}
+                        placeholder="Add new subtask or link existing..."
                         onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                                 e.preventDefault();
@@ -474,6 +499,28 @@ function TaskForm({ form, onSubmit, users, onClose }: { form: any, onSubmit: (da
                             }
                         }}
                     />
+                    <Popover open={isTaskPopoverOpen} onOpenChange={setIsTaskPopoverOpen}>
+                        <PopoverTrigger asChild>
+                             <Button type="button" variant="outline" size="icon">
+                                <LinkIcon className="h-4 w-4" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[300px] p-0">
+                            <Command>
+                                <CommandInput placeholder="Search tasks to link..." />
+                                <CommandList>
+                                    <CommandEmpty>No tasks found.</CommandEmpty>
+                                    <CommandGroup>
+                                        {availableTasksToLink.map(task => (
+                                            <CommandItem key={task.id} onSelect={() => handleLinkTask(task)}>
+                                                {task.title}
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
                     <Button type="button" onClick={handleAddSubtask}>Add</Button>
                 </div>
             </div>

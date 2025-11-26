@@ -352,6 +352,7 @@ export interface Subtask {
     completed: boolean;
     startDate: Timestamp | null;
     dueDate: Timestamp | null;
+    linkedTaskId?: string;
 }
 
 export interface Task {

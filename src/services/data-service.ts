@@ -2689,6 +2689,7 @@ export async function addTask(taskData: NewTaskData): Promise<void> {
             ...st,
             startDate: (st as any).dateRange?.from ? Timestamp.fromDate((st as any).dateRange.from) : null,
             dueDate: (st as any).dateRange?.to ? Timestamp.fromDate((st as any).dateRange.to) : null,
+            linkedTaskId: st.linkedTaskId || null,
         })) || [],
     };
     await addDoc(collection(db, "tasks"), newTask);
@@ -2723,6 +2724,7 @@ export async function updateTask(taskId: string, data: Partial<Omit<Task, 'id'>>
                 ...rest,
                 startDate: dateRange?.from ? Timestamp.fromDate(dateRange.from) : null,
                 dueDate: dateRange?.to ? Timestamp.fromDate(dateRange.to) : null,
+                linkedTaskId: st.linkedTaskId || null,
             }
         });
     }
