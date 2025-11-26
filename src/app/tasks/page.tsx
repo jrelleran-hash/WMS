@@ -36,6 +36,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Checkbox } from "@/components/ui/checkbox";
 import type { DateRange } from "react-day-picker";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import Link from 'next/link';
 
 
 const subtaskSchema = z.object({
@@ -95,7 +96,7 @@ function StaffKpiDashboard() {
             
             return {
                 userId: user.uid,
-                name: `${'user.firstName'} ${'user.lastName'}`,
+                name: `${user.firstName} ${user.lastName}`,
                 total: userTasks.length,
                 completed,
                 overdue,
@@ -301,7 +302,7 @@ export default function TasksPage() {
                                 <DialogTitle>Create New Task</DialogTitle>
                                 <DialogDescription>Fill in the details and assign the task to a staff member.</DialogDescription>
                             </DialogHeader>
-                            <TaskForm form={form} onSubmit={onSubmit} users={users} tasks={tasks} onClose={() => setIsAddDialogOpen(false)} />
+                            <TaskForm form={form} onSubmit={onSubmit} users={users} tasks={tasks} onClose={() => setIsAddDialogOpen(false)} onEdit={setSelectedTask} />
                         </DialogContent>
                     </Dialog>
                 )}
@@ -334,7 +335,7 @@ export default function TasksPage() {
                         <DialogTitle>Edit Task</DialogTitle>
                         <DialogDescription>Update the details for this task.</DialogDescription>
                     </DialogHeader>
-                    <TaskForm form={form} onSubmit={onSubmit} users={users} tasks={tasks} onClose={() => setSelectedTask(null)} />
+                    <TaskForm form={form} onSubmit={onSubmit} users={users} tasks={tasks} onClose={() => setSelectedTask(null)} onEdit={setSelectedTask} />
                 </DialogContent>
             </Dialog>
 
@@ -358,7 +359,7 @@ export default function TasksPage() {
     )
 }
 
-function TaskForm({ form, onSubmit, users, tasks, onClose }: { form: any, onSubmit: (data: TaskFormValues) => Promise<void>, users: any[], tasks: Task[], onClose: () => void }) {
+function TaskForm({ form, onSubmit, users, tasks, onClose, onEdit }: { form: any, onSubmit: (data: TaskFormValues) => Promise<void>, users: any[], tasks: Task[], onClose: () => void, onEdit: (task: Task) => void }) {
     const { watch, control, register, setValue } = form;
     const [subtaskInput, setSubtaskInput] = useState("");
     const [openSubtaskPopovers, setOpenSubtaskPopovers] = useState<Record<number, boolean>>({});
@@ -412,6 +413,16 @@ function TaskForm({ form, onSubmit, users, tasks, onClose }: { form: any, onSubm
         setIsTaskPopoverOpen(false);
     };
 
+    const handleSubtaskClick = (subtask: Subtask) => {
+        if (subtask.linkedTaskId) {
+            const linkedTask = tasks.find(t => t.id === subtask.linkedTaskId);
+            if (linkedTask) {
+                onClose(); // Close current dialog
+                setTimeout(() => onEdit(linkedTask), 150); // Open new dialog after a short delay
+            }
+        }
+    };
+
     return (
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-4">
             <div className="space-y-2">
@@ -426,7 +437,32 @@ function TaskForm({ form, onSubmit, users, tasks, onClose }: { form: any, onSubm
             <div className="space-y-2">
                 <Label>Subtasks</Label>
                 <div className="space-y-2">
-                    {fields.map((field, index) => (
+                    {fields.map((field, index) => {
+                        const subtask = watch(`subtasks.${index}`);
+                        const isLinked = !!subtask.linkedTaskId;
+                        
+                        const subtaskButton = (
+                            <Button 
+                                type="button" 
+                                variant="outline" 
+                                className={cn("flex-1 justify-start font-normal h-auto", subtask.completed && "line-through text-muted-foreground")}
+                                onClick={() => !isLinked && setOpenSubtaskPopovers(prev => ({...prev, [index]: true}))}
+                            >
+                                <div className="flex items-center gap-2">
+                                    {isLinked && <LinkIcon className="h-4 w-4 text-primary" />}
+                                    <div className="flex flex-col items-start">
+                                        <span>{subtask.title}</span>
+                                        {subtask.dateRange?.from && (
+                                            <span className="text-xs text-muted-foreground">
+                                                {format(subtask.dateRange.from, 'PP')} - {subtask.dateRange.to ? format(subtask.dateRange.to, 'PP') : ''}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            </Button>
+                        );
+
+                        return (
                         <div key={field.id} className="flex items-center gap-2">
                             <Controller
                                 name={`subtasks.${index}.completed`}
@@ -438,54 +474,49 @@ function TaskForm({ form, onSubmit, users, tasks, onClose }: { form: any, onSubm
                                     />
                                 )}
                             />
-                            <Popover open={openSubtaskPopovers[index]} onOpenChange={(open) => setOpenSubtaskPopovers(prev => ({...prev, [index]: open}))}>
-                                <PopoverTrigger asChild>
-                                    <Button variant="outline" className={cn("flex-1 justify-start font-normal h-auto", form.watch(`subtasks.${index}.completed`) && "line-through text-muted-foreground")}>
-                                        <div className="flex items-center gap-2">
-                                            {watch(`subtasks.${index}.linkedTaskId`) && <LinkIcon className="h-4 w-4 text-primary" />}
-                                            <div className="flex flex-col items-start">
-                                                <span>{watch(`subtasks.${index}.title`)}</span>
-                                                {watch(`subtasks.${index}.dateRange.from`) && (
-                                                    <span className="text-xs text-muted-foreground">
-                                                        {format(watch(`subtasks.${index}.dateRange.from`), 'PP')} - {watch(`subtasks.${index}.dateRange.to`) ? format(watch(`subtasks.${index}.dateRange.to`), 'PP') : ''}
-                                                    </span>
-                                                )}
+                            
+                            {isLinked ? (
+                                <div onClick={() => handleSubtaskClick(subtask)} className="flex-1">
+                                    {subtaskButton}
+                                </div>
+                            ) : (
+                                <Popover open={openSubtaskPopovers[index]} onOpenChange={(open) => setOpenSubtaskPopovers(prev => ({...prev, [index]: open}))}>
+                                    <PopoverTrigger asChild>
+                                        {subtaskButton}
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-80">
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <Label>Subtask Title</Label>
+                                                <Input {...register(`subtasks.${index}.title`)} />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Date Range</Label>
+                                                <Controller
+                                                    name={`subtasks.${index}.dateRange`}
+                                                    control={control}
+                                                    render={({ field: dateField }) => (
+                                                        <Calendar
+                                                            initialFocus
+                                                            mode="range"
+                                                            defaultMonth={dateField.value?.from}
+                                                            selected={dateField.value as DateRange}
+                                                            onSelect={dateField.onChange}
+                                                            numberOfMonths={1}
+                                                        />
+                                                    )}
+                                                />
                                             </div>
                                         </div>
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-80">
-                                    <div className="space-y-4">
-                                        <div className="space-y-2">
-                                            <Label>Subtask Title</Label>
-                                            <Input {...register(`subtasks.${index}.title`)} />
-                                        </div>
-                                         <div className="space-y-2">
-                                            <Label>Date Range</Label>
-                                             <Controller
-                                                name={`subtasks.${index}.dateRange`}
-                                                control={control}
-                                                render={({ field: dateField }) => (
-                                                    <Calendar
-                                                        initialFocus
-                                                        mode="range"
-                                                        defaultMonth={dateField.value?.from}
-                                                        selected={dateField.value as DateRange}
-                                                        onSelect={dateField.onChange}
-                                                        numberOfMonths={1}
-                                                    />
-                                                )}
-                                            />
-                                        </div>
-                                    </div>
-                                </PopoverContent>
-                            </Popover>
+                                    </PopoverContent>
+                                </Popover>
+                            )}
 
                             <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
                                 <X className="h-4 w-4" />
                             </Button>
                         </div>
-                    ))}
+                    )})}
                 </div>
                 <div className="flex items-center gap-2">
                     <Input
