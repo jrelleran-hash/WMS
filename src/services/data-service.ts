@@ -2685,7 +2685,8 @@ export async function addTask(taskData: NewTaskData): Promise<void> {
         assignedToName: `${userData.firstName} ${userData.lastName}`,
         status: 'Pending',
         createdAt: Timestamp.now(),
-        progress: progress,
+        progress: progress || 0,
+        completedAt: null,
         subtasks: taskData.subtasks?.map(st => ({
             ...st,
             startDate: (st as any).dateRange?.from ? Timestamp.fromDate((st as any).dateRange.from) : null,
@@ -2866,6 +2867,7 @@ export async function addWorker(worker: Omit<Worker, 'id'>): Promise<DocumentRef
     throw new Error("Failed to add worker.");
   }
 }
+
 
 
 
