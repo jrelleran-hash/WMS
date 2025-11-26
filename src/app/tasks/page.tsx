@@ -27,7 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PlusCircle, MoreHorizontal, Calendar as CalendarIcon, Trash2, X, Edit2, Link as LinkIcon, ChevronsUpDown, Check } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Calendar as CalendarIcon, Trash2, X, Edit2, Link as LinkIcon, ChevronsUpDown, Check, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { Slider } from "@/components/ui/slider";
@@ -473,11 +473,7 @@ function TaskForm({ form, onSubmit, users, tasks, onClose, onEdit }: { form: any
                                 )}
                             />
                             
-                            {isLinked ? (
-                                <div onClick={() => handleSubtaskClick(subtask)} className="flex-1 cursor-pointer">
-                                    {subtaskButton}
-                                </div>
-                            ) : (
+                            <div onClick={() => handleSubtaskClick(subtask)} className={cn("flex-1", isLinked && "cursor-pointer")}>
                                 <Popover open={openSubtaskPopovers[index]} onOpenChange={(open) => setOpenSubtaskPopovers(prev => ({...prev, [index]: open}))}>
                                     <PopoverTrigger asChild>
                                         {subtaskButton}
@@ -508,7 +504,7 @@ function TaskForm({ form, onSubmit, users, tasks, onClose, onEdit }: { form: any
                                         </div>
                                     </PopoverContent>
                                 </Popover>
-                            )}
+                            </div>
 
                             <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
                                 <X className="h-4 w-4" />
@@ -638,17 +634,118 @@ function TaskForm({ form, onSubmit, users, tasks, onClose, onEdit }: { form: any
     );
 }
 
+interface HierarchicalTask extends Task {
+  children: HierarchicalTask[];
+}
+
+function TaskRow({ task, level, onStatusChange, onProgressChange, onEdit, onDelete, tasks }: { task: HierarchicalTask, level: number, onStatusChange: any, onProgressChange: any, onEdit: any, onDelete: any, tasks: Task[] }) {
+    const [isOpen, setIsOpen] = useState(true);
+
+    return (
+        <React.Fragment>
+            <TableRow onClick={() => onEdit(task)} className="cursor-pointer">
+                <TableCell style={{ paddingLeft: `${level * 1.5 + 1}rem` }}>
+                    <div className="flex items-center gap-2">
+                        {task.children.length > 0 ? (
+                           <Button variant="ghost" size="icon" className="h-6 w-6 -ml-2" onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}>
+                                <ChevronRight className={cn("h-4 w-4 transition-transform", isOpen && "rotate-90")} />
+                            </Button>
+                        ) : (
+                           <div className="w-6 h-6" /> 
+                        )}
+                        {task.parentTaskId && (
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div className="cursor-default" onClick={(e) => { e.stopPropagation(); onEdit(tasks.find(t => t.id === task.parentTaskId) as Task)}}>
+                                            <LinkIcon className="h-4 w-4 text-muted-foreground" />
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Subtask of: {task.parentTaskTitle}</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        )}
+                        <span className="font-medium">{task.title}</span>
+                    </div>
+                </TableCell>
+                <TableCell><Badge variant={priorityVariant[task.priority]}>{task.priority}</Badge></TableCell>
+                <TableCell>{task.assignedToName}</TableCell>
+                <TableCell>{task.dueDate ? format(task.dueDate.toDate(), 'PPP') : 'N/A'}</TableCell>
+                <TableCell>
+                    <div className="flex items-center gap-2">
+                        <Progress value={task.progress || 0} />
+                        <span className="text-xs font-mono w-8 text-right">{task.progress || 0}%</span>
+                    </div>
+                </TableCell>
+                <TableCell>
+                    <div onClick={(e) => e.stopPropagation()}>
+                        <Select 
+                            defaultValue={task.status}
+                            onValueChange={(value) => onStatusChange(task.id, value as Task['status'])}
+                        >
+                            <SelectTrigger className="w-[120px] h-8 text-xs">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                    {(["Pending", "In Progress", "Completed", "Delayed"] as Task['status'][]).map(s => (
+                                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                                    ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </TableCell>
+                <TableCell className="text-right">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}><MoreHorizontal /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onSelect={() => onEdit(task)}>Edit Details</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-destructive" onSelect={() => onDelete(task.id)}>Delete Task</DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </TableCell>
+            </TableRow>
+             {isOpen && task.children.map(child => (
+                <TaskRow key={child.id} task={child} level={level + 1} onStatusChange={onStatusChange} onProgressChange={onProgressChange} onEdit={onEdit} onDelete={onDelete} tasks={tasks}/>
+            ))}
+        </React.Fragment>
+    )
+}
+
 
 function TaskTable({ tasks, loading, onStatusChange, onProgressChange, onEdit, onDelete }: { tasks: Task[], loading: boolean, onStatusChange: (taskId: string, status: Task['status']) => void, onProgressChange: (taskId: string, progress: number) => void, onEdit: (task: Task) => void, onDelete: (taskId: string) => void }) {
+    
+    const hierarchicalTasks = useMemo(() => {
+        const taskMap: Record<string, HierarchicalTask> = {};
+        const topLevelTasks: HierarchicalTask[] = [];
 
-    const sortedTasks = useMemo(() => {
-        return [...tasks].sort((a, b) => {
+        tasks.forEach(task => {
+            taskMap[task.id] = { ...task, children: [] };
+        });
+
+        Object.values(taskMap).forEach(taskNode => {
+            if (taskNode.parentTaskId && taskMap[taskNode.parentTaskId]) {
+                taskMap[taskNode.parentTaskId].children.push(taskNode);
+            } else {
+                topLevelTasks.push(taskNode);
+            }
+        });
+        
+        // Sort top-level tasks by status and date
+        topLevelTasks.sort((a, b) => {
             const statusOrder = { 'In Progress': 0, 'Delayed': 1, 'Pending': 2, 'Completed': 3 };
             if (statusOrder[a.status] !== statusOrder[b.status]) {
                 return statusOrder[a.status] - statusOrder[b.status];
             }
             return (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0);
         });
+        
+        return topLevelTasks;
     }, [tasks]);
 
     return (
@@ -673,68 +770,9 @@ function TaskTable({ tasks, loading, onStatusChange, onProgressChange, onEdit, o
                                     <TableCell colSpan={7}><Skeleton className="h-8 w-full" /></TableCell>
                                 </TableRow>
                             ))
-                        ) : sortedTasks.length > 0 ? (
-                            sortedTasks.map(task => (
-                                <TableRow key={task.id} onClick={() => onEdit(task)} className="cursor-pointer">
-                                    <TableCell className="font-medium">
-                                        <div className="flex items-center gap-2">
-                                            {task.parentTaskId && (
-                                                <TooltipProvider>
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <div className="cursor-default" onClick={(e) => { e.stopPropagation(); onEdit(tasks.find(t => t.id === task.parentTaskId) as Task)}}>
-                                                                <LinkIcon className="h-4 w-4 text-muted-foreground" />
-                                                            </div>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>
-                                                            <p>Subtask of: {task.parentTaskTitle}</p>
-                                                        </TooltipContent>
-                                                    </Tooltip>
-                                                </TooltipProvider>
-                                            )}
-                                            <span>{task.title}</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell><Badge variant={priorityVariant[task.priority]}>{task.priority}</Badge></TableCell>
-                                    <TableCell>{task.assignedToName}</TableCell>
-                                    <TableCell>{task.dueDate ? format(task.dueDate.toDate(), 'PPP') : 'N/A'}</TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            <Progress value={task.progress || 0} />
-                                            <span className="text-xs font-mono w-8 text-right">{task.progress || 0}%</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div onClick={(e) => e.stopPropagation()}>
-                                            <Select 
-                                                defaultValue={task.status}
-                                                onValueChange={(value) => onStatusChange(task.id, value as Task['status'])}
-                                            >
-                                                <SelectTrigger className="w-[120px] h-8 text-xs">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                     {(["Pending", "In Progress", "Completed", "Delayed"] as Task['status'][]).map(s => (
-                                                        <SelectItem key={s} value={s}>{s}</SelectItem>
-                                                     ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}><MoreHorizontal /></Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent>
-                                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                <DropdownMenuItem onSelect={() => onEdit(task)}>Edit Details</DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem className="text-destructive" onSelect={() => onDelete(task.id)}>Delete Task</DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
-                                </TableRow>
+                        ) : hierarchicalTasks.length > 0 ? (
+                            hierarchicalTasks.map(task => (
+                                <TaskRow key={task.id} task={task} level={0} {...{ onStatusChange, onProgressChange, onEdit, onDelete, tasks }} />
                             ))
                         ) : (
                             <TableRow>
