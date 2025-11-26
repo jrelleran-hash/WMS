@@ -91,9 +91,9 @@ const allPermissions: { group: string; permissions: { value: PagePermission; lab
     { group: "Tools", permissions: [
         { value: "/my-tools", label: "My Tools" },
         { value: "/tools", label: "Tool Management" },
-        { value: "/tool-accountability", label: "Tool Accountability" },
         { value: "/tool-booking", label: "Tool Booking" },
         { value: "/tool-maintenance", label: "Tool Maintenance" },
+        { value: "/tool-accountability", label: "Tool Accountability" },
     ]},
     { group: "Assurance", permissions: [
         { value: "/returns", label: "Returns" },
