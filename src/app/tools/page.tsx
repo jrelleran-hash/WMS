@@ -450,8 +450,7 @@ export default function ToolManagementPage() {
         <TabsList>
             {canManage && <TabsTrigger value="inventory">Tool Inventory</TabsTrigger>}
             {canManage && <TabsTrigger value="requests">Request Queue <Badge variant="secondary" className="ml-2">{pendingRequests.length}</Badge></TabsTrigger>}
-            {canManage && <TabsTrigger value="ledger">Issuance Ledger</TabsTrigger>}
-            {canManage && <TabsTrigger value="history">Borrow History</TabsTrigger>}
+            {canManage && <TabsTrigger value="history">Tools History</TabsTrigger>}
         </TabsList>
         <TabsContent value="inventory">
             <Card>
@@ -576,80 +575,81 @@ export default function ToolManagementPage() {
                 </CardContent>
             </Card>
         </TabsContent>
-        <TabsContent value="ledger">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Tool Issuance Ledger</CardTitle>
-                    <CardDescription>A log of all approved tool requests.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Booking #</TableHead>
-                                <TableHead>Tool</TableHead>
-                                <TableHead>Issued To</TableHead>
-                                <TableHead>Requested By</TableHead>
-                                <TableHead>Type</TableHead>
-                                <TableHead>Date Approved</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                             {loading ? (
-                                <TableRow><TableCell colSpan={7}><Skeleton className="h-8" /></TableCell></TableRow>
-                            ) : approvedRequests.length > 0 ? (
-                                approvedRequests.map(request => {
-                                    const tool = tools.find(t => t.id === request.toolId);
-                                    return (
-                                        <TableRow key={request.id}>
-                                            <TableCell className="font-mono">{request.bookingNumber}</TableCell>
-                                            <TableCell>{request.toolName}</TableCell>
-                                            <TableCell>{request.requestedForName}</TableCell>
-                                            <TableCell>{users.find(u => u.uid === request.createdById)?.firstName} {users.find(u => u.uid === request.createdById)?.lastName}</TableCell>
-                                            <TableCell><Badge variant="outline">{request.bookingType}</Badge></TableCell>
-                                            <TableCell>{formatDate(request.approvedAt)}</TableCell>
-                                            <TableCell className="text-right">
-                                            {tool && (
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon"><MoreHorizontal /></Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuLabel>Quick Actions</DropdownMenuLabel>
-                                                        {request.bookingType === 'Borrow' && (
-                                                            <DropdownMenuItem onSelect={() => setReturningTool(tool)}>
-                                                                <RefreshCcw className="mr-2" />
-                                                                Return Tool
-                                                            </DropdownMenuItem>
-                                                        )}
-                                                        {request.bookingType === 'Accountability' && (
-                                                             <DropdownMenuItem onSelect={() => setRecallingTool(tool)}>
-                                                                <RefreshCcw className="mr-2" />
-                                                                Recall Tool
-                                                            </DropdownMenuItem>
-                                                        )}
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            )}
-                                            </TableCell>
-                                        </TableRow>
-                                    )
-                                })
-                            ) : (
-                                <TableRow><TableCell colSpan={7} className="h-24 text-center">No approved requests yet.</TableCell></TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-        </TabsContent>
         <TabsContent value="history">
-             <Tabs defaultValue="accountability">
+             <Tabs defaultValue="ledger">
                 <TabsList>
+                    <TabsTrigger value="ledger">Issuance Ledger</TabsTrigger>
                     <TabsTrigger value="accountability">Accountability</TabsTrigger>
                     <TabsTrigger value="temporary">Temporary Borrow</TabsTrigger>
                 </TabsList>
+                <TabsContent value="ledger">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Tool Issuance Ledger</CardTitle>
+                            <CardDescription>A log of all approved tool requests.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Booking #</TableHead>
+                                        <TableHead>Tool</TableHead>
+                                        <TableHead>Issued To</TableHead>
+                                        <TableHead>Requested By</TableHead>
+                                        <TableHead>Type</TableHead>
+                                        <TableHead>Date Approved</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {loading ? (
+                                        <TableRow><TableCell colSpan={7}><Skeleton className="h-8" /></TableCell></TableRow>
+                                    ) : approvedRequests.length > 0 ? (
+                                        approvedRequests.map(request => {
+                                            const tool = tools.find(t => t.id === request.toolId);
+                                            return (
+                                                <TableRow key={request.id}>
+                                                    <TableCell className="font-mono">{request.bookingNumber}</TableCell>
+                                                    <TableCell>{request.toolName}</TableCell>
+                                                    <TableCell>{request.requestedForName}</TableCell>
+                                                    <TableCell>{users.find(u => u.uid === request.createdById)?.firstName} {users.find(u => u.uid === request.createdById)?.lastName}</TableCell>
+                                                    <TableCell><Badge variant="outline">{request.bookingType}</Badge></TableCell>
+                                                    <TableCell>{formatDate(request.approvedAt)}</TableCell>
+                                                    <TableCell className="text-right">
+                                                    {tool && (
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button variant="ghost" size="icon"><MoreHorizontal /></Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end">
+                                                                <DropdownMenuLabel>Quick Actions</DropdownMenuLabel>
+                                                                {request.bookingType === 'Borrow' && (
+                                                                    <DropdownMenuItem onSelect={() => setReturningTool(tool)}>
+                                                                        <RefreshCcw className="mr-2" />
+                                                                        Return Tool
+                                                                    </DropdownMenuItem>
+                                                                )}
+                                                                {request.bookingType === 'Accountability' && (
+                                                                    <DropdownMenuItem onSelect={() => setRecallingTool(tool)}>
+                                                                        <RefreshCcw className="mr-2" />
+                                                                        Recall Tool
+                                                                    </DropdownMenuItem>
+                                                                )}
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    )}
+                                                    </TableCell>
+                                                </TableRow>
+                                            )
+                                        })
+                                    ) : (
+                                        <TableRow><TableCell colSpan={7} className="h-24 text-center">No approved requests yet.</TableCell></TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
                 <TabsContent value="accountability">
                     <Card>
                         <CardContent className="pt-6">
