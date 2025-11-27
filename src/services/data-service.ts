@@ -1983,7 +1983,7 @@ export async function borrowTool(toolId: string, borrowedBy: string, releasedBy:
         const newBorrowRecord = {
             toolId: toolId,
             borrowedBy: borrowedBy,
-            borrowedByName: `${'userData.firstName'} ${'userData.lastName'}`,
+            borrowedByName: `${userData.firstName} ${userData.lastName}`,
             releasedBy,
             dateBorrowed: Timestamp.fromDate(dateBorrowed),
             dueDate: Timestamp.fromDate(dueDate),
@@ -2088,7 +2088,7 @@ export async function assignToolForAccountability(toolId: string, userId: string
         transaction.update(toolRef, {
             status: "Assigned",
             assignedToUserId: userId,
-            assignedToUserName: `${'userData.firstName'} ${'userData.lastName'}`
+            assignedToUserName: `${userData.firstName} ${userData.lastName}`
         });
     });
 }
