@@ -642,22 +642,23 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "profile");
 
   const isAdmin = userProfile?.role === 'Admin';
+  
+  useEffect(() => {
+    // If the user lands on settings and isn't an admin, but has a tab parameter,
+    // ensure that tab is valid. If not, default to 'profile'.
+    if (!authLoading && userProfile && !isAdmin) {
+      const tab = searchParams.get('tab');
+      if (tab && !['profile', 'security', 'appearance'].includes(tab)) {
+        router.replace('/settings?tab=profile');
+      }
+    }
+  }, [authLoading, userProfile, isAdmin, searchParams, router]);
+
 
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
   });
 
-  useEffect(() => {
-    if (!authLoading && !canView) {
-      toast({
-        variant: "destructive",
-        title: "Unauthorized",
-        description: "You do not have permission to view this page.",
-      });
-      router.push('/');
-    }
-  }, [authLoading, canView, router, toast]);
-  
   useEffect(() => {
     const tab = searchParams.get("tab");
     if (tab) {
@@ -730,10 +731,10 @@ export default function SettingsPage() {
     router.push(`/settings?tab=${value}`, { scroll: false });
   };
   
-  if (authLoading || !canView) {
+  if (authLoading || !userProfile) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-8rem)]">
-        <p className="text-muted-foreground">Access Denied. Redirecting...</p>
+        <p className="text-muted-foreground">Loading...</p>
       </div>
     );
   }
@@ -748,10 +749,10 @@ export default function SettingsPage() {
       <Tabs defaultValue="profile" value={activeTab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList>
           <TabsTrigger value="profile">My Profile</TabsTrigger>
-          <TabsTrigger value="general">General</TabsTrigger>
+          {canView && <TabsTrigger value="general">General</TabsTrigger>}
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
+          {canView && <TabsTrigger value="notifications">Notifications</TabsTrigger>}
           {isAdmin && <TabsTrigger value="users">Users</TabsTrigger>}
         </TabsList>
 
@@ -831,9 +832,11 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
         
-        <TabsContent value="general" className="space-y-4">
-          <GeneralSettingsTab />
-        </TabsContent>
+        {canView && (
+          <TabsContent value="general" className="space-y-4">
+            <GeneralSettingsTab />
+          </TabsContent>
+        )}
 
         <TabsContent value="appearance" className="space-y-4">
           <AppearanceTab />
@@ -843,46 +846,50 @@ export default function SettingsPage() {
           <SecurityTab />
         </TabsContent>
 
-        <TabsContent value="notifications" className="space-y-4">
-           <Card>
-            <CardHeader>
-              <CardTitle>Notifications</CardTitle>
-              <CardDescription>
-                Manage how you receive notifications.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-               <form onSubmit={onNotificationsSubmit} className="space-y-6 max-w-lg">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 rounded-lg border">
-                      <div className="space-y-1">
-                          <Label htmlFor="order-emails">New Orders</Label>
-                          <p className="text-sm text-muted-foreground">Receive an email for every new order.</p>
-                      </div>
-                      <Switch id="order-emails" defaultChecked />
-                  </div>
-                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 rounded-lg border">
-                      <div className="space-y-1">
-                          <Label htmlFor="stock-emails">Low Stock Alerts</Label>
-                          <p className="text-sm text-muted-foreground">Get notified when product stock is low.</p>
-                      </div>
-                      <Switch id="stock-emails" defaultChecked />
-                  </div>
-                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 rounded-lg border">
-                      <div className="space-y-1">
-                          <Label htmlFor="activity-digest">Weekly Activity Digest</Label>
-                          <p className="text-sm text-muted-foreground">Receive a weekly summary of all activity.</p>
-                      </div>
-                      <Switch id="activity-digest" />
-                  </div>
-                  <Button type="submit">Save Preferences</Button>
-               </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {canView && (
+          <TabsContent value="notifications" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Notifications</CardTitle>
+                <CardDescription>
+                  Manage how you receive notifications.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <form onSubmit={onNotificationsSubmit} className="space-y-6 max-w-lg">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 rounded-lg border">
+                        <div className="space-y-1">
+                            <Label htmlFor="order-emails">New Orders</Label>
+                            <p className="text-sm text-muted-foreground">Receive an email for every new order.</p>
+                        </div>
+                        <Switch id="order-emails" defaultChecked />
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 rounded-lg border">
+                        <div className="space-y-1">
+                            <Label htmlFor="stock-emails">Low Stock Alerts</Label>
+                            <p className="text-sm text-muted-foreground">Get notified when product stock is low.</p>
+                        </div>
+                        <Switch id="stock-emails" defaultChecked />
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 rounded-lg border">
+                        <div className="space-y-1">
+                            <Label htmlFor="activity-digest">Weekly Activity Digest</Label>
+                            <p className="text-sm text-muted-foreground">Receive a weekly summary of all activity.</p>
+                        </div>
+                        <Switch id="activity-digest" />
+                    </div>
+                    <Button type="submit">Save Preferences</Button>
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
-        <TabsContent value="users" className="space-y-4">
-            <UserManagementTable isAdmin={isAdmin} />
-        </TabsContent>
+        {isAdmin && (
+          <TabsContent value="users" className="space-y-4">
+              <UserManagementTable isAdmin={isAdmin} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
