@@ -69,17 +69,33 @@ export default function MyToolsPage() {
 
     const assignedTools = useMemo(() => {
         if (!userProfile) return [];
-        return tools.filter(t => t.assignedToUserId === userProfile.uid);
-    }, [tools, userProfile]);
+        const requestedAccountabilityToolIds = new Set(
+            toolBookingRequests
+                .filter(r => r.status === 'Approved' && r.bookingType === 'Accountability' && r.createdById === userProfile.uid)
+                .map(r => r.toolId)
+        );
+        return tools.filter(t => 
+            t.assignedToUserId === userProfile.uid || 
+            (t.status === 'Assigned' && requestedAccountabilityToolIds.has(t.id))
+        );
+    }, [tools, toolBookingRequests, userProfile]);
     
     const borrowedTools = useMemo(() => {
         if (!userProfile) return [];
-        return tools.filter(t => t.status === 'In Use' && t.currentBorrowRecord?.borrowedBy === userProfile.uid);
-    }, [tools, userProfile]);
+        const requestedBorrowToolIds = new Set(
+            toolBookingRequests
+                .filter(r => r.status === 'Approved' && r.bookingType === 'Borrow' && r.createdById === userProfile.uid)
+                .map(r => r.toolId)
+        );
+        return tools.filter(t => 
+            (t.status === 'In Use' && t.currentBorrowRecord?.borrowedBy === userProfile.uid) ||
+            (t.status === 'In Use' && requestedBorrowToolIds.has(t.id))
+        );
+    }, [tools, toolBookingRequests, userProfile]);
 
-    const requestedTools = useMemo(() => {
+    const myRequests = useMemo(() => {
         if (!userProfile) return [];
-        return toolBookingRequests.filter(r => r.requestedForId === userProfile.uid);
+        return toolBookingRequests.filter(r => r.createdById === userProfile.uid || r.requestedForId === userProfile.uid);
     }, [toolBookingRequests, userProfile]);
 
     const formatDate = (date?: Date | Timestamp) => {
@@ -114,14 +130,14 @@ export default function MyToolsPage() {
                 <TabsList>
                     <TabsTrigger value="accountability">Accountability ({assignedTools.length})</TabsTrigger>
                     <TabsTrigger value="borrowed">Borrowed ({borrowedTools.length})</TabsTrigger>
-                    <TabsTrigger value="requests">My Requests ({requestedTools.length})</TabsTrigger>
+                    <TabsTrigger value="requests">My Requests ({myRequests.length})</TabsTrigger>
                 </TabsList>
                 <TabsContent value="accountability">
                      <Card>
                         <CardHeader>
                             <CardTitle>Accountable Tools</CardTitle>
                             <CardDescription>
-                                These tools are under your long-term care.
+                                These tools are under your long-term care or were requested by you for others.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -131,13 +147,14 @@ export default function MyToolsPage() {
                                     <TableHead>Tool</TableHead>
                                     <TableHead>Serial #</TableHead>
                                     <TableHead>Condition</TableHead>
+                                    <TableHead>Assigned To</TableHead>
                                 </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                 {loading ? (
                                     Array.from({ length: 3 }).map((_, i) => (
                                     <TableRow key={i}>
-                                        <TableCell colSpan={3}>
+                                        <TableCell colSpan={4}>
                                         <Skeleton className="h-8 w-full" />
                                         </TableCell>
                                     </TableRow>
@@ -152,11 +169,12 @@ export default function MyToolsPage() {
                                                 {tool.condition}
                                             </Badge>
                                         </TableCell>
+                                        <TableCell>{tool.assignedToUserName}</TableCell>
                                     </TableRow>
                                     ))
                                 ) : (
                                     <TableRow>
-                                    <TableCell colSpan={3} className="h-24 text-center">
+                                    <TableCell colSpan={4} className="h-24 text-center">
                                         You do not have any tools assigned to you.
                                     </TableCell>
                                     </TableRow>
@@ -171,7 +189,7 @@ export default function MyToolsPage() {
                         <CardHeader>
                             <CardTitle>Borrowed Tools</CardTitle>
                             <CardDescription>
-                                Tools you have temporarily checked out. Please return them on time.
+                                Tools you have temporarily checked out or requested for others.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -180,6 +198,7 @@ export default function MyToolsPage() {
                                 <TableRow>
                                     <TableHead>Tool</TableHead>
                                     <TableHead>Serial #</TableHead>
+                                    <TableHead>Borrowed By</TableHead>
                                     <TableHead>Date Borrowed</TableHead>
                                     <TableHead>Due Date</TableHead>
                                 </TableRow>
@@ -188,7 +207,7 @@ export default function MyToolsPage() {
                                 {loading ? (
                                     Array.from({ length: 3 }).map((_, i) => (
                                     <TableRow key={i}>
-                                        <TableCell colSpan={4}>
+                                        <TableCell colSpan={5}>
                                         <Skeleton className="h-8 w-full" />
                                         </TableCell>
                                     </TableRow>
@@ -199,6 +218,9 @@ export default function MyToolsPage() {
                                         <TableCell className="font-medium">{tool.name}</TableCell>
                                         <TableCell>{tool.serialNumber}</TableCell>
                                         <TableCell>
+                                            {tool.currentBorrowRecord?.borrowedByName}
+                                        </TableCell>
+                                        <TableCell>
                                             {formatDate(tool.currentBorrowRecord?.dateBorrowed)}
                                         </TableCell>
                                         <TableCell>
@@ -208,7 +230,7 @@ export default function MyToolsPage() {
                                     ))
                                 ) : (
                                     <TableRow>
-                                    <TableCell colSpan={4} className="h-24 text-center">
+                                    <TableCell colSpan={5} className="h-24 text-center">
                                         You have not borrowed any tools.
                                     </TableCell>
                                     </TableRow>
@@ -229,6 +251,7 @@ export default function MyToolsPage() {
                                 <TableHeader>
                                 <TableRow>
                                     <TableHead>Tool</TableHead>
+                                    <TableHead>Requested For</TableHead>
                                     <TableHead>Type</TableHead>
                                     <TableHead>Date Requested</TableHead>
                                     <TableHead>Status</TableHead>
@@ -238,15 +261,16 @@ export default function MyToolsPage() {
                                 {loading ? (
                                     Array.from({ length: 3 }).map((_, i) => (
                                     <TableRow key={i}>
-                                        <TableCell colSpan={4}>
+                                        <TableCell colSpan={5}>
                                         <Skeleton className="h-8 w-full" />
                                         </TableCell>
                                     </TableRow>
                                     ))
-                                ) : requestedTools.length > 0 ? (
-                                    requestedTools.map((request) => (
+                                ) : myRequests.length > 0 ? (
+                                    myRequests.map((request) => (
                                     <TableRow key={request.id}>
                                         <TableCell className="font-medium">{request.toolName}</TableCell>
+                                        <TableCell>{request.requestedForName}</TableCell>
                                         <TableCell>
                                             {request.bookingType}
                                         </TableCell>
@@ -260,7 +284,7 @@ export default function MyToolsPage() {
                                     ))
                                 ) : (
                                     <TableRow>
-                                    <TableCell colSpan={4} className="h-24 text-center">
+                                    <TableCell colSpan={5} className="h-24 text-center">
                                         You have not made any tool requests.
                                     </TableCell>
                                     </TableRow>
@@ -274,3 +298,5 @@ export default function MyToolsPage() {
         </div>
     );
 }
+
+    
