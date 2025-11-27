@@ -6,7 +6,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { PlusCircle, MoreHorizontal, Calendar as CalendarIcon, History, ArrowUpRight, UserCheck, Check, X } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Calendar as CalendarIcon, History, ArrowUpRight, UserCheck, Check, X, RefreshCcw } from "lucide-react";
 import { Timestamp } from "firebase/firestore";
 import { format } from "date-fns";
 
@@ -54,7 +54,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { useData } from "@/context/data-context";
 import { useAuth } from "@/hooks/use-auth";
-import { addTool, updateTool, deleteTool, borrowTool, returnTool, getToolHistory, assignToolForAccountability, recallTool, approveToolBookingRequest, rejectToolBookingRequest } from "@/services/data-service";
+import { addTool, updateTool, deleteTool, returnTool, getToolHistory, assignToolForAccountability, recallTool, approveToolBookingRequest, rejectToolBookingRequest, borrowTool } from "@/services/data-service";
 import type { Tool, ToolBorrowRecord, UserProfile, ProductLocation, ToolBookingRequest } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -592,24 +592,52 @@ export default function ToolManagementPage() {
                                 <TableHead>Requested By</TableHead>
                                 <TableHead>Type</TableHead>
                                 <TableHead>Date Approved</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                              {loading ? (
-                                <TableRow><TableCell colSpan={6}><Skeleton className="h-8" /></TableCell></TableRow>
+                                <TableRow><TableCell colSpan={7}><Skeleton className="h-8" /></TableCell></TableRow>
                             ) : approvedRequests.length > 0 ? (
-                                approvedRequests.map(request => (
-                                    <TableRow key={request.id}>
-                                        <TableCell className="font-mono">{request.bookingNumber}</TableCell>
-                                        <TableCell>{request.toolName}</TableCell>
-                                        <TableCell>{request.requestedForName}</TableCell>
-                                        <TableCell>{users.find(u => u.uid === request.createdById)?.firstName} {users.find(u => u.uid === request.createdById)?.lastName}</TableCell>
-                                        <TableCell><Badge variant="outline">{request.bookingType}</Badge></TableCell>
-                                        <TableCell>{formatDate(request.approvedAt)}</TableCell>
-                                    </TableRow>
-                                ))
+                                approvedRequests.map(request => {
+                                    const tool = tools.find(t => t.id === request.toolId);
+                                    return (
+                                        <TableRow key={request.id}>
+                                            <TableCell className="font-mono">{request.bookingNumber}</TableCell>
+                                            <TableCell>{request.toolName}</TableCell>
+                                            <TableCell>{request.requestedForName}</TableCell>
+                                            <TableCell>{users.find(u => u.uid === request.createdById)?.firstName} {users.find(u => u.uid === request.createdById)?.lastName}</TableCell>
+                                            <TableCell><Badge variant="outline">{request.bookingType}</Badge></TableCell>
+                                            <TableCell>{formatDate(request.approvedAt)}</TableCell>
+                                            <TableCell className="text-right">
+                                            {tool && (
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon"><MoreHorizontal /></Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuLabel>Quick Actions</DropdownMenuLabel>
+                                                        {request.bookingType === 'Borrow' && (
+                                                            <DropdownMenuItem onSelect={() => setReturningTool(tool)}>
+                                                                <RefreshCcw className="mr-2" />
+                                                                Return Tool
+                                                            </DropdownMenuItem>
+                                                        )}
+                                                        {request.bookingType === 'Accountability' && (
+                                                             <DropdownMenuItem onSelect={() => setRecallingTool(tool)}>
+                                                                <RefreshCcw className="mr-2" />
+                                                                Recall Tool
+                                                            </DropdownMenuItem>
+                                                        )}
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            )}
+                                            </TableCell>
+                                        </TableRow>
+                                    )
+                                })
                             ) : (
-                                <TableRow><TableCell colSpan={6} className="h-24 text-center">No approved requests yet.</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={7} className="h-24 text-center">No approved requests yet.</TableCell></TableRow>
                             )}
                         </TableBody>
                     </Table>
@@ -1053,4 +1081,5 @@ export default function ToolManagementPage() {
 
 
     
+
 
