@@ -173,20 +173,24 @@ export default function DashboardPage() {
   
   const { toolCount, toolChangeText, toolTitle } = useMemo(() => {
     let filteredTools: Tool[];
-    if(toolFilter === 'all') {
-        filteredTools = tools;
-    } else {
-        filteredTools = tools.filter(t => t.status === toolFilter);
-    }
-    
+
     const titleMap: Record<ToolFilterType, string> = {
         'all': 'Total Tools',
         'Available': 'Available Tools',
         'In Use': 'Tools In Use',
-        'Under Maintenance': 'In Maintenance',
-        'Assigned': 'Assigned Tools'
+        'Defective': 'Defective Tools',
     };
 
+    if (toolFilter === 'all') {
+        filteredTools = tools;
+    } else if (toolFilter === 'Defective') {
+        filteredTools = tools.filter(t => t.condition === 'Needs Repair' || t.condition === 'Damaged');
+    } else if (toolFilter === 'In Use') {
+        filteredTools = tools.filter(t => t.status === 'In Use' || t.status === 'Assigned');
+    } else {
+        filteredTools = tools.filter(t => t.status === toolFilter);
+    }
+    
     return {
         toolCount: filteredTools.length.toString(),
         toolChangeText: `out of ${tools.length} total tools`,
@@ -267,7 +271,7 @@ export default function DashboardPage() {
             children={<ToolStatusChart tools={tools} filter={toolFilter} />}
             footer={
                  <div className="flex justify-end gap-1 mt-2">
-                {(["all", "Available", "In Use", "Under Maintenance", "Assigned"] as ToolFilterType[]).map((f) => (
+                {(["all", "Available", "In Use", "Defective"] as ToolFilterType[]).map((f) => (
                   <Button 
                     key={`tool-${f}`} 
                     variant={toolFilter === f ? "secondary" : "ghost"} 
@@ -304,5 +308,3 @@ export default function DashboardPage() {
     </>
   );
 }
-
-    

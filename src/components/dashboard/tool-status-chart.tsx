@@ -21,17 +21,13 @@ const chartConfig = {
     label: "In Use",
     color: "hsl(var(--chart-2))",
   },
-  "Under Maintenance": {
-    label: "Under Maintenance",
+  "Defective": {
+    label: "Defective",
     color: "hsl(var(--destructive))",
-  },
-  "Assigned": {
-    label: "Assigned",
-    color: "hsl(var(--chart-4))",
   },
 } satisfies ChartConfig;
 
-export type ToolFilterType = "all" | "Available" | "In Use" | "Under Maintenance" | "Assigned";
+export type ToolFilterType = "all" | "Available" | "In Use" | "Defective";
 
 interface ToolStatusChartProps {
   tools: Tool[];
@@ -45,18 +41,24 @@ export function ToolStatusChart({ tools, filter }: ToolStatusChartProps) {
       "all": 0,
       "Available": 0,
       "In Use": 0,
-      "Under Maintenance": 0,
-      "Assigned": 0,
+      "Defective": 0,
     };
+    
     tools.forEach(tool => {
-        if(summary[tool.status] !== undefined) {
-            summary[tool.status]++;
+        if (tool.condition === 'Needs Repair' || tool.condition === 'Damaged') {
+            summary['Defective']++;
+        }
+        if (tool.status === 'In Use' || tool.status === 'Assigned') {
+            summary['In Use']++;
+        }
+        else if (summary[tool.status as ToolFilterType] !== undefined) {
+             summary[tool.status as ToolFilterType]++;
         }
     });
     
     return (Object.keys(chartConfig) as (keyof typeof chartConfig)[]).map((status) => ({
         status,
-        count: summary[status as Tool['status']],
+        count: summary[status as ToolFilterType],
         fill: `var(--color-${status.replace(/ /g, '')})`,
         opacity: filter === 'all' || filter === status ? 1 : 0.3,
     }));
