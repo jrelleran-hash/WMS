@@ -42,9 +42,15 @@ const conditionVariant: { [key: string]: "default" | "secondary" | "destructive"
   Damaged: "destructive",
 };
 
+const requestStatusVariant: { [key: string]: "default" | "secondary" | "destructive" } = {
+    Pending: "secondary",
+    Approved: "default",
+    Rejected: "destructive",
+};
+
 
 export default function MyToolsPage() {
-    const { tools, loading } = useData();
+    const { tools, toolBookingRequests, loading } = useData();
     const { userProfile, loading: authLoading } = useAuth();
     const { canView } = useAuthorization({ page: '/my-tools' });
     const router = useRouter();
@@ -71,6 +77,11 @@ export default function MyToolsPage() {
         return tools.filter(t => t.status === 'In Use' && t.currentBorrowRecord?.borrowedBy === userProfile.uid);
     }, [tools, userProfile]);
 
+    const requestedTools = useMemo(() => {
+        if (!userProfile) return [];
+        return toolBookingRequests.filter(r => r.requestedForId === userProfile.uid);
+    }, [toolBookingRequests, userProfile]);
+
     const formatDate = (date?: Date | Timestamp) => {
         if (!date) return 'N/A';
         const jsDate = date instanceof Timestamp ? date.toDate() : date;
@@ -94,7 +105,7 @@ export default function MyToolsPage() {
                         My Tools
                     </h1>
                     <p className="text-muted-foreground">
-                        A list of all tools currently assigned to you or borrowed by you.
+                        A list of all tools currently assigned to you, borrowed by you, or requested by you.
                     </p>
                 </div>
             </div>
@@ -103,6 +114,7 @@ export default function MyToolsPage() {
                 <TabsList>
                     <TabsTrigger value="accountability">Accountability ({assignedTools.length})</TabsTrigger>
                     <TabsTrigger value="borrowed">Borrowed ({borrowedTools.length})</TabsTrigger>
+                    <TabsTrigger value="requests">My Requests ({requestedTools.length})</TabsTrigger>
                 </TabsList>
                 <TabsContent value="accountability">
                      <Card>
@@ -206,6 +218,58 @@ export default function MyToolsPage() {
                         </CardContent>
                     </Card>
                 </TabsContent>
+                 <TabsContent value="requests">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>My Tool Requests</CardTitle>
+                            <CardDescription>A history of your tool booking requests.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                             <Table>
+                                <TableHeader>
+                                <TableRow>
+                                    <TableHead>Tool</TableHead>
+                                    <TableHead>Type</TableHead>
+                                    <TableHead>Date Requested</TableHead>
+                                    <TableHead>Status</TableHead>
+                                </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                {loading ? (
+                                    Array.from({ length: 3 }).map((_, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell colSpan={4}>
+                                        <Skeleton className="h-8 w-full" />
+                                        </TableCell>
+                                    </TableRow>
+                                    ))
+                                ) : requestedTools.length > 0 ? (
+                                    requestedTools.map((request) => (
+                                    <TableRow key={request.id}>
+                                        <TableCell className="font-medium">{request.toolName}</TableCell>
+                                        <TableCell>
+                                            {request.bookingType}
+                                        </TableCell>
+                                        <TableCell>{formatDate(request.createdAt)}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={requestStatusVariant[request.status]}>
+                                                {request.status}
+                                            </Badge>
+                                        </TableCell>
+                                    </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow>
+                                    <TableCell colSpan={4} className="h-24 text-center">
+                                        You have not made any tool requests.
+                                    </TableCell>
+                                    </TableRow>
+                                )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                 </TabsContent>
             </Tabs>
         </div>
     );
