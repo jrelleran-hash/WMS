@@ -24,6 +24,7 @@ import { DateRange } from "react-day-picker";
 import { Input } from "@/components/ui/input";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useAuthorization } from "@/hooks/use-authorization";
 
 const bookingSchema = z.object({
   toolId: z.string().min(1, "Please select a tool."),
@@ -51,6 +52,7 @@ const bookingSchema = z.object({
     message: "End date must be on or after the start date.",
     path: ["dateRange"],
 });
+
 
 type BookingFormValues = z.infer<typeof bookingSchema>;
 
