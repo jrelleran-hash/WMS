@@ -32,18 +32,18 @@ const bookingSchema = z.object({
   dateRange: z.object({
     from: z.date().optional(),
     to: z.date().optional(),
-  }),
+  }).optional(),
   notes: z.string().optional(),
 }).refine((data) => {
     if (data.bookingType === 'Borrow') {
-        return !!data.dateRange.from && !!data.dateRange.to;
+        return !!data.dateRange?.from && !!data.dateRange?.to;
     }
     return true;
 }, {
     message: "Date range is required for borrowing.",
     path: ["dateRange"],
 }).refine((data) => {
-    if (data.bookingType === 'Borrow' && data.dateRange.from && data.dateRange.to) {
+    if (data.bookingType === 'Borrow' && data.dateRange?.from && data.dateRange?.to) {
         return data.dateRange.from <= data.dateRange.to;
     }
     return true;
@@ -102,8 +102,8 @@ export default function ToolBookingPage() {
         requestedById: userProfile.uid,
         requestedForId: data.requestedForId,
         bookingType: data.bookingType,
-        startDate: data.dateRange.from,
-        endDate: data.dateRange.to,
+        startDate: data.dateRange?.from,
+        endDate: data.dateRange?.to,
         notes: data.notes,
       });
       setIsSubmitted(true);
