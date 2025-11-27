@@ -2952,13 +2952,6 @@ export async function addWorker(worker: Omit<Worker, 'id'>): Promise<DocumentRef
     throw new Error("Failed to add worker.");
   }
 }
-
-
-
-
-
-
-
-
-
     
+
+
