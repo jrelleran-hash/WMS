@@ -152,6 +152,7 @@ export default function ToolManagementPage() {
   const assignedTools = useMemo(() => tools.filter(t => t.status === "Assigned"), [tools]);
   const borrowedTools = useMemo(() => tools.filter(t => t.status === "In Use"), [tools]);
   const pendingRequests = useMemo(() => toolBookingRequests.filter(r => r.status === 'Pending'), [toolBookingRequests]);
+  const approvedRequests = useMemo(() => toolBookingRequests.filter(r => r.status === 'Approved'), [toolBookingRequests]);
 
   useEffect(() => { if (isAddDialogOpen) form.reset({ condition: "Good" }); }, [isAddDialogOpen, form]);
   useEffect(() => { if (editingTool) { form.reset({ ...editingTool, purchaseDate: editingTool.purchaseDate ? new Date(editingTool.purchaseDate) : undefined, borrowDuration: editingTool.borrowDuration || 7 }); setIsEditDialogOpen(true); } else { setIsEditDialogOpen(false); } }, [editingTool, form]);
@@ -449,6 +450,7 @@ export default function ToolManagementPage() {
         <TabsList>
             {canManage && <TabsTrigger value="inventory">Tool Inventory</TabsTrigger>}
             {canManage && <TabsTrigger value="requests">Request Queue <Badge variant="secondary" className="ml-2">{pendingRequests.length}</Badge></TabsTrigger>}
+            {canManage && <TabsTrigger value="ledger">Issuance Ledger</TabsTrigger>}
             {canManage && <TabsTrigger value="history">Borrow History</TabsTrigger>}
         </TabsList>
         <TabsContent value="inventory">
@@ -568,6 +570,46 @@ export default function ToolManagementPage() {
                                 ))
                             ) : (
                                 <TableRow><TableCell colSpan={5} className="h-24 text-center">No pending tool requests.</TableCell></TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+        </TabsContent>
+        <TabsContent value="ledger">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Tool Issuance Ledger</CardTitle>
+                    <CardDescription>A log of all approved tool requests.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Booking #</TableHead>
+                                <TableHead>Tool</TableHead>
+                                <TableHead>Issued To</TableHead>
+                                <TableHead>Requested By</TableHead>
+                                <TableHead>Type</TableHead>
+                                <TableHead>Date Approved</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                             {loading ? (
+                                <TableRow><TableCell colSpan={6}><Skeleton className="h-8" /></TableCell></TableRow>
+                            ) : approvedRequests.length > 0 ? (
+                                approvedRequests.map(request => (
+                                    <TableRow key={request.id}>
+                                        <TableCell className="font-mono">{request.bookingNumber}</TableCell>
+                                        <TableCell>{request.toolName}</TableCell>
+                                        <TableCell>{request.requestedForName}</TableCell>
+                                        <TableCell>{users.find(u => u.uid === request.createdById)?.firstName} {users.find(u => u.uid === request.createdById)?.lastName}</TableCell>
+                                        <TableCell><Badge variant="outline">{request.bookingType}</Badge></TableCell>
+                                        <TableCell>{formatDate(request.approvedAt)}</TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow><TableCell colSpan={6} className="h-24 text-center">No approved requests yet.</TableCell></TableRow>
                             )}
                         </TableBody>
                     </Table>
@@ -1011,3 +1053,4 @@ export default function ToolManagementPage() {
 
 
     
+

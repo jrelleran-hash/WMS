@@ -5,7 +5,7 @@ import { collection, getDocs, getDoc, doc, orderBy, query, limit, Timestamp, whe
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import type { Activity, Notification, Order, Product, Client, Issuance, Supplier, PurchaseOrder, Shipment, Return, ReturnItem, OutboundReturn, OutboundReturnItem, UserProfile, OrderItem, PurchaseOrderItem, IssuanceItem, Backorder, UserRole, PagePermission, ProductCategory, ProductLocation, Tool, ToolBorrowRecord, SalvagedPart, DisposalRecord, ToolMaintenanceRecord, ToolBookingRequest, Vehicle, Task, Subtask, Worker, FuelLog } from "@/types";
-import { format, subDays, addDays, differenceInDays } from 'date-fns';
+import { format, subDays, addDays, differenceInDays, getMonth, getYear } from 'date-fns';
 
 function timeSince(date: Date) {
   const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
@@ -1968,34 +1968,37 @@ export async function borrowTool(toolId: string, borrowedBy: string, releasedBy:
 
     await runTransaction(db, async (transaction) => {
         const toolDoc = await transaction.get(toolRef);
-        const userDoc = await transaction.get(userRef);
-
-        if (!toolDoc.exists()) throw new Error("Tool not found.");
-        if (!userDoc.exists()) throw new Error("User not found.");
-
-        const toolData = toolDoc.data() as Tool;
-        if (toolData.status !== 'Available') throw new Error("Tool is not available for borrowing.");
-
-        const userData = userDoc.data() as UserProfile;
-        const dateBorrowed = new Date();
-        const dueDate = addDays(dateBorrowed, toolData.borrowDuration || defaultBorrowDuration);
+        if (!toolDoc.exists() || toolDoc.data().status !== 'Available') {
+            throw new Error("Tool is not available for borrowing.");
+        }
         
-        const newBorrowRecord = {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists()) {
+            throw new Error("User not found.");
+        }
+        const userData = userDoc.data() as UserProfile;
+        const toolData = toolDoc.data();
+
+        const borrowDate = Timestamp.now();
+        const duration = toolData.borrowDuration || defaultBorrowDuration;
+        const dueDate = Timestamp.fromDate(addDays(borrowDate.toDate(), duration));
+        
+        const borrowRecordRef = doc(collection(db, "toolBorrowRecords"));
+        transaction.set(borrowRecordRef, {
             toolId: toolId,
             borrowedBy: borrowedBy,
             borrowedByName: `${userData.firstName} ${userData.lastName}`,
-            releasedBy,
-            dateBorrowed: Timestamp.fromDate(dateBorrowed),
-            dueDate: Timestamp.fromDate(dueDate),
+            dateBorrowed: borrowDate,
+            dueDate: dueDate,
             dateReturned: null,
-            notes: notes || "",
-        };
+            notes: notes || null,
+            releasedBy: releasedBy,
+        });
 
-        const borrowRecordRef = doc(collection(db, "toolBorrowRecords"));
-        transaction.set(borrowRecordRef, newBorrowRecord);
         transaction.update(toolRef, { status: "In Use" });
     });
 }
+
 
 export async function returnTool(toolId: string, condition: Tool['condition'], notes?: string): Promise<void> {
     const borrowRecordsQuery = query(
@@ -2391,7 +2394,22 @@ export async function createToolBookingRequest(data: NewBookingRequestData): Pro
         const userRef = doc(db, "users", data.requestedForId);
         const workerRef = doc(db, "workers", data.requestedForId);
 
-        const [toolDoc, userDoc, workerDoc] = await Promise.all([getDoc(toolRef), getDoc(userRef), getDoc(workerRef)]);
+        const [toolDoc, userDoc, workerDoc, bookingsSnapshot] = await Promise.all([
+            getDoc(toolRef), 
+            getDoc(userRef), 
+            getDoc(workerRef),
+            getDocs(collection(db, 'toolBookingRequests'))
+        ]);
+        
+        const now = new Date();
+        const month = getMonth(now);
+        const year = getYear(now);
+        const monthlyBookings = bookingsSnapshot.docs.filter(d => {
+            const bookingDate = (d.data().createdAt as Timestamp).toDate();
+            return getMonth(bookingDate) === month && getYear(bookingDate) === year;
+        }).length;
+        
+        const bookingNumber = `TB-${format(now, 'MM')}${format(now, 'yy')}-${(monthlyBookings + 1).toString().padStart(4, '0')}`;
 
         if (!toolDoc.exists()) throw new Error("Tool not found.");
         if (toolDoc.data().status !== 'Available') throw new Error("Tool is not currently available for booking.");
@@ -2408,6 +2426,7 @@ export async function createToolBookingRequest(data: NewBookingRequestData): Pro
         }
 
         const newRequest = {
+            bookingNumber,
             toolId: data.toolId,
             toolName: toolDoc.data().name,
             createdById: data.requestedById,
@@ -2419,6 +2438,7 @@ export async function createToolBookingRequest(data: NewBookingRequestData): Pro
             notes: data.notes || "",
             status: "Pending",
             createdAt: Timestamp.now(),
+            approvedAt: null,
         };
 
         await addDoc(collection(db, "toolBookingRequests"), newRequest);
@@ -2449,6 +2469,7 @@ export async function getToolBookingRequests(): Promise<ToolBookingRequest[]> {
                 startDate: (data.startDate as Timestamp)?.toDate(),
                 endDate: (data.endDate as Timestamp)?.toDate(),
                 createdAt: (data.createdAt as Timestamp).toDate(),
+                 approvedAt: (data.approvedAt as Timestamp)?.toDate(),
             } as ToolBookingRequest;
         });
     } catch (error) {
@@ -2497,7 +2518,7 @@ export async function approveToolBookingRequest(requestId: string, approvedBy: s
         }
 
         // Update the request status
-        transaction.update(requestRef, { status: 'Approved' });
+        transaction.update(requestRef, { status: 'Approved', approvedAt: Timestamp.now() });
     });
 }
 
@@ -2953,5 +2974,7 @@ export async function addWorker(worker: Omit<Worker, 'id'>): Promise<DocumentRef
   }
 }
     
+
+
 
 

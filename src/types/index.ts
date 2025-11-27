@@ -220,7 +220,7 @@ export interface OutboundReturn {
     dateShipped?: Date;
 }
 
-export type UserRole = "Admin" | "Manager" | "Staff" | "Worker" | "Approver" | "Site Coordinator" | "Production Manager";
+export type UserRole = "Admin" | "Manager" | "Staff" | "Worker" | "Approver" | "Site Coordinator";
 export type PagePermission = "/" | "/clients" | "/logistics" | "/analytics" | "/orders" | "/purchase-orders" | "/suppliers" | "/inventory" | "/issuance" | "/returns" | "/quality-control" | "/settings" | "/warehouse" | "/tools" | "/tool-maintenance" | "/waste-management" | "/logistics-booking" | "/tool-booking" | "/vehicles" | "/tasks" | "/categories" | "/my-tools";
 
 export interface UserProfile {
@@ -303,10 +303,12 @@ export interface ToolMaintenanceRecord {
 
 export interface ToolBookingRequest {
     id: string;
+    bookingNumber?: string;
     toolId: string;
     toolName: string;
     createdById: string; // Supervisor
     requestedForId: string; // Worker
+    requestedByName?: string;
     requestedForName: string;
     bookingType: 'Borrow' | 'Accountability';
     startDate?: Date;
@@ -314,6 +316,7 @@ export interface ToolBookingRequest {
     status: 'Pending' | 'Approved' | 'Rejected';
     notes?: string;
     createdAt: Date;
+    approvedAt?: Date;
 }
 
 export interface FuelLog {
@@ -375,3 +378,4 @@ export interface Task {
     parentTaskId?: string | null;
     parentTaskTitle?: string | null;
 }
+
