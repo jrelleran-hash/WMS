@@ -308,8 +308,9 @@ export interface ToolBookingRequest {
     createdById: string; // Supervisor
     requestedForId: string; // Worker
     requestedForName: string;
-    startDate: Date;
-    endDate: Date;
+    bookingType: 'Borrow' | 'Accountability';
+    startDate?: Date;
+    endDate?: Date;
     status: 'Pending' | 'Approved' | 'Rejected';
     notes?: string;
     createdAt: Date;

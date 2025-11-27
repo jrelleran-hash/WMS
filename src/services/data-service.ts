@@ -462,8 +462,8 @@ export async function addClient(client: Omit<Client, 'id' | 'createdAt'>): Promi
     
     await createNotification({
         title: "New Client Added",
-        description: `${'client.clientName'} is now a client.`,
-        details: `A new client, ${'client.clientName'} for project "${'client.projectName'}", has been added to the database.`,
+        description: `${client.clientName} is now a client.`,
+        details: `A new client, ${client.clientName} for project "${client.projectName}", has been added to the database.`,
         href: "/clients",
         icon: "UserPlus",
     });
@@ -2379,8 +2379,9 @@ type NewBookingRequestData = {
     toolId: string;
     requestedById: string; // The user CREATING the request
     requestedForId: string; // The user the tool IS FOR
-    startDate: Date;
-    endDate: Date;
+    bookingType: 'Borrow' | 'Accountability';
+    startDate?: Date;
+    endDate?: Date;
     notes?: string;
 };
 
@@ -2412,8 +2413,9 @@ export async function createToolBookingRequest(data: NewBookingRequestData): Pro
             createdById: data.requestedById,
             requestedForId: data.requestedForId,
             requestedForName: requestedForName,
-            startDate: Timestamp.fromDate(data.startDate),
-            endDate: Timestamp.fromDate(data.endDate),
+            bookingType: data.bookingType,
+            startDate: data.startDate ? Timestamp.fromDate(data.startDate) : null,
+            endDate: data.endDate ? Timestamp.fromDate(data.endDate) : null,
             notes: data.notes || "",
             status: "Pending",
             createdAt: Timestamp.now(),
@@ -2444,8 +2446,8 @@ export async function getToolBookingRequests(): Promise<ToolBookingRequest[]> {
             return {
                 id: doc.id,
                 ...data,
-                startDate: (data.startDate as Timestamp).toDate(),
-                endDate: (data.endDate as Timestamp).toDate(),
+                startDate: (data.startDate as Timestamp)?.toDate(),
+                endDate: (data.endDate as Timestamp)?.toDate(),
                 createdAt: (data.createdAt as Timestamp).toDate(),
             } as ToolBookingRequest;
         });
@@ -2462,7 +2464,7 @@ export async function approveToolBookingRequest(requestId: string, approvedBy: s
         const requestDoc = await transaction.get(requestRef);
         if (!requestDoc.exists()) throw new Error("Booking request not found.");
         
-        const requestData = requestDoc.data();
+        const requestData = requestDoc.data() as ToolBookingRequest;
         if (requestData.status !== 'Pending') throw new Error("This request has already been actioned.");
         
         const toolRef = doc(db, "tools", requestData.toolId);
@@ -2470,21 +2472,29 @@ export async function approveToolBookingRequest(requestId: string, approvedBy: s
         if (!toolDoc.exists()) throw new Error("Requested tool no longer exists.");
         if (toolDoc.data().status !== 'Available') throw new Error("Tool is no longer available.");
 
-        // Update the tool's status
-        transaction.update(toolRef, { status: 'In Use' });
+        if(requestData.bookingType === 'Accountability') {
+            transaction.update(toolRef, {
+                status: 'Assigned',
+                assignedToUserId: requestData.requestedForId,
+                assignedToUserName: requestData.requestedForName,
+            });
+        } else { // Borrow
+            // Update the tool's status
+            transaction.update(toolRef, { status: 'In Use' });
 
-        // Create a new borrow record
-        const borrowRecordRef = doc(collection(db, "toolBorrowRecords"));
-        transaction.set(borrowRecordRef, {
-            toolId: requestData.toolId,
-            borrowedBy: requestData.requestedForId,
-            borrowedByName: requestData.requestedForName,
-            dateBorrowed: requestData.startDate, // Use the requested start date
-            dueDate: requestData.endDate, // Use the requested end date
-            dateReturned: null,
-            notes: `Booked via request. ${requestData.notes || ''}`,
-            releasedBy: approvedBy,
-        });
+            // Create a new borrow record
+            const borrowRecordRef = doc(collection(db, "toolBorrowRecords"));
+            transaction.set(borrowRecordRef, {
+                toolId: requestData.toolId,
+                borrowedBy: requestData.requestedForId,
+                borrowedByName: requestData.requestedForName,
+                dateBorrowed: requestData.startDate, // Use the requested start date
+                dueDate: requestData.endDate, // Use the requested end date
+                dateReturned: null,
+                notes: `Booked via request. ${requestData.notes || ''}`,
+                releasedBy: approvedBy,
+            });
+        }
 
         // Update the request status
         transaction.update(requestRef, { status: 'Approved' });
