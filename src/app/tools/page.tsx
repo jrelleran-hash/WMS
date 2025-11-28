@@ -168,7 +168,7 @@ export default function ToolManagementPage() {
         return (
             request.bookingNumber?.toLowerCase().includes(lowercasedQuery) ||
             request.toolName.toLowerCase().includes(lowercasedQuery) ||
-            request.requestedForName.toLowerCase().includes(lowercasedQuery) ||
+            request.requestedForName?.toLowerCase().includes(lowercasedQuery) ||
             request.requestedByName?.toLowerCase().includes(lowercasedQuery)
         );
     });
@@ -1191,6 +1191,7 @@ export default function ToolManagementPage() {
 
 
     
+
 
 
 
