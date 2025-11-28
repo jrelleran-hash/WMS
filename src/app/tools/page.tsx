@@ -6,7 +6,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { PlusCircle, MoreHorizontal, Calendar as CalendarIcon, History, ArrowUpRight, UserCheck, Check, X, RefreshCcw, Search } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Calendar as CalendarIcon, History, ArrowUpRight, UserCheck, Check, X, RefreshCcw, Search, Wrench as WrenchIcon } from "lucide-react";
 import { Timestamp } from "firebase/firestore";
 import { format } from "date-fns";
 
@@ -54,7 +54,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { useData } from "@/context/data-context";
 import { useAuth } from "@/hooks/use-auth";
-import { addTool, updateTool, deleteTool, returnTool, getToolHistory, assignToolForAccountability, recallTool, approveToolBookingRequest, rejectToolBookingRequest, deleteToolBookingRequest } from "@/services/data-service";
+import { addTool, updateTool, deleteTool, returnTool, getToolHistory, assignToolForAccountability, recallTool, approveToolBookingRequest, rejectToolBookingRequest, deleteToolBookingRequest, updateToolConditionAndStatus } from "@/services/data-service";
 import type { Tool, ToolBorrowRecord, UserProfile, ProductLocation, ToolBookingRequest } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -168,7 +168,7 @@ export default function ToolManagementPage() {
         return (
             request.bookingNumber?.toLowerCase().includes(lowercasedQuery) ||
             request.toolName.toLowerCase().includes(lowercasedQuery) ||
-            request.requestedForName?.toLowerCase().includes(lowercasedQuery) ||
+            (request.requestedForName && request.requestedForName.toLowerCase().includes(lowercasedQuery)) ||
             request.requestedByName?.toLowerCase().includes(lowercasedQuery)
         );
     });
@@ -338,6 +338,16 @@ export default function ToolManagementPage() {
     } finally {
       setIsDeleteDialogOpen(false);
       setDeletingToolId(null);
+    }
+  };
+
+  const handleForwardToMaintenance = async (toolId: string) => {
+    try {
+        await updateToolConditionAndStatus(toolId, "Needs Repair", "Under Maintenance");
+        toast({ title: "Success", description: "Tool has been moved to the maintenance queue."});
+        await refetchData();
+    } catch (error) {
+        toast({ variant: "destructive", title: "Error", description: "Failed to forward tool to maintenance." });
     }
   };
   
@@ -576,6 +586,11 @@ export default function ToolManagementPage() {
                                                         </DropdownMenuItem>
                                                     </DropdownMenuSubContent>
                                                 </DropdownMenuSub>
+                                            )}
+                                            {tool.condition === 'Needs Repair' && tool.status === 'Available' && (
+                                                <DropdownMenuItem onSelect={() => handleForwardToMaintenance(tool.id)}>
+                                                    <WrenchIcon className="mr-2 h-4 w-4" /> Forward to Maintenance
+                                                </DropdownMenuItem>
                                             )}
                                             <DropdownMenuItem onClick={() => setEditingTool(tool)}>Edit</DropdownMenuItem>
                                             <DropdownMenuItem onClick={() => setHistoryTool(tool)}>
@@ -1203,3 +1218,6 @@ export default function ToolManagementPage() {
 
 
 
+
+
+    
