@@ -23,7 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { Timestamp } from "firebase/firestore";
-import { Wrench, Heart, PlusCircle, Trash2, Check } from "lucide-react";
+import { Wrench, Heart, PlusCircle, Trash2, Check, MoreHorizontal } from "lucide-react";
 import { useAuthorization } from "@/hooks/use-authorization";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -39,6 +39,7 @@ import { addToolToWishlist, getToolWishlist, deleteToolFromWishlist, updateToolW
 import type { ToolWish } from "@/types";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 
 const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
@@ -86,7 +87,7 @@ function WishlistDialogContent({ onApprove }: { onApprove: (toolName: string) =>
         const approverRoles: (typeof userProfile.role)[] = ['Admin', 'Manager', 'Approver'];
         return approverRoles.includes(userProfile.role);
     }, [userProfile]);
-
+    
     const isAdmin = useMemo(() => userProfile?.role === 'Admin', [userProfile]);
 
 
@@ -217,17 +218,36 @@ function WishlistDialogContent({ onApprove }: { onApprove: (toolName: string) =>
                                              <TableCell>
                                                 <Badge variant={wishlistStatusVariant[wish.status]}>{wish.status}</Badge>
                                             </TableCell>
-                                            <TableCell className="text-right space-x-1">
-                                                {canApprove && wish.status === 'Pending' && (
-                                                    <Button variant="ghost" size="icon" onClick={() => { handleStatusUpdate(wish.id, 'Approved'); onApprove(wish.toolName); }}>
-                                                        <Check className="h-4 w-4 text-green-500" />
-                                                    </Button>
-                                                )}
-                                                {(wish.requestedByUid === userProfile?.uid || isAdmin) && (
-                                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(wish.id)}>
-                                                        <Trash2 className="h-4 w-4 text-destructive" />
-                                                    </Button>
-                                                )}
+                                            <TableCell className="text-right">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon">
+                                                            <MoreHorizontal />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                        {canApprove && wish.status === 'Pending' && (
+                                                            <DropdownMenuItem onClick={() => { handleStatusUpdate(wish.id, 'Approved'); onApprove(wish.toolName); }}>
+                                                                <Check className="mr-2 h-4 w-4" />
+                                                                Approve
+                                                            </DropdownMenuItem>
+                                                        )}
+                                                         {canApprove && wish.status === 'Pending' && (
+                                                             <DropdownMenuItem onClick={() => handleStatusUpdate(wish.id, 'Rejected')} className="text-destructive">
+                                                                <X className="mr-2 h-4 w-4" />
+                                                                Reject
+                                                            </DropdownMenuItem>
+                                                        )}
+                                                        {(isAdmin || wish.requestedByUid === userProfile?.uid) && <DropdownMenuSeparator />}
+                                                        {(isAdmin || wish.requestedByUid === userProfile?.uid) && (
+                                                            <DropdownMenuItem onClick={() => handleDeleteClick(wish.id)} className="text-destructive">
+                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                Delete
+                                                            </DropdownMenuItem>
+                                                        )}
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </TableCell>
                                         </TableRow>
                                     ))
@@ -589,6 +609,3 @@ export default function MyToolsPage() {
         </div>
     );
 }
-
-
-
