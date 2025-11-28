@@ -82,15 +82,6 @@ function WishlistDialogContent({ onApprove }: { onApprove: (toolName: string) =>
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [deletingWishId, setDeletingWishId] = useState<string | null>(null);
 
-    const canApprove = useMemo(() => {
-        if (!userProfile) return false;
-        const approverRoles: (typeof userProfile.role)[] = ['Admin', 'Manager', 'Approver'];
-        return approverRoles.includes(userProfile.role);
-    }, [userProfile]);
-    
-    const isAdmin = useMemo(() => userProfile?.role === 'Admin', [userProfile]);
-
-
     const form = useForm<WishlistFormValues>({
         resolver: zodResolver(wishlistSchema),
     });
@@ -210,7 +201,11 @@ function WishlistDialogContent({ onApprove }: { onApprove: (toolName: string) =>
                                         <TableRow key={i}><TableCell colSpan={5}><Skeleton className="h-8 w-full" /></TableCell></TableRow>
                                     ))
                                 ) : wishlist.length > 0 ? (
-                                    wishlist.map(wish => (
+                                    wishlist.map(wish => {
+                                        const canApprove = userProfile && ['Admin', 'Manager', 'Approver'].includes(userProfile.role);
+                                        const canDelete = (userProfile?.role === 'Admin') || (wish.requestedByUid === userProfile?.uid);
+
+                                        return (
                                         <TableRow key={wish.id}>
                                             <TableCell className="font-medium">{wish.toolName}</TableCell>
                                             <TableCell>{wish.requestedByName}</TableCell>
@@ -239,7 +234,7 @@ function WishlistDialogContent({ onApprove }: { onApprove: (toolName: string) =>
                                                                 </DropdownMenuItem>
                                                             </>
                                                         )}
-                                                        {(isAdmin || wish.requestedByUid === userProfile?.uid) && (
+                                                        {canDelete && (
                                                           <>
                                                             {(canApprove && wish.status === 'Pending') && <DropdownMenuSeparator />}
                                                             <DropdownMenuItem onClick={() => handleDeleteClick(wish.id)} className="text-destructive">
@@ -252,7 +247,7 @@ function WishlistDialogContent({ onApprove }: { onApprove: (toolName: string) =>
                                                 </DropdownMenu>
                                             </TableCell>
                                         </TableRow>
-                                    ))
+                                    )})
                                 ) : (
                                     <TableRow>
                                         <TableCell colSpan={5} className="h-24 text-center">The wishlist is empty. Be the first to add something!</TableCell>
@@ -611,3 +606,5 @@ export default function MyToolsPage() {
         </div>
     );
 }
+
+    
