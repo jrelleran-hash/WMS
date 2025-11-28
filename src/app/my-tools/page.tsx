@@ -119,26 +119,32 @@ export default function MyToolsPage() {
     }
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center gap-4">
-                <Wrench className="h-8 w-8 text-primary" />
-                <div>
-                    <h1 className="text-2xl font-bold font-headline tracking-tight">
-                        My Tools
-                    </h1>
-                    <p className="text-muted-foreground">
-                        A list of all tools currently assigned to you, borrowed by you, or requested by you.
-                    </p>
+        <div className="space-y-4">
+            <div className="sticky top-0 bg-background/95 backdrop-blur z-20 -mx-6 px-6 pb-4 -mb-4 border-b">
+                <div className="flex items-center gap-4 pt-4">
+                    <Wrench className="h-8 w-8 text-primary" />
+                    <div>
+                        <h1 className="text-2xl font-bold font-headline tracking-tight">
+                            My Tools
+                        </h1>
+                        <p className="text-muted-foreground">
+                            A list of all tools currently assigned to you, borrowed by you, or requested by you.
+                        </p>
+                    </div>
                 </div>
+
+                 <Tabs defaultValue="accountability" className="pt-4">
+                    <TabsList>
+                        <TabsTrigger value="accountability">Accountability ({assignedTools.length})</TabsTrigger>
+                        <TabsTrigger value="borrowed">Borrowed ({borrowedTools.length})</TabsTrigger>
+                        <TabsTrigger value="requests">My Requests ({myRequests.length})</TabsTrigger>
+                    </TabsList>
+                </Tabs>
             </div>
 
-            <Tabs defaultValue="accountability">
-                <TabsList>
-                    <TabsTrigger value="accountability">Accountability ({assignedTools.length})</TabsTrigger>
-                    <TabsTrigger value="borrowed">Borrowed ({borrowedTools.length})</TabsTrigger>
-                    <TabsTrigger value="requests">My Requests ({myRequests.length})</TabsTrigger>
-                </TabsList>
-                <TabsContent value="accountability">
+
+            <Tabs defaultValue="accountability" className="mt-0">
+                <TabsContent value="accountability" className="mt-0">
                      <Card>
                         <CardHeader>
                             <CardTitle>Accountable Tools</CardTitle>
@@ -192,7 +198,7 @@ export default function MyToolsPage() {
                         </CardContent>
                     </Card>
                 </TabsContent>
-                <TabsContent value="borrowed">
+                <TabsContent value="borrowed" className="mt-0">
                       <Card>
                         <CardHeader>
                             <CardTitle>Borrowed Tools</CardTitle>
@@ -250,7 +256,7 @@ export default function MyToolsPage() {
                         </CardContent>
                     </Card>
                 </TabsContent>
-                 <TabsContent value="requests">
+                 <TabsContent value="requests" className="mt-0">
                     <Card>
                         <CardHeader>
                             <CardTitle>My Tool Requests</CardTitle>
