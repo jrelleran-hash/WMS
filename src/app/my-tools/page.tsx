@@ -81,7 +81,12 @@ function WishlistDialogContent({ onApprove }: { onApprove: (toolName: string) =>
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [deletingWishId, setDeletingWishId] = useState<string | null>(null);
 
-    const canApprove = userProfile?.role === 'Admin' || userProfile?.role === 'Manager' || userProfile?.role === 'Approver';
+    const canApprove = useMemo(() => {
+        if (!userProfile) return false;
+        const approverRoles: (typeof userProfile.role)[] = ['Admin', 'Manager', 'Approver'];
+        return approverRoles.includes(userProfile.role);
+    }, [userProfile]);
+
     const isAdmin = userProfile?.role === 'Admin';
 
 
@@ -584,5 +589,3 @@ export default function MyToolsPage() {
         </div>
     );
 }
-
-    
