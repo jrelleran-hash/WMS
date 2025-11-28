@@ -54,7 +54,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { useData } from "@/context/data-context";
 import { useAuth } from "@/hooks/use-auth";
-import { addTool, updateTool, deleteTool, returnTool, getToolHistory, assignToolForAccountability, recallTool, approveToolBookingRequest, rejectToolBookingRequest, borrowTool } from "@/services/data-service";
+import { addTool, updateTool, deleteTool, borrowTool, returnTool, getToolHistory, assignToolForAccountability, recallTool, approveToolBookingRequest, rejectToolBookingRequest, deleteToolBookingRequest } from "@/services/data-service";
 import type { Tool, ToolBorrowRecord, UserProfile, ProductLocation, ToolBookingRequest } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -118,6 +118,7 @@ export default function ToolManagementPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleteRequestDialogOpen, setIsDeleteRequestDialogOpen] = useState(false);
   const [isBorrowDialogOpen, setIsBorrowDialogOpen] = useState(false);
   const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
@@ -126,6 +127,7 @@ export default function ToolManagementPage() {
 
   const [editingTool, setEditingTool] = useState<Tool | null>(null);
   const [deletingToolId, setDeletingToolId] = useState<string | null>(null);
+  const [deletingRequestId, setDeletingRequestId] = useState<string | null>(null);
   const [borrowingTool, setBorrowingTool] = useState<Tool | null>(null);
   const [returningTool, setReturningTool] = useState<Tool | null>(null);
   const [assigningTool, setAssigningTool] = useState<Tool | null>(null);
@@ -287,6 +289,25 @@ export default function ToolManagementPage() {
     }
   }
 
+  const handleDeleteRequestClick = (requestId: string) => {
+    setDeletingRequestId(requestId);
+    setIsDeleteRequestDialogOpen(true);
+  };
+  
+  const handleDeleteRequestConfirm = async () => {
+    if (!deletingRequestId) return;
+    try {
+      await deleteToolBookingRequest(deletingRequestId);
+      toast({ title: "Success", description: "Booking request deleted successfully." });
+      await refetchData();
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "Failed to delete booking request." });
+    } finally {
+      setIsDeleteRequestDialogOpen(false);
+      setDeletingRequestId(null);
+    }
+  };
+
 
   const handleDeleteConfirm = async () => {
     if (!deletingToolId) return;
@@ -332,127 +353,131 @@ export default function ToolManagementPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-            <h1 className="text-2xl font-bold font-headline tracking-tight">Tool Management</h1>
-            <p className="text-muted-foreground">Track all tools, their status, and who is accountable for them.</p>
-        </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-                <Button size="sm" className="gap-1"><PlusCircle />Add Tool</Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-2xl">
-                 <DialogHeader>
-                    <DialogTitle>Add New Tool</DialogTitle>
-                    <DialogDescription>Enter the details for the new tool below.</DialogDescription>
-                </DialogHeader>
-                <form onSubmit={form.handleSubmit(onAddSubmit)} className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-2 sm:col-span-2">
-                            <Label htmlFor="name">Tool Name</Label>
-                            <Input id="name" {...form.register("name")} />
-                            {form.formState.errors.name && <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>}
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="serialNumber">Serial Number</Label>
-                            <Input id="serialNumber" {...form.register("serialNumber")} />
-                            {form.formState.errors.serialNumber && <p className="text-sm text-destructive">{form.formState.errors.serialNumber.message}</p>}
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="category">Category</Label>
-                             <Controller
-                                name="category"
-                                control={form.control}
-                                render={({ field }) => (
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-                                        <SelectContent>
-                                            {toolCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                )}
-                            />
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                       <div className="space-y-2">
-                            <Label>Purchase Date (Optional)</Label>
-                            <Controller
-                                control={form.control}
-                                name="purchaseDate"
-                                render={({ field }) => (
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} /></PopoverContent>
-                                </Popover>
-                                )}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="purchaseCost">Purchase Cost (Optional)</Label>
-                             <div className="relative">
-                                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">{CURRENCY_CONFIG.symbol}</span>
-                                <Input id="purchaseCost" type="number" step="0.01" className="pl-8" placeholder="0.00" {...form.register("purchaseCost")} />
-                             </div>
-                        </div>
-                    </div>
-                     <div className="space-y-4 rounded-md border p-4">
-                        <Label className="text-base">Default Settings</Label>
+       <div className="sticky top-0 bg-background/95 backdrop-blur z-20 -mx-6 px-6 pb-4 -mb-4 border-b">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-4">
+            <div>
+                <h1 className="text-2xl font-bold font-headline tracking-tight">Tool Management</h1>
+                <p className="text-muted-foreground">Track all tools, their status, and who is accountable for them.</p>
+            </div>
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                <DialogTrigger asChild>
+                    <Button size="sm" className="gap-1"><PlusCircle />Add Tool</Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-2xl">
+                     <DialogHeader>
+                        <DialogTitle>Add New Tool</DialogTitle>
+                        <DialogDescription>Enter the details for the new tool below.</DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={form.handleSubmit(onAddSubmit)} className="space-y-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-2 sm:col-span-2">
+                                <Label htmlFor="name">Tool Name</Label>
+                                <Input id="name" {...form.register("name")} />
+                                {form.formState.errors.name && <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>}
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="serialNumber">Serial Number</Label>
+                                <Input id="serialNumber" {...form.register("serialNumber")} />
+                                {form.formState.errors.serialNumber && <p className="text-sm text-destructive">{form.formState.errors.serialNumber.message}</p>}
+                            </div>
                             <div className="space-y-2">
-                                <Label htmlFor="condition">Condition</Label>
-                                <Controller
-                                    name="condition"
+                                <Label htmlFor="category">Category</Label>
+                                 <Controller
+                                    name="category"
                                     control={form.control}
                                     render={({ field }) => (
                                         <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <SelectTrigger><SelectValue placeholder="Select condition" /></SelectTrigger>
+                                            <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="Good">Good</SelectItem>
-                                                <SelectItem value="Needs Repair">Needs Repair</SelectItem>
-                                                <SelectItem value="Damaged">Damaged</SelectItem>
+                                                {toolCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                                             </SelectContent>
                                         </Select>
                                     )}
                                 />
                             </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                           <div className="space-y-2">
+                                <Label>Purchase Date (Optional)</Label>
+                                <Controller
+                                    control={form.control}
+                                    name="purchaseDate"
+                                    render={({ field }) => (
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} /></PopoverContent>
+                                    </Popover>
+                                    )}
+                                />
+                            </div>
                             <div className="space-y-2">
-                                <Label htmlFor="borrowDuration">Borrow Duration (Days)</Label>
-                                <Input id="borrowDuration" type="number" {...form.register("borrowDuration")} />
-                                {form.formState.errors.borrowDuration && <p className="text-sm text-destructive">{form.formState.errors.borrowDuration.message}</p>}
+                                <Label htmlFor="purchaseCost">Purchase Cost (Optional)</Label>
+                                 <div className="relative">
+                                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">{CURRENCY_CONFIG.symbol}</span>
+                                    <Input id="purchaseCost" type="number" step="0.01" className="pl-8" placeholder="0.00" {...form.register("purchaseCost")} />
+                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <div className="space-y-4 rounded-md border p-4">
-                        <Label className="text-base">Storage Location</Label>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
-                            <Input placeholder="Zone" {...form.register("location.zone")} />
-                            <Input placeholder="Aisle" {...form.register("location.aisle")} />
-                            <Input placeholder="Rack" {...form.register("location.rack")} />
-                            <Input placeholder="Level" {...form.register("location.level")} />
-                            <Input placeholder="Bin" {...form.register("location.bin")} />
+                         <div className="space-y-4 rounded-md border p-4">
+                            <h3 className="text-sm font-medium">Default Settings</h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="condition">Condition</Label>
+                                    <Controller
+                                        name="condition"
+                                        control={form.control}
+                                        render={({ field }) => (
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <SelectTrigger><SelectValue placeholder="Select condition" /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="Good">Good</SelectItem>
+                                                    <SelectItem value="Needs Repair">Needs Repair</SelectItem>
+                                                    <SelectItem value="Damaged">Damaged</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="borrowDuration">Borrow Duration (Days)</Label>
+                                    <Input id="borrowDuration" type="number" {...form.register("borrowDuration")} />
+                                    {form.formState.errors.borrowDuration && <p className="text-sm text-destructive">{form.formState.errors.borrowDuration.message}</p>}
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
-                        <Button type="submit" disabled={form.formState.isSubmitting}>Add Tool</Button>
-                    </DialogFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
+                        <div className="space-y-4 rounded-md border p-4">
+                            <h3 className="text-sm font-medium">Storage Location</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                                <Input placeholder="Zone" {...form.register("location.zone")} />
+                                <Input placeholder="Aisle" {...form.register("location.aisle")} />
+                                <Input placeholder="Rack" {...form.register("location.rack")} />
+                                <Input placeholder="Level" {...form.register("location.level")} />
+                                <Input placeholder="Bin" {...form.register("location.bin")} />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
+                            <Button type="submit" disabled={form.formState.isSubmitting}>Add Tool</Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+        </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="pt-4">
+            <TabsList>
+                {canManage && <TabsTrigger value="inventory">Tool Inventory</TabsTrigger>}
+                {canManage && <TabsTrigger value="requests">Request Queue <Badge variant="secondary" className="ml-2">{pendingRequests.length}</Badge></TabsTrigger>}
+                {canManage && <TabsTrigger value="history">Tools History</TabsTrigger>}
+            </TabsList>
+        </Tabs>
       </div>
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-            {canManage && <TabsTrigger value="inventory">Tool Inventory</TabsTrigger>}
-            {canManage && <TabsTrigger value="requests">Request Queue <Badge variant="secondary" className="ml-2">{pendingRequests.length}</Badge></TabsTrigger>}
-            {canManage && <TabsTrigger value="history">Tools History</TabsTrigger>}
-        </TabsList>
-        <TabsContent value="inventory">
+        <TabsContent value="inventory" className="mt-0">
             <Card>
                 <CardContent className="pt-6">
                     <Table>
@@ -532,7 +557,7 @@ export default function ToolManagementPage() {
                 </CardContent>
             </Card>
         </TabsContent>
-        <TabsContent value="requests">
+        <TabsContent value="requests" className="mt-0">
             <Card>
                 <CardHeader>
                     <CardTitle>Tool Request Queue</CardTitle>
@@ -575,7 +600,7 @@ export default function ToolManagementPage() {
                 </CardContent>
             </Card>
         </TabsContent>
-        <TabsContent value="history">
+        <TabsContent value="history" className="mt-0">
              <Tabs defaultValue="ledger">
                 <TabsList>
                     <TabsTrigger value="ledger">Issuance Ledger</TabsTrigger>
@@ -622,7 +647,7 @@ export default function ToolManagementPage() {
                                                                 <Button variant="ghost" size="icon"><MoreHorizontal /></Button>
                                                             </DropdownMenuTrigger>
                                                             <DropdownMenuContent align="end">
-                                                                <DropdownMenuLabel>Quick Actions</DropdownMenuLabel>
+                                                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                                 {request.bookingType === 'Borrow' && (
                                                                     <DropdownMenuItem onSelect={() => setReturningTool(tool)}>
                                                                         <RefreshCcw className="mr-2" />
@@ -635,6 +660,10 @@ export default function ToolManagementPage() {
                                                                         Recall Tool
                                                                     </DropdownMenuItem>
                                                                 )}
+                                                                <DropdownMenuSeparator />
+                                                                <DropdownMenuItem onSelect={() => handleDeleteRequestClick(request.id)} className="text-destructive">
+                                                                  Delete Request
+                                                                </DropdownMenuItem>
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>
                                                     )}
@@ -792,7 +821,7 @@ export default function ToolManagementPage() {
                         </div>
                     </div>
                     <div className="space-y-4 rounded-md border p-4">
-                        <Label className="text-base">Default Settings</Label>
+                        <h3 className="text-sm font-medium">Default Settings</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="edit-condition">Condition</Label>
@@ -819,7 +848,7 @@ export default function ToolManagementPage() {
                         </div>
                     </div>
                      <div className="space-y-4 rounded-md border p-4">
-                        <Label className="text-base">Storage Location</Label>
+                        <h3 className="text-sm font-medium">Storage Location</h3>
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
                             <Input placeholder="Zone" {...form.register("location.zone")} />
                             <Input placeholder="Aisle" {...form.register("location.aisle")} />
@@ -1070,6 +1099,20 @@ export default function ToolManagementPage() {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+    
+    {/* Delete Request Dialog */}
+    <AlertDialog open={isDeleteRequestDialogOpen} onOpenChange={setIsDeleteRequestDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+          <AlertDialogDescription>This will permanently delete this booking request. This action cannot be undone.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => setIsDeleteRequestDialogOpen(false)}>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={handleDeleteRequestConfirm} className={cn(buttonVariants({variant: "destructive"}))}>Delete Request</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </div>
   );
 }
@@ -1081,5 +1124,6 @@ export default function ToolManagementPage() {
 
 
     
+
 
 
