@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Book, Calendar as CalendarIcon, CheckCircle, User, ChevronsUpDown, Check, PlusCircle, X } from "lucide-react";
+import { Book, Calendar as CalendarIcon, CheckCircle, User, ChevronsUpDown, Check, PlusCircle, Wrench, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createToolBookingRequest, addWorker } from "@/services/data-service";
 import { DateRange } from "react-day-picker";
@@ -26,6 +26,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useAuthorization } from "@/hooks/use-authorization";
 import { Badge } from "@/components/ui/badge";
+import Link from 'next/link';
 
 const bookingSchema = z.object({
   toolIds: z.array(z.string()).min(1, "Please select at least one tool."),
@@ -167,9 +168,23 @@ export default function ToolBookingPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold font-headline tracking-tight">Tool Booking</h1>
-        <p className="text-muted-foreground">Request to borrow a tool for a specific period.</p>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+            <h1 className="text-2xl font-bold font-headline tracking-tight">Tool Booking</h1>
+            <p className="text-muted-foreground">Request to borrow a tool for a specific period.</p>
+        </div>
+         <div className="flex items-center gap-2">
+            <Button variant="outline" asChild>
+                <Link href="/my-tools">
+                    <Wrench className="mr-2 h-4 w-4" /> My Tools
+                </Link>
+            </Button>
+            <Button variant="outline" asChild>
+                <Link href="/tool-wishlist">
+                    <Heart className="mr-2 h-4 w-4" /> Tool Wishlist
+                </Link>
+            </Button>
+        </div>
       </div>
 
       <Card className="max-w-2xl mx-auto">
