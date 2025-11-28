@@ -246,7 +246,7 @@ export default function ToolWishlistPage() {
                                                                         <PlusCircle className="mr-2 h-4 w-4" />Add to Inventory
                                                                     </DropdownMenuItem>
                                                                 )}
-                                                                {canDelete && <DropdownMenuSeparator />}
+                                                                {canDelete && canApprove && <DropdownMenuSeparator />}
                                                                 {canDelete && (
                                                                     <DropdownMenuItem className="text-destructive" onSelect={() => handleDeleteClick(wish.id)}>
                                                                         <Trash2 className="mr-2 h-4 w-4" />Delete
