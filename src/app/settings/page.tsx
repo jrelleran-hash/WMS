@@ -135,14 +135,9 @@ const toTitleCase = (str: string) => {
   );
 };
 
-const getInitialNames = (displayName: string | null | undefined) => {
-    const name = displayName || "";
-    const nameParts = name.split(" ").filter(Boolean);
-    if (nameParts.length === 0) return { firstName: "", lastName: ""};
-    if (nameParts.length === 1) return { firstName: nameParts[0], lastName: ""};
-    const lastName = nameParts.pop() || "";
-    const firstName = nameParts.join(" ");
-    return { firstName, lastName };
+const getInitialNames = (profile: UserProfile | null) => {
+    if (!profile) return { firstName: "", lastName: "" };
+    return { firstName: profile.firstName, lastName: profile.lastName };
 }
 
 function UserManagementTable({ isAdmin }: { isAdmin: boolean }) {
@@ -667,15 +662,15 @@ export default function SettingsPage() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (isProfileDialogOpen && user) {
-        const { firstName, lastName } = getInitialNames(user.displayName);
+    if (isProfileDialogOpen && userProfile) {
+        const { firstName, lastName } = getInitialNames(userProfile);
         profileForm.reset({
             firstName: firstName,
             lastName: lastName,
-            phone: user.phoneNumber || "",
+            phone: user?.phoneNumber || "",
         });
     }
-  }, [user, profileForm, isProfileDialogOpen]);
+  }, [user, userProfile, profileForm, isProfileDialogOpen]);
 
 
   const onProfileSubmit = async (data: ProfileFormValues) => {
@@ -894,4 +889,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
