@@ -23,7 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { Timestamp } from "firebase/firestore";
-import { Wrench, Heart, PlusCircle, Trash2 } from "lucide-react";
+import { Wrench, Heart, PlusCircle, Trash2, Check } from "lucide-react";
 import { useAuthorization } from "@/hooks/use-authorization";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -35,7 +35,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
-import { addToolToWishlist, getToolWishlist, deleteToolFromWishlist } from "@/services/data-service";
+import { addToolToWishlist, getToolWishlist, deleteToolFromWishlist, updateToolWishStatus } from "@/services/data-service";
 import type { ToolWish } from "@/types";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -60,19 +60,29 @@ const requestStatusVariant: { [key: string]: "default" | "secondary" | "destruct
     Rejected: "destructive",
 };
 
+const wishlistStatusVariant: { [key in ToolWish['status']]: "default" | "secondary" | "destructive" } = {
+    Pending: "secondary",
+    Approved: "default",
+    Rejected: "destructive",
+};
+
+
 const wishlistSchema = z.object({
     toolName: z.string().min(3, "Tool name must be at least 3 characters long."),
     reason: z.string().optional(),
 });
 type WishlistFormValues = z.infer<typeof wishlistSchema>;
 
-function WishlistDialogContent() {
+function WishlistDialogContent({ onApprove }: { onApprove: (toolName: string) => void }) {
     const { userProfile } = useAuth();
     const { toast } = useToast();
     const [wishlist, setWishlist] = useState<ToolWish[]>([]);
     const [loading, setLoading] = useState(true);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [deletingWishId, setDeletingWishId] = useState<string | null>(null);
+
+    const canApprove = userProfile?.role === 'Admin' || userProfile?.role === 'Manager' || userProfile?.role === 'Approver';
+
 
     const form = useForm<WishlistFormValues>({
         resolver: zodResolver(wishlistSchema),
@@ -126,6 +136,16 @@ function WishlistDialogContent() {
             setDeletingWishId(null);
         }
     }
+
+     const handleStatusUpdate = async (wishId: string, status: ToolWish['status']) => {
+        try {
+            await updateToolWishStatus(wishId, status);
+            toast({ title: "Success", description: "Wishlist item updated." });
+            await fetchWishlist();
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: "Failed to update wishlist item." });
+        }
+    }
     
      const formatDate = (date: Date) => {
         if (!date) return 'N/A';
@@ -173,13 +193,14 @@ function WishlistDialogContent() {
                                     <TableHead>Tool</TableHead>
                                     <TableHead>Requested By</TableHead>
                                     <TableHead>Date</TableHead>
+                                    <TableHead>Status</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {loading ? (
                                     Array.from({ length: 4 }).map((_, i) => (
-                                        <TableRow key={i}><TableCell colSpan={4}><Skeleton className="h-8 w-full" /></TableCell></TableRow>
+                                        <TableRow key={i}><TableCell colSpan={5}><Skeleton className="h-8 w-full" /></TableCell></TableRow>
                                     ))
                                 ) : wishlist.length > 0 ? (
                                     wishlist.map(wish => (
@@ -187,7 +208,20 @@ function WishlistDialogContent() {
                                             <TableCell className="font-medium">{wish.toolName}</TableCell>
                                             <TableCell>{wish.requestedByName}</TableCell>
                                             <TableCell>{formatDate(wish.createdAt)}</TableCell>
-                                            <TableCell className="text-right">
+                                             <TableCell>
+                                                <Badge variant={wishlistStatusVariant[wish.status]}>{wish.status}</Badge>
+                                            </TableCell>
+                                            <TableCell className="text-right space-x-1">
+                                                {canApprove && wish.status === 'Pending' && (
+                                                    <>
+                                                        <Button variant="ghost" size="icon" onClick={() => { handleStatusUpdate(wish.id, 'Approved'); onApprove(wish.toolName); }}>
+                                                            <Check className="h-4 w-4 text-green-500" />
+                                                        </Button>
+                                                        <Button variant="ghost" size="icon" onClick={() => handleStatusUpdate(wish.id, 'Rejected')}>
+                                                            <X className="h-4 w-4 text-destructive" />
+                                                        </Button>
+                                                    </>
+                                                )}
                                                 {wish.requestedByUid === userProfile?.uid && (
                                                     <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(wish.id)}>
                                                         <Trash2 className="h-4 w-4 text-destructive" />
@@ -198,7 +232,7 @@ function WishlistDialogContent() {
                                     ))
                                 ) : (
                                     <TableRow>
-                                        <TableCell colSpan={4} className="h-24 text-center">The wishlist is empty. Be the first to add something!</TableCell>
+                                        <TableCell colSpan={5} className="h-24 text-center">The wishlist is empty. Be the first to add something!</TableCell>
                                     </TableRow>
                                 )}
                             </TableBody>
@@ -231,6 +265,8 @@ export default function MyToolsPage() {
     const { canView } = useAuthorization({ page: '/my-tools' });
     const router = useRouter();
     const { toast } = useToast();
+    const [isWishlistOpen, setIsWishlistOpen] = useState(false);
+
 
     useEffect(() => {
         if (!authLoading && !canView) {
@@ -309,7 +345,7 @@ export default function MyToolsPage() {
                             </p>
                         </div>
                     </div>
-                     <Dialog>
+                     <Dialog open={isWishlistOpen} onOpenChange={setIsWishlistOpen}>
                         <DialogTrigger asChild>
                            <Button variant="outline"><Heart className="mr-2 h-4 w-4" /> Tool Wishlist</Button>
                         </DialogTrigger>
@@ -321,7 +357,7 @@ export default function MyToolsPage() {
                                 </DialogDescription>
                             </DialogHeader>
                              <div className="py-4">
-                                <WishlistDialogContent />
+                                <WishlistDialogContent onApprove={() => {}} />
                             </div>
                         </DialogContent>
                     </Dialog>
@@ -508,3 +544,4 @@ export default function MyToolsPage() {
         </div>
     );
 }
+

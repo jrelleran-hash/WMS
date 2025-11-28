@@ -2998,18 +2998,30 @@ export async function getToolWishlist(): Promise<ToolWish[]> {
     }
 }
 
-export async function addToolToWishlist(wish: Omit<ToolWish, 'id' | 'createdAt'>): Promise<void> {
+export async function addToolToWishlist(wish: Omit<ToolWish, 'id' | 'createdAt' | 'status'>): Promise<void> {
     try {
         const wishlistCol = collection(db, "toolWishlist");
         await addDoc(wishlistCol, {
             ...wish,
             createdAt: Timestamp.now(),
+            status: "Pending",
         });
     } catch (error) {
         console.error("Error adding to wishlist:", error);
         throw new Error("Failed to add to wishlist.");
     }
 }
+
+export async function updateToolWishStatus(wishId: string, status: ToolWish['status']): Promise<void> {
+    try {
+        const wishRef = doc(db, "toolWishlist", wishId);
+        await updateDoc(wishRef, { status });
+    } catch (error) {
+        console.error("Error updating wishlist status:", error);
+        throw new Error("Failed to update wishlist status.");
+    }
+}
+
 
 export async function deleteToolFromWishlist(wishId: string): Promise<void> {
     try {

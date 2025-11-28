@@ -385,4 +385,5 @@ export interface ToolWish {
     requestedByUid: string;
     requestedByName: string;
     createdAt: Date;
+    status: 'Pending' | 'Approved' | 'Rejected';
 }
