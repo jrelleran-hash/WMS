@@ -211,8 +211,9 @@ export default function ToolWishlistPage() {
                                         ))
                                     ) : wishlist.length > 0 ? (
                                         wishlist.map(wish => {
-                                            const canDelete = (userProfile?.role === 'Admin') || (wish.requestedByUid === userProfile?.uid);
-                                            const canApprove = userProfile?.role === 'Admin' || userProfile?.role === 'Manager' || userProfile?.role === 'Approver';
+                                            const canDelete = userProfile?.role === 'Admin' || wish.requestedByUid === userProfile?.uid;
+                                            const canApprove = ['Admin', 'Manager', 'Approver'].includes(userProfile?.role || '');
+
                                             return (
                                             <TableRow key={wish.id}>
                                                 <TableCell className="font-medium">{wish.toolName}</TableCell>
@@ -246,7 +247,7 @@ export default function ToolWishlistPage() {
                                                                         <PlusCircle className="mr-2 h-4 w-4" />Add to Inventory
                                                                     </DropdownMenuItem>
                                                                 )}
-                                                                {canDelete && canApprove && <DropdownMenuSeparator />}
+                                                                {canDelete && canApprove && wish.status === 'Pending' && <DropdownMenuSeparator />}
                                                                 {canDelete && (
                                                                     <DropdownMenuItem className="text-destructive" onSelect={() => handleDeleteClick(wish.id)}>
                                                                         <Trash2 className="mr-2 h-4 w-4" />Delete
