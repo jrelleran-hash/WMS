@@ -137,7 +137,18 @@ const toTitleCase = (str: string) => {
 
 const getInitialNames = (profile: UserProfile | null) => {
     if (!profile) return { firstName: "", lastName: "" };
-    return { firstName: profile.firstName, lastName: profile.lastName };
+    if (profile.firstName && profile.lastName) {
+      return { firstName: profile.firstName, lastName: profile.lastName };
+    }
+    // Fallback to splitting displayName if firstName/lastName aren't populated
+    if (profile.email) {
+      const nameParts = profile.email.split('@')[0].split('.').map(toTitleCase);
+      if (nameParts.length > 1) {
+        return { firstName: nameParts[0], lastName: nameParts.slice(1).join(' ') };
+      }
+      return { firstName: nameParts[0], lastName: "" };
+    }
+    return { firstName: "", lastName: "" };
 }
 
 function UserManagementTable({ isAdmin }: { isAdmin: boolean }) {
@@ -889,3 +900,6 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+
+    
