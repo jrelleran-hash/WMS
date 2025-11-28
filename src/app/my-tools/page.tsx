@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { useData } from "@/context/data-context";
 import {
   Card,
@@ -213,14 +213,9 @@ function WishlistDialogContent({ onApprove }: { onApprove: (toolName: string) =>
                                             </TableCell>
                                             <TableCell className="text-right space-x-1">
                                                 {canApprove && wish.status === 'Pending' && (
-                                                    <>
-                                                        <Button variant="ghost" size="icon" onClick={() => { handleStatusUpdate(wish.id, 'Approved'); onApprove(wish.toolName); }}>
-                                                            <Check className="h-4 w-4 text-green-500" />
-                                                        </Button>
-                                                        <Button variant="ghost" size="icon" onClick={() => handleStatusUpdate(wish.id, 'Rejected')}>
-                                                            <X className="h-4 w-4 text-destructive" />
-                                                        </Button>
-                                                    </>
+                                                    <Button variant="ghost" size="icon" onClick={() => { handleStatusUpdate(wish.id, 'Approved'); onApprove(wish.toolName); }}>
+                                                        <Check className="h-4 w-4 text-green-500" />
+                                                    </Button>
                                                 )}
                                                 {wish.requestedByUid === userProfile?.uid && (
                                                     <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(wish.id)}>
@@ -545,3 +540,5 @@ export default function MyToolsPage() {
     );
 }
 
+
+    
