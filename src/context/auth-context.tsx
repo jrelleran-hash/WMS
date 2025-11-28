@@ -42,13 +42,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   const fetchUserProfile = useCallback(async (firebaseUser: FirebaseUser) => {
-      const [profile, token] = await Promise.all([
-        getUserProfile(firebaseUser.uid),
-        getIdToken(firebaseUser, true) // Force refresh of the token
-      ]);
-      setUserProfile(profile);
-      // Set the session cookie for middleware
-      setCookie('__session', token, 1);
+      let profile: UserProfile | null = null;
+      let token: string | null = null;
+
+      try {
+        profile = await getUserProfile(firebaseUser.uid);
+        setUserProfile(profile);
+      } catch (error) {
+        console.error("Failed to fetch user profile:", error);
+        // Set to null or a default state if fetching fails
+        setUserProfile(null);
+      }
+
+      try {
+        token = await getIdToken(firebaseUser, true);
+        if (token) {
+          // Set the session cookie for middleware
+          setCookie('__session', token, 1);
+        }
+      } catch (error) {
+        console.error("Failed to get ID token:", error);
+        // Handle token error, maybe by erasing the cookie
+        eraseCookie('__session');
+      }
+
   }, []);
 
   useEffect(() => {
