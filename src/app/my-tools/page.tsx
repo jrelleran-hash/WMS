@@ -1,9 +1,8 @@
 
 "use client";
 
-import { useMemo, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useData } from "@/context/data-context";
-import { useAuth } from "@/hooks/use-auth";
 import {
   Card,
   CardContent,
@@ -24,10 +23,21 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { Timestamp } from "firebase/firestore";
-import { Wrench } from "lucide-react";
+import { Wrench, Heart, PlusCircle, Trash2 } from "lucide-react";
 import { useAuthorization } from "@/hooks/use-authorization";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/hooks/use-auth";
+import { addToolToWishlist, getToolWishlist, deleteToolFromWishlist } from "@/services/data-service";
+import type { ToolWish } from "@/types";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
     Available: "default",
@@ -48,6 +58,168 @@ const requestStatusVariant: { [key: string]: "default" | "secondary" | "destruct
     Rejected: "destructive",
 };
 
+const wishlistSchema = z.object({
+    toolName: z.string().min(3, "Tool name must be at least 3 characters long."),
+    reason: z.string().optional(),
+});
+type WishlistFormValues = z.infer<typeof wishlistSchema>;
+
+function WishlistTab() {
+    const { userProfile } = useAuth();
+    const { toast } = useToast();
+    const [wishlist, setWishlist] = useState<ToolWish[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [deletingWishId, setDeletingWishId] = useState<string | null>(null);
+
+    const form = useForm<WishlistFormValues>({
+        resolver: zodResolver(wishlistSchema),
+    });
+
+    const fetchWishlist = async () => {
+        setLoading(true);
+        const wishes = await getToolWishlist();
+        setWishlist(wishes);
+        setLoading(false);
+    };
+
+    useEffect(() => {
+        fetchWishlist();
+    }, []);
+
+    const onSubmit = async (data: WishlistFormValues) => {
+        if (!userProfile) {
+            toast({ variant: "destructive", title: "Error", description: "You must be logged in to add to the wishlist." });
+            return;
+        }
+        try {
+            await addToolToWishlist({
+                ...data,
+                requestedByUid: userProfile.uid,
+                requestedByName: `${userProfile.firstName} ${userProfile.lastName}`,
+            });
+            toast({ title: "Success", description: "Your wish has been added to the list!" });
+            form.reset();
+            await fetchWishlist();
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: "Failed to add your wish." });
+        }
+    };
+    
+    const handleDeleteClick = (wishId: string) => {
+        setDeletingWishId(wishId);
+        setIsDeleteDialogOpen(true);
+    };
+    
+    const handleDeleteConfirm = async () => {
+        if (!deletingWishId) return;
+        try {
+            await deleteToolFromWishlist(deletingWishId);
+            toast({ title: "Success", description: "Wishlist item removed." });
+            await fetchWishlist();
+        } catch (error) {
+             toast({ variant: "destructive", title: "Error", description: "Failed to remove wishlist item." });
+        } finally {
+            setIsDeleteDialogOpen(false);
+            setDeletingWishId(null);
+        }
+    }
+    
+     const formatDate = (date: Date) => {
+        if (!date) return 'N/A';
+        return format(date, 'PP');
+    };
+
+    return (
+        <div className="grid md:grid-cols-3 gap-6">
+            <div className="md:col-span-1">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><Heart className="h-5 w-5" /> Add a Wish</CardTitle>
+                        <CardDescription>What tool would make your job easier?</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="toolName">Tool Name</Label>
+                                <Input id="toolName" {...form.register("toolName")} placeholder="e.g., Magnetic Wristband" />
+                                {form.formState.errors.toolName && <p className="text-sm text-destructive">{form.formState.errors.toolName.message}</p>}
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="reason">Reason (Optional)</Label>
+                                <Textarea id="reason" {...form.register("reason")} placeholder="e.g., To hold screws while on a ladder."/>
+                            </div>
+                            <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                                <PlusCircle className="mr-2"/>
+                                Add to Wishlist
+                            </Button>
+                        </form>
+                    </CardContent>
+                 </Card>
+            </div>
+            <div className="md:col-span-2">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Team Wishlist</CardTitle>
+                        <CardDescription>Tools requested by the team for future procurement.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Tool</TableHead>
+                                    <TableHead>Requested By</TableHead>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {loading ? (
+                                    Array.from({ length: 4 }).map((_, i) => (
+                                        <TableRow key={i}><TableCell colSpan={4}><Skeleton className="h-8 w-full" /></TableCell></TableRow>
+                                    ))
+                                ) : wishlist.length > 0 ? (
+                                    wishlist.map(wish => (
+                                        <TableRow key={wish.id}>
+                                            <TableCell className="font-medium">{wish.toolName}</TableCell>
+                                            <TableCell>{wish.requestedByName}</TableCell>
+                                            <TableCell>{formatDate(wish.createdAt)}</TableCell>
+                                            <TableCell className="text-right">
+                                                {wish.requestedByUid === userProfile?.uid && (
+                                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(wish.id)}>
+                                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                                    </Button>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="h-24 text-center">The wishlist is empty. Be the first to add something!</TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+            </div>
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently remove this item from the wishlist.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteConfirm}>Remove</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </div>
+    )
+}
 
 export default function MyToolsPage() {
     const { tools, toolBookingRequests, users, loading } = useData();
@@ -138,6 +310,7 @@ export default function MyToolsPage() {
                         <TabsTrigger value="accountability">Accountability ({assignedTools.length})</TabsTrigger>
                         <TabsTrigger value="borrowed">Borrowed ({borrowedTools.length})</TabsTrigger>
                         <TabsTrigger value="requests">My Requests ({myRequests.length})</TabsTrigger>
+                        <TabsTrigger value="wishlist">Wishlist</TabsTrigger>
                     </TabsList>
                 </Tabs>
             </div>
@@ -310,9 +483,10 @@ export default function MyToolsPage() {
                         </CardContent>
                     </Card>
                  </TabsContent>
+                 <TabsContent value="wishlist" className="mt-0">
+                    <WishlistTab />
+                 </TabsContent>
             </Tabs>
         </div>
     );
 }
-
-    

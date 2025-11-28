@@ -3,7 +3,7 @@ import { db, storage, auth } from "@/lib/firebase";
 import { collection, getDocs, getDoc, doc, orderBy, query, limit, Timestamp, where, DocumentReference, addDoc, updateDoc, deleteDoc, arrayUnion, runTransaction, writeBatch, setDoc } from "firebase/firestore";
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import type { Activity, Notification, Order, Product, Client, Issuance, Supplier, PurchaseOrder, Shipment, Return, ReturnItem, OutboundReturn, OutboundReturnItem, UserProfile, OrderItem, PurchaseOrderItem, IssuanceItem, Backorder, UserRole, PagePermission, ProductCategory, ProductLocation, Tool, ToolBorrowRecord, SalvagedPart, DisposalRecord, ToolMaintenanceRecord, ToolBookingRequest, Vehicle, Task, Subtask, Worker, FuelLog } from "@/types";
+import type { Activity, Notification, Order, Product, Client, Issuance, Supplier, PurchaseOrder, Shipment, Return, ReturnItem, OutboundReturn, OutboundReturnItem, UserProfile, OrderItem, PurchaseOrderItem, IssuanceItem, Backorder, UserRole, PagePermission, ProductCategory, ProductLocation, Tool, ToolBorrowRecord, SalvagedPart, DisposalRecord, ToolMaintenanceRecord, ToolBookingRequest, Vehicle, Task, Subtask, Worker, FuelLog, ToolWish } from "@/types";
 import { format, subDays, addDays, differenceInDays, getMonth, getYear, startOfMonth, endOfMonth } from 'date-fns';
 
 function timeSince(date: Date) {
@@ -2978,4 +2978,45 @@ export async function addWorker(worker: Omit<Worker, 'id'>): Promise<DocumentRef
     throw new Error("Failed to add worker.");
   }
 }
-    
+
+export async function getToolWishlist(): Promise<ToolWish[]> {
+    try {
+        const wishlistCol = collection(db, "toolWishlist");
+        const q = query(wishlistCol, orderBy("createdAt", "desc"));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                createdAt: (data.createdAt as Timestamp).toDate(),
+            } as ToolWish;
+        });
+    } catch (error) {
+        console.error("Error fetching tool wishlist:", error);
+        return [];
+    }
+}
+
+export async function addToolToWishlist(wish: Omit<ToolWish, 'id' | 'createdAt'>): Promise<void> {
+    try {
+        const wishlistCol = collection(db, "toolWishlist");
+        await addDoc(wishlistCol, {
+            ...wish,
+            createdAt: Timestamp.now(),
+        });
+    } catch (error) {
+        console.error("Error adding to wishlist:", error);
+        throw new Error("Failed to add to wishlist.");
+    }
+}
+
+export async function deleteToolFromWishlist(wishId: string): Promise<void> {
+    try {
+        const wishRef = doc(db, "toolWishlist", wishId);
+        await deleteDoc(wishRef);
+    } catch (error) {
+        console.error("Error deleting from wishlist:", error);
+        throw new Error("Failed to delete from wishlist.");
+    }
+}

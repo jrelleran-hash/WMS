@@ -1,5 +1,4 @@
 
-
 import { Timestamp, DocumentReference } from "firebase/firestore";
 
 export interface Activity {
@@ -379,3 +378,11 @@ export interface Task {
     parentTaskTitle?: string | null;
 }
 
+export interface ToolWish {
+    id: string;
+    toolName: string;
+    reason?: string;
+    requestedByUid: string;
+    requestedByName: string;
+    createdAt: Date;
+}
