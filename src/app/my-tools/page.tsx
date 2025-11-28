@@ -23,7 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { Timestamp } from "firebase/firestore";
-import { Wrench, Heart, PlusCircle, Trash2, Check, MoreHorizontal } from "lucide-react";
+import { Wrench, Heart, PlusCircle, Trash2, Check, MoreHorizontal, X } from "lucide-react";
 import { useAuthorization } from "@/hooks/use-authorization";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -228,23 +228,25 @@ function WishlistDialogContent({ onApprove }: { onApprove: (toolName: string) =>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                         {canApprove && wish.status === 'Pending' && (
-                                                            <DropdownMenuItem onClick={() => { handleStatusUpdate(wish.id, 'Approved'); onApprove(wish.toolName); }}>
-                                                                <Check className="mr-2 h-4 w-4" />
-                                                                Approve
-                                                            </DropdownMenuItem>
+                                                            <>
+                                                                <DropdownMenuItem onSelect={() => { handleStatusUpdate(wish.id, 'Approved'); onApprove(wish.toolName); }}>
+                                                                    <Check className="mr-2 h-4 w-4" />
+                                                                    Approve
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem onSelect={() => handleStatusUpdate(wish.id, 'Rejected')} className="text-destructive">
+                                                                    <X className="mr-2 h-4 w-4" />
+                                                                    Reject
+                                                                </DropdownMenuItem>
+                                                            </>
                                                         )}
-                                                         {canApprove && wish.status === 'Pending' && (
-                                                             <DropdownMenuItem onClick={() => handleStatusUpdate(wish.id, 'Rejected')} className="text-destructive">
-                                                                <X className="mr-2 h-4 w-4" />
-                                                                Reject
-                                                            </DropdownMenuItem>
-                                                        )}
-                                                        {(isAdmin || wish.requestedByUid === userProfile?.uid) && <DropdownMenuSeparator />}
                                                         {(isAdmin || wish.requestedByUid === userProfile?.uid) && (
+                                                          <>
+                                                            {(canApprove && wish.status === 'Pending') && <DropdownMenuSeparator />}
                                                             <DropdownMenuItem onClick={() => handleDeleteClick(wish.id)} className="text-destructive">
                                                                 <Trash2 className="mr-2 h-4 w-4" />
                                                                 Delete
                                                             </DropdownMenuItem>
+                                                          </>
                                                         )}
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
