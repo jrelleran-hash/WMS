@@ -145,7 +145,7 @@ function WishlistDialogContent() {
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="toolName">Tool Name</Label>
-                                <Input id="toolName" {...form.register("toolName")} placeholder="e.g., Magnetic Wristband" />
+                                <Input id="toolName" {...form.register("toolName")} placeholder="e.g., Cordless Drill" />
                                 {form.formState.errors.toolName && <p className="text-sm text-destructive">{form.formState.errors.toolName.message}</p>}
                             </div>
                             <div className="space-y-2">
