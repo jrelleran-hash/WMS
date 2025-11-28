@@ -87,23 +87,23 @@ function WishlistDialogContent({ onApprove }: { onApprove: (toolName: string) =>
         return approverRoles.includes(userProfile.role);
     }, [userProfile]);
 
-    const isAdmin = userProfile?.role === 'Admin';
+    const isAdmin = useMemo(() => userProfile?.role === 'Admin', [userProfile]);
 
 
     const form = useForm<WishlistFormValues>({
         resolver: zodResolver(wishlistSchema),
     });
 
-    const fetchWishlist = async () => {
+    const fetchWishlist = useCallback(async () => {
         setLoading(true);
         const wishes = await getToolWishlist();
         setWishlist(wishes);
         setLoading(false);
-    };
+    }, []);
 
     useEffect(() => {
         fetchWishlist();
-    }, []);
+    }, [fetchWishlist]);
 
     const onSubmit = async (data: WishlistFormValues) => {
         if (!userProfile) {
@@ -589,3 +589,4 @@ export default function MyToolsPage() {
         </div>
     );
 }
+
