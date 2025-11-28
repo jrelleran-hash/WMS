@@ -1,5 +1,4 @@
 
-
 import { db, storage, auth } from "@/lib/firebase";
 import { collection, getDocs, getDoc, doc, orderBy, query, limit, Timestamp, where, DocumentReference, addDoc, updateDoc, deleteDoc, arrayUnion, runTransaction, writeBatch, setDoc } from "firebase/firestore";
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, createUserWithEmailAndPassword } from "firebase/auth";
@@ -2531,6 +2530,12 @@ export async function rejectToolBookingRequest(requestId: string): Promise<void>
     await updateDoc(requestRef, { status: 'Rejected' });
 }
 
+export async function deleteToolBookingRequest(requestId: string): Promise<void> {
+    const requestRef = doc(db, "toolBookingRequests", requestId);
+    await deleteDoc(requestRef);
+}
+
+
 export async function getVehicles(): Promise<Vehicle[]> {
     try {
         const vehiclesCol = collection(db, "vehicles");
@@ -2974,6 +2979,7 @@ export async function addWorker(worker: Omit<Worker, 'id'>): Promise<DocumentRef
   }
 }
     
+
 
 
 
