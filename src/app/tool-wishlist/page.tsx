@@ -21,7 +21,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
-import { Heart, PlusCircle, Trash2, Check, MoreHorizontal, X, Users as UsersIcon } from "lucide-react";
+import { Heart, PlusCircle, Trash2, Check, MoreHorizontal, X, Users as UsersIcon, Book } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -37,6 +37,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useRouter } from 'next/navigation';
+import Link from "next/link";
 
 const wishlistStatusVariant: { [key in ToolWish['status']]: "default" | "secondary" | "destructive" } = {
     Pending: "secondary",
@@ -157,9 +158,18 @@ export default function ToolWishlistPage() {
                     <h1 className="text-2xl font-bold font-headline tracking-tight">Tool Wishlist</h1>
                     <p className="text-muted-foreground">Request new tools for the team.</p>
                 </div>
-                 <Button variant="outline" onClick={() => router.push('/my-tools')}>
-                    <UsersIcon className="mr-2 h-4 w-4" /> My Tools
-                </Button>
+                 <div className="flex items-center gap-2">
+                    <Button variant="outline" asChild>
+                        <Link href="/tool-booking">
+                            <Book className="mr-2 h-4 w-4" /> Tool Booking
+                        </Link>
+                    </Button>
+                    <Button variant="outline" asChild>
+                        <Link href="/my-tools">
+                            <UsersIcon className="mr-2 h-4 w-4" /> My Tools
+                        </Link>
+                    </Button>
+                </div>
             </div>
             <div className="grid md:grid-cols-3 gap-6">
                 <div className="md:col-span-1">
@@ -212,7 +222,7 @@ export default function ToolWishlistPage() {
                                     ) : wishlist.length > 0 ? (
                                         wishlist.map(wish => {
                                             const canDelete = userProfile?.role === 'Admin' || wish.requestedByUid === userProfile?.uid;
-                                            const canApprove = ['Admin', 'Manager', 'Approver'].includes(userProfile?.role || '');
+                                            const canApprove = userProfile?.role === 'Admin' || userProfile?.role === 'Manager' || userProfile?.role === 'Approver';
 
                                             return (
                                             <TableRow key={wish.id}>
