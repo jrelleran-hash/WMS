@@ -6,7 +6,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { PlusCircle, MoreHorizontal, Calendar as CalendarIcon, History, ArrowUpRight, UserCheck, Check, X, RefreshCcw } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Calendar as CalendarIcon, History, ArrowUpRight, UserCheck, Check, X, RefreshCcw, Search } from "lucide-react";
 import { Timestamp } from "firebase/firestore";
 import { format } from "date-fns";
 
@@ -137,6 +137,7 @@ export default function ToolManagementPage() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [returnVerification, setReturnVerification] = useState<{tool: Tool, formData: ReturnFormValues} | null>(null);
   const [verificationInput, setVerificationInput] = useState("");
+  const [historySearchQuery, setHistorySearchQuery] = useState("");
 
   const form = useForm<ToolFormValues>({
     resolver: zodResolver(toolSchema),
@@ -156,6 +157,21 @@ export default function ToolManagementPage() {
   const borrowedTools = useMemo(() => tools.filter(t => t.status === "In Use"), [tools]);
   const pendingRequests = useMemo(() => toolBookingRequests.filter(r => r.status === 'Pending'), [toolBookingRequests]);
   const approvedRequests = useMemo(() => toolBookingRequests.filter(r => r.status === 'Approved'), [toolBookingRequests]);
+
+  const filteredApprovedRequests = useMemo(() => {
+    if (!historySearchQuery) {
+        return approvedRequests;
+    }
+    const lowercasedQuery = historySearchQuery.toLowerCase();
+    return approvedRequests.filter(request => {
+        return (
+            request.bookingNumber?.toLowerCase().includes(lowercasedQuery) ||
+            request.toolName.toLowerCase().includes(lowercasedQuery) ||
+            request.requestedForName.toLowerCase().includes(lowercasedQuery) ||
+            request.requestedByName?.toLowerCase().includes(lowercasedQuery)
+        );
+    });
+  }, [approvedRequests, historySearchQuery]);
 
   useEffect(() => { if (isAddDialogOpen) form.reset({ condition: "Good" }); }, [isAddDialogOpen, form]);
   useEffect(() => { if (editingTool) { form.reset({ ...editingTool, purchaseDate: editingTool.purchaseDate ? new Date(editingTool.purchaseDate) : undefined, borrowDuration: editingTool.borrowDuration || 7 }); setIsEditDialogOpen(true); } else { setIsEditDialogOpen(false); } }, [editingTool, form]);
@@ -612,7 +628,18 @@ export default function ToolManagementPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle>Tool Issuance Ledger</CardTitle>
-                            <CardDescription>A log of all approved tool requests.</CardDescription>
+                            <div className="flex justify-between items-center">
+                                <CardDescription>A log of all approved tool requests.</CardDescription>
+                                <div className="relative w-64">
+                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input 
+                                        placeholder="Filter by name, tool, booking #"
+                                        className="pl-8"
+                                        value={historySearchQuery}
+                                        onChange={(e) => setHistorySearchQuery(e.target.value)}
+                                    />
+                                </div>
+                            </div>
                         </CardHeader>
                         <CardContent>
                             <Table>
@@ -630,8 +657,8 @@ export default function ToolManagementPage() {
                                 <TableBody>
                                     {loading ? (
                                         <TableRow><TableCell colSpan={7}><Skeleton className="h-8" /></TableCell></TableRow>
-                                    ) : approvedRequests.length > 0 ? (
-                                        approvedRequests.map(request => {
+                                    ) : filteredApprovedRequests.length > 0 ? (
+                                        filteredApprovedRequests.map(request => {
                                             const tool = tools.find(t => t.id === request.toolId);
                                             return (
                                                 <TableRow key={request.id}>
@@ -675,7 +702,7 @@ export default function ToolManagementPage() {
                                             )
                                         })
                                     ) : (
-                                        <TableRow><TableCell colSpan={7} className="h-24 text-center">No approved requests yet.</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={7} className="h-24 text-center">No approved requests found.</TableCell></TableRow>
                                     )}
                                 </TableBody>
                             </Table>
@@ -1123,6 +1150,7 @@ export default function ToolManagementPage() {
 
 
     
+
 
 
 
