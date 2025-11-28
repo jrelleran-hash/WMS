@@ -38,7 +38,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { addToolToWishlist, getToolWishlist, deleteToolFromWishlist, updateToolWishStatus, addTool } from "@/services/data-service";
 import type { ToolWish } from "@/types";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 
 
 const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
@@ -584,6 +584,3 @@ export default function MyToolsPage() {
         </div>
     );
 }
-
-
-    
