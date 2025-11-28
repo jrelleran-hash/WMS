@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Book, Calendar as CalendarIcon, CheckCircle, User, ChevronsUpDown, Check, PlusCircle } from "lucide-react";
+import { Book, Calendar as CalendarIcon, CheckCircle, User, ChevronsUpDown, Check, PlusCircle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createToolBookingRequest, addWorker } from "@/services/data-service";
 import { DateRange } from "react-day-picker";
@@ -25,9 +25,10 @@ import { Input } from "@/components/ui/input";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useAuthorization } from "@/hooks/use-authorization";
+import { Badge } from "@/components/ui/badge";
 
 const bookingSchema = z.object({
-  toolId: z.string().min(1, "Please select a tool."),
+  toolIds: z.array(z.string()).min(1, "Please select at least one tool."),
   requestedForId: z.string().min(1, "Please select the worker this tool is for."),
   bookingType: z.enum(["Borrow", "Accountability"]),
   dateRange: z.object({
@@ -70,6 +71,7 @@ export default function ToolBookingPage() {
   const { toast } = useToast();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [userPopoverOpen, setUserPopoverOpen] = useState(false);
+  const [toolPopoverOpen, setToolPopoverOpen] = useState(false);
   const [isAddWorkerOpen, setIsAddWorkerOpen] = useState(false);
 
   const availableTools = useMemo(() => tools.filter(t => t.status === "Available"), [tools]);
@@ -78,6 +80,7 @@ export default function ToolBookingPage() {
     resolver: zodResolver(bookingSchema),
     defaultValues: {
       bookingType: "Borrow",
+      toolIds: [],
     }
   });
 
@@ -88,6 +91,7 @@ export default function ToolBookingPage() {
   const { control, handleSubmit, register, formState: { errors }, watch, setValue } = form;
   
   const bookingType = watch("bookingType");
+  const selectedToolIds = watch("toolIds");
 
   const onSubmit = async (data: BookingFormValues) => {
     if (!userProfile) {
@@ -99,15 +103,17 @@ export default function ToolBookingPage() {
         return;
     }
     try {
-      await createToolBookingRequest({
-        toolId: data.toolId,
-        requestedById: userProfile.uid,
-        requestedForId: data.requestedForId,
-        bookingType: data.bookingType,
-        startDate: data.dateRange?.from,
-        endDate: data.dateRange?.to,
-        notes: data.notes,
-      });
+      for (const toolId of data.toolIds) {
+        await createToolBookingRequest({
+            toolId: toolId,
+            requestedById: userProfile.uid,
+            requestedForId: data.requestedForId,
+            bookingType: data.bookingType,
+            startDate: data.dateRange?.from,
+            endDate: data.dateRange?.to,
+            notes: data.notes,
+        });
+      }
       setIsSubmitted(true);
       form.reset();
     } catch (error) {
@@ -193,26 +199,53 @@ export default function ToolBookingPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Tool</Label>
-              <Controller
-                name="toolId"
+              <Label>Tool(s)</Label>
+               <Controller
+                name="toolIds"
                 control={control}
                 render={({ field }) => (
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a tool..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableTools.map(tool => (
-                        <SelectItem key={tool.id} value={tool.id}>
-                          {tool.name} ({tool.serialNumber})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={toolPopoverOpen} onOpenChange={setToolPopoverOpen}>
+                    <PopoverTrigger asChild>
+                       <Button variant="outline" role="combobox" className="w-full justify-between h-auto">
+                           <div className="flex flex-wrap gap-1">
+                                {selectedToolIds.length > 0 ? selectedToolIds.map(toolId => {
+                                    const tool = availableTools.find(t => t.id === toolId);
+                                    return <Badge key={toolId} variant="secondary">{tool?.name}</Badge>
+                                }) : "Select tools..."}
+                           </div>
+                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                       </Button>
+                    </PopoverTrigger>
+                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                        <Command>
+                          <CommandInput placeholder="Search tools..." />
+                          <CommandList>
+                            <CommandEmpty>No tools found.</CommandEmpty>
+                            <CommandGroup>
+                              {availableTools.map((tool) => (
+                                <CommandItem
+                                  key={tool.id}
+                                  value={tool.name}
+                                  onSelect={() => {
+                                    const currentToolIds = field.value || [];
+                                    const newToolIds = currentToolIds.includes(tool.id)
+                                      ? currentToolIds.filter(id => id !== tool.id)
+                                      : [...currentToolIds, tool.id];
+                                    field.onChange(newToolIds);
+                                  }}
+                                >
+                                  <Check className={cn("mr-2 h-4 w-4", field.value?.includes(tool.id) ? "opacity-100" : "opacity-0")} />
+                                  {tool.name} ({tool.serialNumber})
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                    </PopoverContent>
+                  </Popover>
                 )}
               />
-              {errors.toolId && <p className="text-sm text-destructive">{errors.toolId.message}</p>}
+              {errors.toolIds && <p className="text-sm text-destructive">{errors.toolIds.message}</p>}
             </div>
 
             <div className="space-y-2">

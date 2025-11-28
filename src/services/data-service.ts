@@ -2401,14 +2401,14 @@ export async function createToolBookingRequest(data: NewBookingRequestData): Pro
         ]);
         
         const now = new Date();
-        const month = getMonth(now);
-        const year = getYear(now);
+        const month = getMonth(now) + 1; // getMonth is 0-indexed
+        const year = getYear(now).toString().slice(-2);
         const monthlyBookings = bookingsSnapshot.docs.filter(d => {
             const bookingDate = (d.data().createdAt as Timestamp).toDate();
-            return getMonth(bookingDate) === month && getYear(bookingDate) === year;
+            return getMonth(bookingDate) + 1 === month && getYear(bookingDate) === getYear(now);
         }).length;
         
-        const bookingNumber = `TB-${format(now, 'MM')}${format(now, 'yy')}-${(monthlyBookings + 1).toString().padStart(4, '0')}`;
+        const bookingNumber = `TB-${month.toString().padStart(2, '0')}${year}-${(monthlyBookings + 1).toString().padStart(4, '0')}`;
 
         if (!toolDoc.exists()) throw new Error("Tool not found.");
         if (toolDoc.data().status !== 'Available') throw new Error("Tool is not currently available for booking.");
@@ -2979,9 +2979,3 @@ export async function addWorker(worker: Omit<Worker, 'id'>): Promise<DocumentRef
   }
 }
     
-
-
-
-
-
-
