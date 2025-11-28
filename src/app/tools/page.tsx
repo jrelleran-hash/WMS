@@ -633,7 +633,7 @@ export default function ToolManagementPage() {
                                 <div className="relative w-64">
                                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                     <Input 
-                                        placeholder="Filter by name, tool, booking #"
+                                        placeholder="Search by Tool, accountable user, booking #"
                                         className="pl-8"
                                         value={historySearchQuery}
                                         onChange={(e) => setHistorySearchQuery(e.target.value)}
@@ -1150,6 +1150,7 @@ export default function ToolManagementPage() {
 
 
     
+
 
 
 
