@@ -1113,7 +1113,7 @@ export default function ToolManagementPage() {
     
     {/* History Dialog */}
     <Dialog open={isHistoryDialogOpen} onOpenChange={(open) => !open && setHistoryTool(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl" showCloseButton={false}>
             <DialogHeader>
                 <DialogTitle>Borrow History: {historyTool?.name}</DialogTitle>
                 <DialogDescription>A log of who has borrowed this tool.</DialogDescription>
@@ -1191,6 +1191,7 @@ export default function ToolManagementPage() {
 
 
     
+
 
 
 
