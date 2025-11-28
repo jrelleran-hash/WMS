@@ -23,7 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { Timestamp } from "firebase/firestore";
-import { Wrench, Heart } from "lucide-react";
+import { Wrench, Heart, Book } from "lucide-react";
 import { useAuthorization } from "@/hooks/use-authorization";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -136,11 +136,18 @@ export default function MyToolsPage() {
                             </p>
                         </div>
                     </div>
-                     <Button variant="outline" asChild>
-                        <Link href="/tool-wishlist">
-                            <Heart className="mr-2 h-4 w-4" /> Tool Wishlist
-                        </Link>
-                    </Button>
+                    <div className="flex items-center gap-2">
+                         <Button variant="outline" asChild>
+                            <Link href="/tool-booking">
+                                <Book className="mr-2 h-4 w-4" /> Tool Booking
+                            </Link>
+                        </Button>
+                         <Button variant="outline" asChild>
+                            <Link href="/tool-wishlist">
+                                <Heart className="mr-2 h-4 w-4" /> Tool Wishlist
+                            </Link>
+                        </Button>
+                    </div>
                 </div>
 
                  <Tabs defaultValue="accountability" className="pt-4">
