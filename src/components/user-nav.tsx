@@ -28,6 +28,8 @@ export function UserNav() {
 
   if (!isClient) return null;
   
+  const displayName = userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : user?.displayName || "User";
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -38,7 +40,7 @@ export function UserNav() {
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user?.displayName || "User"}</p>
+            <p className="text-sm font-medium leading-none">{displayName}</p>
             <p className="text-xs leading-none text-muted-foreground">
               {user?.email || "user@example.com"}
             </p>
