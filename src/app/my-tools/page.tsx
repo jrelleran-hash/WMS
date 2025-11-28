@@ -38,6 +38,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { addToolToWishlist, getToolWishlist, deleteToolFromWishlist } from "@/services/data-service";
 import type { ToolWish } from "@/types";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+
 
 const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
     Available: "default",
@@ -64,7 +66,7 @@ const wishlistSchema = z.object({
 });
 type WishlistFormValues = z.infer<typeof wishlistSchema>;
 
-function WishlistTab() {
+function WishlistDialogContent() {
     const { userProfile } = useAuth();
     const { toast } = useToast();
     const [wishlist, setWishlist] = useState<ToolWish[]>([]);
@@ -131,6 +133,7 @@ function WishlistTab() {
     };
 
     return (
+        <>
         <div className="grid md:grid-cols-3 gap-6">
             <div className="md:col-span-1">
                  <Card>
@@ -203,21 +206,22 @@ function WishlistTab() {
                     </CardContent>
                 </Card>
             </div>
-            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This will permanently remove this item from the wishlist.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteConfirm}>Remove</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
         </div>
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will permanently remove this item from the wishlist.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteConfirm}>Remove</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+      </>
     )
 }
 
@@ -293,16 +297,34 @@ export default function MyToolsPage() {
     return (
         <div className="space-y-4">
             <div className="sticky top-0 bg-background/95 backdrop-blur z-20 -mx-6 px-6 pb-4 -mb-4 border-b">
-                <div className="flex items-center gap-4 pt-4">
-                    <Wrench className="h-8 w-8 text-primary" />
-                    <div>
-                        <h1 className="text-2xl font-bold font-headline tracking-tight">
-                            My Tools
-                        </h1>
-                        <p className="text-muted-foreground">
-                            A list of all tools currently assigned to you, borrowed by you, or requested by you.
-                        </p>
+                <div className="flex items-center justify-between gap-4 pt-4">
+                    <div className="flex items-center gap-4">
+                        <Wrench className="h-8 w-8 text-primary" />
+                        <div>
+                            <h1 className="text-2xl font-bold font-headline tracking-tight">
+                                My Tools
+                            </h1>
+                            <p className="text-muted-foreground">
+                                A list of all tools currently assigned to you, borrowed by you, or requested by you.
+                            </p>
+                        </div>
                     </div>
+                     <Dialog>
+                        <DialogTrigger asChild>
+                           <Button variant="outline"><Heart className="mr-2 h-4 w-4" /> Tool Wishlist</Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl">
+                             <DialogHeader>
+                                <DialogTitle>Tool Wishlist</DialogTitle>
+                                <DialogDescription>
+                                    Request new tools for the team.
+                                </DialogDescription>
+                            </DialogHeader>
+                             <div className="py-4">
+                                <WishlistDialogContent />
+                            </div>
+                        </DialogContent>
+                    </Dialog>
                 </div>
 
                  <Tabs defaultValue="accountability" className="pt-4">
@@ -310,7 +332,6 @@ export default function MyToolsPage() {
                         <TabsTrigger value="accountability">Accountability ({assignedTools.length})</TabsTrigger>
                         <TabsTrigger value="borrowed">Borrowed ({borrowedTools.length})</TabsTrigger>
                         <TabsTrigger value="requests">My Requests ({myRequests.length})</TabsTrigger>
-                        <TabsTrigger value="wishlist">Wishlist</TabsTrigger>
                     </TabsList>
                 </Tabs>
             </div>
@@ -482,9 +503,6 @@ export default function MyToolsPage() {
                             </Table>
                         </CardContent>
                     </Card>
-                 </TabsContent>
-                 <TabsContent value="wishlist" className="mt-0">
-                    <WishlistTab />
                  </TabsContent>
             </Tabs>
         </div>
