@@ -10,7 +10,7 @@ import { Search } from "lucide-react";
 import { GlobalSearch } from "../layout/global-search";
 
 export function WelcomeCard() {
-  const { user } = useAuth();
+  const { userProfile } = useAuth();
   const [currentDate, setCurrentDate] = useState("");
 
   useEffect(() => {
@@ -25,15 +25,13 @@ export function WelcomeCard() {
   }, []);
 
   const getFirstName = () => {
-    if (user?.displayName) {
-      const nameParts = user.displayName.split(" ").filter(Boolean);
-      if (nameParts.length > 1) {
-        nameParts.pop(); // Remove the last part (last name)
-        return nameParts.join(" ");
-      }
-      return user.displayName; // Return the full name if it's just one word
+    if (userProfile?.firstName) {
+      return userProfile.firstName;
     }
-    return user?.email || "User";
+    if (userProfile?.email) {
+      return userProfile.email.split("@")[0];
+    }
+    return "User";
   };
 
   return (
