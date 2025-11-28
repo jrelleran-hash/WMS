@@ -35,7 +35,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
-import { addToolToWishlist, getToolWishlist, deleteToolFromWishlist, updateToolWishStatus } from "@/services/data-service";
+import { addToolToWishlist, getToolWishlist, deleteToolFromWishlist, updateToolWishStatus, addTool } from "@/services/data-service";
 import type { ToolWish } from "@/types";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -82,6 +82,7 @@ function WishlistDialogContent({ onApprove }: { onApprove: (toolName: string) =>
     const [deletingWishId, setDeletingWishId] = useState<string | null>(null);
 
     const canApprove = userProfile?.role === 'Admin' || userProfile?.role === 'Manager' || userProfile?.role === 'Approver';
+    const isAdmin = userProfile?.role === 'Admin';
 
 
     const form = useForm<WishlistFormValues>({
@@ -217,7 +218,7 @@ function WishlistDialogContent({ onApprove }: { onApprove: (toolName: string) =>
                                                         <Check className="h-4 w-4 text-green-500" />
                                                     </Button>
                                                 )}
-                                                {wish.requestedByUid === userProfile?.uid && (
+                                                {(wish.requestedByUid === userProfile?.uid || isAdmin) && (
                                                     <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(wish.id)}>
                                                         <Trash2 className="h-4 w-4 text-destructive" />
                                                     </Button>
@@ -255,13 +256,17 @@ function WishlistDialogContent({ onApprove }: { onApprove: (toolName: string) =>
 }
 
 export default function MyToolsPage() {
-    const { tools, toolBookingRequests, users, loading } = useData();
+    const { tools, toolBookingRequests, users, loading, refetchData } = useData();
     const { userProfile, loading: authLoading } = useAuth();
     const { canView } = useAuthorization({ page: '/my-tools' });
     const router = useRouter();
     const { toast } = useToast();
     const [isWishlistOpen, setIsWishlistOpen] = useState(false);
+    const [isAddToolOpen, setIsAddToolOpen] = useState(false);
 
+    const toolForm = useForm<{name: string}>({
+        defaultValues: { name: "" }
+    });
 
     useEffect(() => {
         if (!authLoading && !canView) {
@@ -317,6 +322,26 @@ export default function MyToolsPage() {
         return format(jsDate, 'PP');
     }
     
+     const handleApproveWish = (toolName: string) => {
+        setIsWishlistOpen(false); // Close wishlist dialog
+        // Use a timeout to ensure the dialog is closed before opening the new one
+        setTimeout(() => {
+            toolForm.setValue('name', toolName);
+            setIsAddToolOpen(true);
+        }, 150);
+    };
+
+    const onAddToolSubmit = async (data: {name: string}) => {
+        try {
+            await addTool({ name: data.name, condition: 'Good' }); // Add other necessary fields if your schema requires them
+            toast({ title: "Success", description: `Tool "${data.name}" added successfully.`});
+            setIsAddToolOpen(false);
+            await refetchData();
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: "Failed to add tool."});
+        }
+    };
+    
     if (authLoading || !canView) {
         return (
           <div className="flex items-center justify-center h-[calc(100vh-8rem)]">
@@ -352,7 +377,7 @@ export default function MyToolsPage() {
                                 </DialogDescription>
                             </DialogHeader>
                              <div className="py-4">
-                                <WishlistDialogContent onApprove={() => {}} />
+                                <WishlistDialogContent onApprove={handleApproveWish} />
                             </div>
                         </DialogContent>
                     </Dialog>
@@ -536,6 +561,26 @@ export default function MyToolsPage() {
                     </Card>
                  </TabsContent>
             </Tabs>
+            
+            <Dialog open={isAddToolOpen} onOpenChange={setIsAddToolOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Add New Tool from Wishlist</DialogTitle>
+                        <DialogDescription>A wish has been approved! Please fill in any additional details for this new tool.</DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={toolForm.handleSubmit(onAddToolSubmit)} className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="tool-name-wish">Tool Name</Label>
+                            <Input id="tool-name-wish" {...toolForm.register('name')} />
+                        </div>
+                        {/* Here you could add more fields from the main "Add Tool" form if needed */}
+                        <DialogFooter>
+                             <Button type="button" variant="ghost" onClick={() => setIsAddToolOpen(false)}>Cancel</Button>
+                             <Button type="submit">Add Tool to Inventory</Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
