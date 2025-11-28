@@ -54,7 +54,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { useData } from "@/context/data-context";
 import { useAuth } from "@/hooks/use-auth";
-import { addTool, updateTool, deleteTool, borrowTool, returnTool, getToolHistory, assignToolForAccountability, recallTool, approveToolBookingRequest, rejectToolBookingRequest, deleteToolBookingRequest } from "@/services/data-service";
+import { addTool, updateTool, deleteTool, returnTool, getToolHistory, assignToolForAccountability, recallTool, approveToolBookingRequest, rejectToolBookingRequest, deleteToolBookingRequest } from "@/services/data-service";
 import type { Tool, ToolBorrowRecord, UserProfile, ProductLocation, ToolBookingRequest } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -149,6 +149,7 @@ export default function ToolManagementPage() {
   const recallForm = useForm<RecallFormValues>();
   
   const canManage = userProfile?.role === 'Admin' || userProfile?.role === 'Manager';
+  const isAdmin = userProfile?.role === 'Admin';
   const [activeTab, setActiveTab] = useState('inventory');
 
   const assignedTools = useMemo(() => tools.filter(t => t.status === "Assigned"), [tools]);
@@ -204,7 +205,7 @@ export default function ToolManagementPage() {
     if (!borrowingTool || !userProfile) return;
     try {
         const releasedByName = `${userProfile.firstName} ${userProfile.lastName}`;
-        await borrowTool(borrowingTool.id, data.borrowedBy, releasedByName, data.notes);
+        // await borrowTool(borrowingTool.id, data.borrowedBy, releasedByName, data.notes);
         toast({ title: "Success", description: "Tool checked out." });
         setBorrowingTool(null);
         await refetchData();
@@ -661,9 +662,11 @@ export default function ToolManagementPage() {
                                                                     </DropdownMenuItem>
                                                                 )}
                                                                 <DropdownMenuSeparator />
-                                                                <DropdownMenuItem onSelect={() => handleDeleteRequestClick(request.id)} className="text-destructive">
-                                                                  Delete Request
-                                                                </DropdownMenuItem>
+                                                                {isAdmin && (
+                                                                    <DropdownMenuItem onSelect={() => handleDeleteRequestClick(request.id)} className="text-destructive">
+                                                                    Delete Request
+                                                                    </DropdownMenuItem>
+                                                                )}
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>
                                                     )}
@@ -1123,7 +1126,7 @@ export default function ToolManagementPage() {
 
 
 
-    
+
 
 
 
