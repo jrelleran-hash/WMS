@@ -201,18 +201,18 @@ export default function ToolWishlistPage() {
                                         <TableHead>Requested By</TableHead>
                                         <TableHead>Date</TableHead>
                                         <TableHead>Status</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
+                                        
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {loading || authLoading ? (
                                         Array.from({ length: 4 }).map((_, i) => (
-                                            <TableRow key={i}><TableCell colSpan={5}><Skeleton className="h-8 w-full" /></TableCell></TableRow>
+                                            <TableRow key={i}><TableCell colSpan={4}><Skeleton className="h-8 w-full" /></TableCell></TableRow>
                                         ))
                                     ) : wishlist.length > 0 ? (
                                         wishlist.map(wish => {
                                             const canDelete = (userProfile?.role === 'Admin') || (wish.requestedByUid === userProfile?.uid);
-
+                                            const canApprove = userProfile?.role === 'Admin' || userProfile?.role === 'Manager' || userProfile?.role === 'Approver';
                                             return (
                                             <TableRow key={wish.id}>
                                                 <TableCell className="font-medium">{wish.toolName}</TableCell>
@@ -221,44 +221,11 @@ export default function ToolWishlistPage() {
                                                 <TableCell>
                                                     <Badge variant={wishlistStatusVariant[wish.status]}>{wish.status}</Badge>
                                                 </TableCell>
-                                                <TableCell className="text-right">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="icon">
-                                                                <MoreHorizontal />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                            {wish.status === 'Pending' && (
-                                                                <>
-                                                                    <DropdownMenuItem onSelect={() => { handleStatusUpdate(wish.id, 'Approved'); handleApproveWish(wish.toolName); }}>
-                                                                        <Check className="mr-2 h-4 w-4" />
-                                                                        Approve
-                                                                    </DropdownMenuItem>
-                                                                    <DropdownMenuItem onSelect={() => handleStatusUpdate(wish.id, 'Rejected')} className="text-destructive">
-                                                                        <X className="mr-2 h-4 w-4" />
-                                                                        Reject
-                                                                    </DropdownMenuItem>
-                                                                </>
-                                                            )}
-                                                            {canDelete && (
-                                                            <>
-                                                                {wish.status === 'Pending' && <DropdownMenuSeparator />}
-                                                                <DropdownMenuItem onClick={() => handleDeleteClick(wish.id)} className="text-destructive">
-                                                                    <Trash2 className="mr-2 h-4 w-4" />
-                                                                    Delete
-                                                                </DropdownMenuItem>
-                                                            </>
-                                                            )}
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </TableCell>
                                             </TableRow>
                                         )})
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="h-24 text-center">The wishlist is empty. Be the first to add something!</TableCell>
+                                            <TableCell colSpan={4} className="h-24 text-center">The wishlist is empty. Be the first to add something!</TableCell>
                                         </TableRow>
                                     )}
                                 </TableBody>
