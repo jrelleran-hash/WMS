@@ -124,6 +124,7 @@ export default function ToolManagementPage() {
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [isRecallDialogOpen, setIsRecallDialogOpen] = useState(false);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
+  const [isUnsavedChangesAlertOpen, setIsUnsavedChangesAlertOpen] = useState(false);
 
   const [editingTool, setEditingTool] = useState<Tool | null>(null);
   const [deletingToolId, setDeletingToolId] = useState<string | null>(null);
@@ -366,6 +367,25 @@ export default function ToolManagementPage() {
     if (returnCondition === "Damaged") return "Forward to Waste Management";
     return "Confirm Return";
   }, [returnCondition]);
+
+  const handleEditDialogClose = (open: boolean) => {
+    if (!open && form.formState.isDirty) {
+      setIsUnsavedChangesAlertOpen(true);
+    } else {
+      setEditingTool(null);
+    }
+  };
+
+  const handleDiscardChanges = () => {
+    setEditingTool(null);
+    setIsUnsavedChangesAlertOpen(false);
+    form.reset();
+  };
+
+  const handleSaveChanges = () => {
+    form.handleSubmit(onEditSubmit)();
+    setIsUnsavedChangesAlertOpen(false);
+  };
 
 
   return (
@@ -789,7 +809,7 @@ export default function ToolManagementPage() {
     
 
     {/* Edit Dialog */}
-    <Dialog open={isEditDialogOpen} onOpenChange={(open) => !open && setEditingTool(null)}>
+    <Dialog open={isEditDialogOpen} onOpenChange={handleEditDialogClose}>
         <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
                 <DialogTitle>Edit Tool</DialogTitle>
@@ -888,12 +908,33 @@ export default function ToolManagementPage() {
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => setEditingTool(null)}>Cancel</Button>
+                        <Button type="button" variant="outline" onClick={() => handleEditDialogClose(false)}>Cancel</Button>
                         <Button type="submit" disabled={form.formState.isSubmitting}>Save Changes</Button>
                     </DialogFooter>
                 </form>
         </DialogContent>
     </Dialog>
+    
+    <AlertDialog open={isUnsavedChangesAlertOpen} onOpenChange={setIsUnsavedChangesAlertOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>You have unsaved changes</AlertDialogTitle>
+            <AlertDialogDescription>
+                Do you want to save your changes before closing?
+            </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setIsUnsavedChangesAlertOpen(false)}>Cancel</AlertDialogCancel>
+            <Button variant="destructive" onClick={handleDiscardChanges}>
+                Discard
+            </Button>
+            <AlertDialogAction onClick={handleSaveChanges}>
+                Save Changes
+            </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+
 
     {/* Borrow Dialog */}
     <Dialog open={isBorrowDialogOpen} onOpenChange={(open) => !open && setBorrowingTool(null)}>
@@ -1150,6 +1191,7 @@ export default function ToolManagementPage() {
 
 
     
+
 
 
 
