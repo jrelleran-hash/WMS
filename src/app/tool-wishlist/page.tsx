@@ -211,7 +211,6 @@ export default function ToolWishlistPage() {
                                         ))
                                     ) : wishlist.length > 0 ? (
                                         wishlist.map(wish => {
-                                            const canApprove = userProfile && ['Admin', 'Manager', 'Approver'].includes(userProfile.role);
                                             const canDelete = (userProfile?.role === 'Admin') || (wish.requestedByUid === userProfile?.uid);
 
                                             return (
@@ -231,7 +230,7 @@ export default function ToolWishlistPage() {
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                            {canApprove && wish.status === 'Pending' && (
+                                                            {wish.status === 'Pending' && (
                                                                 <>
                                                                     <DropdownMenuItem onSelect={() => { handleStatusUpdate(wish.id, 'Approved'); handleApproveWish(wish.toolName); }}>
                                                                         <Check className="mr-2 h-4 w-4" />
@@ -245,7 +244,7 @@ export default function ToolWishlistPage() {
                                                             )}
                                                             {canDelete && (
                                                             <>
-                                                                {(canApprove && wish.status === 'Pending') && <DropdownMenuSeparator />}
+                                                                {wish.status === 'Pending' && <DropdownMenuSeparator />}
                                                                 <DropdownMenuItem onClick={() => handleDeleteClick(wish.id)} className="text-destructive">
                                                                     <Trash2 className="mr-2 h-4 w-4" />
                                                                     Delete
