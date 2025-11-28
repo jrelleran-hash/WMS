@@ -21,7 +21,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
-import { Heart, PlusCircle, Trash2, Check, MoreHorizontal, X, Link as LinkIcon, Users as UsersIcon } from "lucide-react";
+import { Heart, PlusCircle, Trash2, Check, MoreHorizontal, X, Users as UsersIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
