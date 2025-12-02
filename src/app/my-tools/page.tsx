@@ -54,7 +54,7 @@ const requestStatusVariant: { [key: string]: "default" | "secondary" | "destruct
 
 
 export default function MyToolsPage() {
-    const { tools, toolBookingRequests, users, loading, refetchData } = useData();
+    const { tools, toolBookingRequests, users, workers, loading, refetchData } = useData();
     const { userProfile, loading: authLoading } = useAuth();
     const { canView } = useAuthorization({ page: '/my-tools' });
     const router = useRouter();
@@ -83,12 +83,15 @@ export default function MyToolsPage() {
 
     const myRequests = useMemo(() => {
         if (!userProfile) return [];
-        return toolBookingRequests.filter(r => r.createdById === userProfile.uid || r.requestedForId === userProfile.uid);
+        return toolBookingRequests.filter(r => r.createdById === userProfile.uid);
     }, [toolBookingRequests, userProfile]);
-
+    
     const getRequestorTypeName = (request: ToolBookingRequest) => {
-        const user = users.find(u => u.uid === request.requestedForId);
-        return user ? "User" : "Worker";
+        const isUser = users.some(u => u.uid === request.requestedForId);
+        if (isUser) return "User";
+        const isWorker = workers.some(w => w.id === request.requestedForId);
+        if(isWorker) return "Worker";
+        return "Unknown";
     }
 
     const formatDate = (date?: Date | Timestamp) => {
