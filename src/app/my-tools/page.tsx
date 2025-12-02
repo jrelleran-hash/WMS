@@ -23,13 +23,14 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { Timestamp } from "firebase/firestore";
-import { Wrench, Heart, Book } from "lucide-react";
+import { Wrench, Heart, Book, Users as UsersIcon } from "lucide-react";
 import { useAuthorization } from "@/hooks/use-authorization";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import type { ToolBookingRequest, UserProfile } from "@/types";
 
 
 const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
@@ -82,8 +83,13 @@ export default function MyToolsPage() {
 
     const myRequests = useMemo(() => {
         if (!userProfile) return [];
-        return toolBookingRequests.filter(r => r.createdById === userProfile.uid);
+        return toolBookingRequests.filter(r => r.createdById === userProfile.uid || r.requestedForId === userProfile.uid);
     }, [toolBookingRequests, userProfile]);
+
+    const getRequestorTypeName = (request: ToolBookingRequest) => {
+        const user = users.find(u => u.uid === request.requestedForId);
+        return user ? "User" : "Worker";
+    }
 
     const formatDate = (date?: Date | Timestamp) => {
         if (!date) return 'N/A';
@@ -114,13 +120,13 @@ export default function MyToolsPage() {
                             </p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                         <Button variant="outline" asChild>
+                     <div className="flex items-center gap-2">
+                        <Button variant="outline" asChild>
                             <Link href="/tool-booking">
                                 <Book className="mr-2 h-4 w-4" /> Tool Booking
                             </Link>
                         </Button>
-                         <Button variant="outline" asChild>
+                        <Button variant="outline" asChild>
                             <Link href="/tool-wishlist">
                                 <Heart className="mr-2 h-4 w-4" /> Tool Wishlist
                             </Link>
@@ -251,7 +257,8 @@ export default function MyToolsPage() {
                                 <TableRow>
                                     <TableHead>Tool</TableHead>
                                     <TableHead>Requested For</TableHead>
-                                    <TableHead>Type</TableHead>
+                                    <TableHead>For (Type)</TableHead>
+                                    <TableHead>Booking Type</TableHead>
                                     <TableHead>Date Requested</TableHead>
                                     <TableHead>Status</TableHead>
                                 </TableRow>
@@ -260,7 +267,7 @@ export default function MyToolsPage() {
                                 {loading ? (
                                     Array.from({ length: 3 }).map((_, i) => (
                                     <TableRow key={i}>
-                                        <TableCell colSpan={5}>
+                                        <TableCell colSpan={6}>
                                         <Skeleton className="h-8 w-full" />
                                         </TableCell>
                                     </TableRow>
@@ -270,6 +277,12 @@ export default function MyToolsPage() {
                                     <TableRow key={request.id}>
                                         <TableCell className="font-medium">{request.toolName}</TableCell>
                                         <TableCell>{request.requestedForName}</TableCell>
+                                         <TableCell>
+                                            <Badge variant="outline" className="flex items-center gap-1 w-fit">
+                                                {getRequestorTypeName(request) === 'User' ? <UsersIcon className="w-3 h-3"/> : <Wrench className="w-3 h-3"/>}
+                                                {getRequestorTypeName(request)}
+                                            </Badge>
+                                        </TableCell>
                                         <TableCell>
                                             <Badge variant="outline">{request.bookingType}</Badge>
                                         </TableCell>
@@ -283,7 +296,7 @@ export default function MyToolsPage() {
                                     ))
                                 ) : (
                                     <TableRow>
-                                    <TableCell colSpan={5} className="h-24 text-center">
+                                    <TableCell colSpan={6} className="h-24 text-center">
                                         You have not made any tool requests.
                                     </TableCell>
                                     </TableRow>
@@ -297,4 +310,3 @@ export default function MyToolsPage() {
         </div>
     );
 }
-
