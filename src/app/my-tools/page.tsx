@@ -72,7 +72,7 @@ export default function MyToolsPage() {
 
     const assignedTools = useMemo(() => {
         if (!userProfile) return [];
-        return tools.filter(t => t.assignedToUserId === userProfile.uid);
+        return tools.filter(t => t.status === "Assigned" && t.assignedToUserId === userProfile.uid);
     }, [tools, userProfile]);
     
     const borrowedTools = useMemo(() => {
@@ -127,19 +127,15 @@ export default function MyToolsPage() {
                         </Button>
                     </div>
                 </div>
-
-                 <Tabs defaultValue="accountability" className="pt-4">
-                    <TabsList>
-                        <TabsTrigger value="accountability">Accountability ({assignedTools.length})</TabsTrigger>
-                        <TabsTrigger value="borrowed">Borrowed ({borrowedTools.length})</TabsTrigger>
-                        <TabsTrigger value="requests">My Requests ({myRequests.length})</TabsTrigger>
-                    </TabsList>
-                </Tabs>
             </div>
 
-
-            <Tabs defaultValue="accountability" className="mt-0">
-                <TabsContent value="accountability" className="mt-0">
+            <Tabs defaultValue="accountability" className="pt-4">
+                <TabsList>
+                    <TabsTrigger value="accountability">Accountability ({assignedTools.length})</TabsTrigger>
+                    <TabsTrigger value="borrowed">Borrowed ({borrowedTools.length})</TabsTrigger>
+                    <TabsTrigger value="requests">My Requests ({myRequests.length})</TabsTrigger>
+                </TabsList>
+                <TabsContent value="accountability">
                      <Card>
                         <CardHeader>
                             <CardTitle>Accountable Tools</CardTitle>
@@ -191,7 +187,7 @@ export default function MyToolsPage() {
                         </CardContent>
                     </Card>
                 </TabsContent>
-                <TabsContent value="borrowed" className="mt-0">
+                <TabsContent value="borrowed">
                       <Card>
                         <CardHeader>
                             <CardTitle>Borrowed Tools</CardTitle>
@@ -243,7 +239,7 @@ export default function MyToolsPage() {
                         </CardContent>
                     </Card>
                 </TabsContent>
-                 <TabsContent value="requests" className="mt-0">
+                 <TabsContent value="requests">
                     <Card>
                         <CardHeader>
                             <CardTitle>My Tool Requests</CardTitle>
@@ -275,7 +271,7 @@ export default function MyToolsPage() {
                                         <TableCell className="font-medium">{request.toolName}</TableCell>
                                         <TableCell>{request.requestedForName}</TableCell>
                                         <TableCell>
-                                            {request.bookingType}
+                                            <Badge variant="outline">{request.bookingType}</Badge>
                                         </TableCell>
                                         <TableCell>{formatDate(request.createdAt)}</TableCell>
                                         <TableCell>
