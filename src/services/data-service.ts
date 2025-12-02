@@ -1,4 +1,5 @@
 
+
 import { db, storage, auth } from "@/lib/firebase";
 import { collection, getDocs, getDoc, doc, orderBy, query, limit, Timestamp, where, DocumentReference, addDoc, updateDoc, deleteDoc, arrayUnion, runTransaction, writeBatch, setDoc } from "firebase/firestore";
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, createUserWithEmailAndPassword } from "firebase/auth";
@@ -1902,7 +1903,9 @@ export async function getTools(): Promise<Tool[]> {
                 ...data,
                 purchaseDate: data.purchaseDate ? (data.purchaseDate as Timestamp).toDate() : undefined,
                 createdAt: data.createdAt ? (data.createdAt as Timestamp).toDate() : undefined,
-                currentBorrowRecord: currentBorrowRecord
+                currentBorrowRecord: currentBorrowRecord,
+                assignedToUserId: data.assignedToUserId || null,
+                assignedToUserName: data.assignedToUserName || null,
             } as Tool;
         }));
         
