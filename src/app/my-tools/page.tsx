@@ -100,10 +100,10 @@ export default function MyToolsPage() {
         return format(jsDate, 'PP');
     }
     
-    if (authLoading || !canView) {
+    if (authLoading || loading || !userProfile) {
         return (
           <div className="flex items-center justify-center h-[calc(100vh-8rem)]">
-            <p className="text-muted-foreground">Access Denied. Redirecting...</p>
+            <p className="text-muted-foreground">Loading your tools...</p>
           </div>
         );
     }
