@@ -18,19 +18,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { Timestamp } from "firebase/firestore";
-import { Wrench, Heart, Book, Users as UsersIcon } from "lucide-react";
+import { Wrench, Heart, Book, Users as UsersIcon, HardHat, User } from "lucide-react";
 import { useAuthorization } from "@/hooks/use-authorization";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import type { ToolBookingRequest, UserProfile } from "@/types";
+import type { ToolBookingRequest, UserProfile, Tool } from "@/types";
 
 
 const statusVariant: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
@@ -46,7 +46,7 @@ const conditionVariant: { [key: string]: "default" | "secondary" | "destructive"
   Damaged: "destructive",
 };
 
-const requestStatusVariant: { [key: string]: "default" | "secondary" | "destructive" } = {
+const requestStatusVariant: { [key in ToolBookingRequest['status']]: "default" | "secondary" | "destructive" } = {
     Pending: "secondary",
     Approved: "default",
     Rejected: "destructive",
@@ -59,6 +59,8 @@ export default function MyToolsPage() {
     const { canView } = useAuthorization({ page: '/my-tools' });
     const router = useRouter();
     const { toast } = useToast();
+    const [modalContent, setModalContent] = useState<"accountability" | "borrowed" | "requests" | null>(null);
+
 
     useEffect(() => {
         if (!authLoading && !canView) {
@@ -108,7 +110,20 @@ export default function MyToolsPage() {
         );
     }
 
+    const modalTitle = {
+        accountability: "Accountable Tools",
+        borrowed: "Borrowed Tools",
+        requests: "My Tool Requests"
+    };
+
+    const modalDescription = {
+        accountability: "These tools are under your long-term care.",
+        borrowed: "Tools you have temporarily checked out.",
+        requests: "A history of your tool booking requests."
+    };
+
     return (
+        <>
         <div className="space-y-4">
             <div className="sticky top-0 bg-background/95 backdrop-blur z-20 -mx-6 px-6 pb-4 -mb-4 border-b">
                 <div className="flex items-center justify-between gap-4 pt-4">
@@ -138,178 +153,197 @@ export default function MyToolsPage() {
                 </div>
             </div>
 
-            <Tabs defaultValue="accountability" className="pt-4">
-                <TabsList>
-                    <TabsTrigger value="accountability">Accountability ({assignedTools.length})</TabsTrigger>
-                    <TabsTrigger value="borrowed">Borrowed ({borrowedTools.length})</TabsTrigger>
-                    <TabsTrigger value="requests">My Requests ({myRequests.length})</TabsTrigger>
-                </TabsList>
-                <TabsContent value="accountability">
-                     <Card>
-                        <CardHeader>
-                            <CardTitle>Accountable Tools</CardTitle>
-                            <CardDescription>
-                                These tools are under your long-term care.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                <TableRow>
-                                    <TableHead>Tool</TableHead>
-                                    <TableHead>Serial #</TableHead>
-                                    <TableHead>Condition</TableHead>
-                                    <TableHead>Assigned To</TableHead>
-                                </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                {loading ? (
-                                    Array.from({ length: 3 }).map((_, i) => (
-                                    <TableRow key={i}>
-                                        <TableCell colSpan={4}>
-                                        <Skeleton className="h-8 w-full" />
-                                        </TableCell>
-                                    </TableRow>
-                                    ))
-                                ) : assignedTools.length > 0 ? (
-                                    assignedTools.map((tool) => (
-                                    <TableRow key={tool.id}>
-                                        <TableCell className="font-medium">{tool.name}</TableCell>
-                                        <TableCell>{tool.serialNumber}</TableCell>
-                                        <TableCell>
-                                            <Badge variant={conditionVariant[tool.condition]}>
-                                                {tool.condition}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>{tool.assignedToUserName}</TableCell>
-                                    </TableRow>
-                                    ))
-                                ) : (
-                                    <TableRow>
-                                    <TableCell colSpan={4} className="h-24 text-center">
-                                        You do not have any tools assigned to you.
-                                    </TableCell>
-                                    </TableRow>
-                                )}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-                <TabsContent value="borrowed">
-                      <Card>
-                        <CardHeader>
-                            <CardTitle>Borrowed Tools</CardTitle>
-                            <CardDescription>
-                                Tools you have temporarily checked out.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                <TableRow>
-                                    <TableHead>Tool</TableHead>
-                                    <TableHead>Serial #</TableHead>
-                                    <TableHead>Date Borrowed</TableHead>
-                                    <TableHead>Due Date</TableHead>
-                                </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                {loading ? (
-                                    Array.from({ length: 3 }).map((_, i) => (
-                                    <TableRow key={i}>
-                                        <TableCell colSpan={4}>
-                                        <Skeleton className="h-8 w-full" />
-                                        </TableCell>
-                                    </TableRow>
-                                    ))
-                                ) : borrowedTools.length > 0 ? (
-                                    borrowedTools.map((tool) => (
-                                    <TableRow key={tool.id}>
-                                        <TableCell className="font-medium">{tool.name}</TableCell>
-                                        <TableCell>{tool.serialNumber}</TableCell>
-                                        <TableCell>
-                                            {formatDate(tool.currentBorrowRecord?.dateBorrowed)}
-                                        </TableCell>
-                                        <TableCell>
-                                            {formatDate(tool.currentBorrowRecord?.dueDate)}
-                                        </TableCell>
-                                    </TableRow>
-                                    ))
-                                ) : (
-                                    <TableRow>
-                                    <TableCell colSpan={4} className="h-24 text-center">
-                                        You have not borrowed any tools.
-                                    </TableCell>
-                                    </TableRow>
-                                )}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-                 <TabsContent value="requests">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>My Tool Requests</CardTitle>
-                            <CardDescription>A history of your tool booking requests.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                             <Table>
-                                <TableHeader>
-                                <TableRow>
-                                    <TableHead>Tool</TableHead>
-                                    <TableHead>Requested For</TableHead>
-                                    <TableHead>For (Type)</TableHead>
-                                    <TableHead>Booking Type</TableHead>
-                                    <TableHead>Date Requested</TableHead>
-                                    <TableHead>Status</TableHead>
-                                </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                {loading ? (
-                                    Array.from({ length: 3 }).map((_, i) => (
-                                    <TableRow key={i}>
-                                        <TableCell colSpan={6}>
-                                        <Skeleton className="h-8 w-full" />
-                                        </TableCell>
-                                    </TableRow>
-                                    ))
-                                ) : myRequests.length > 0 ? (
-                                    myRequests.map((request) => (
-                                    <TableRow key={request.id}>
-                                        <TableCell className="font-medium">{request.toolName}</TableCell>
-                                        <TableCell>{request.requestedForName}</TableCell>
-                                         <TableCell>
-                                            <Badge variant="outline" className="flex items-center gap-1 w-fit">
-                                                {getRequestorTypeName(request) === 'User' ? <UsersIcon className="w-3 h-3"/> : <Wrench className="w-3 h-3"/>}
-                                                {getRequestorTypeName(request)}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant="outline">{request.bookingType}</Badge>
-                                        </TableCell>
-                                        <TableCell>{formatDate(request.createdAt)}</TableCell>
-                                        <TableCell>
-                                            <Badge variant={requestStatusVariant[request.status]}>
-                                                {request.status}
-                                            </Badge>
-                                        </TableCell>
-                                    </TableRow>
-                                    ))
-                                ) : (
-                                    <TableRow>
-                                    <TableCell colSpan={6} className="h-24 text-center">
-                                        You have not made any tool requests.
-                                    </TableCell>
-                                    </TableRow>
-                                )}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                 </TabsContent>
-            </Tabs>
+            <div className="grid gap-6 md:grid-cols-3 pt-4">
+                <Card className="cursor-pointer hover:border-primary transition-colors" onClick={() => setModalContent('accountability')}>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Accountability</CardTitle>
+                        <User className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold font-headline">{assignedTools.length}</div>
+                        <p className="text-xs text-muted-foreground">Tools under your long-term care</p>
+                    </CardContent>
+                </Card>
+                <Card className="cursor-pointer hover:border-primary transition-colors" onClick={() => setModalContent('borrowed')}>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Borrowed</CardTitle>
+                        <HardHat className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold font-headline">{borrowedTools.length}</div>
+                        <p className="text-xs text-muted-foreground">Tools temporarily checked out</p>
+                    </CardContent>
+                </Card>
+                <Card className="cursor-pointer hover:border-primary transition-colors" onClick={() => setModalContent('requests')}>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">My Requests</CardTitle>
+                        <Book className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold font-headline">{myRequests.length}</div>
+                        <p className="text-xs text-muted-foreground">Total requests submitted</p>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
+        
+        <Dialog open={!!modalContent} onOpenChange={(open) => !open && setModalContent(null)}>
+            <DialogContent className="max-w-4xl">
+                 <DialogHeader>
+                    <DialogTitle>{modalContent ? modalTitle[modalContent] : ''}</DialogTitle>
+                    <DialogDescription>
+                        {modalContent ? modalDescription[modalContent] : ''}
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div className="max-h-[60vh] overflow-y-auto">
+                {modalContent === 'accountability' && (
+                    <Table>
+                        <TableHeader>
+                        <TableRow>
+                            <TableHead>Tool</TableHead>
+                            <TableHead>Serial #</TableHead>
+                            <TableHead>Condition</TableHead>
+                        </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                        {loading ? (
+                            Array.from({ length: 3 }).map((_, i) => (
+                            <TableRow key={i}>
+                                <TableCell colSpan={3}>
+                                <Skeleton className="h-8 w-full" />
+                                </TableCell>
+                            </TableRow>
+                            ))
+                        ) : assignedTools.length > 0 ? (
+                            assignedTools.map((tool) => (
+                            <TableRow key={tool.id}>
+                                <TableCell className="font-medium">{tool.name}</TableCell>
+                                <TableCell>{tool.serialNumber}</TableCell>
+                                <TableCell>
+                                    <Badge variant={conditionVariant[tool.condition]}>
+                                        {tool.condition}
+                                    </Badge>
+                                </TableCell>
+                            </TableRow>
+                            ))
+                        ) : (
+                            <TableRow>
+                            <TableCell colSpan={3} className="h-24 text-center">
+                                You do not have any tools assigned to you.
+                            </TableCell>
+                            </TableRow>
+                        )}
+                        </TableBody>
+                    </Table>
+                )}
+                
+                {modalContent === 'borrowed' && (
+                    <Table>
+                        <TableHeader>
+                        <TableRow>
+                            <TableHead>Tool</TableHead>
+                            <TableHead>Serial #</TableHead>
+                            <TableHead>Date Borrowed</TableHead>
+                            <TableHead>Due Date</TableHead>
+                        </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                        {loading ? (
+                            Array.from({ length: 3 }).map((_, i) => (
+                            <TableRow key={i}>
+                                <TableCell colSpan={4}>
+                                <Skeleton className="h-8 w-full" />
+                                </TableCell>
+                            </TableRow>
+                            ))
+                        ) : borrowedTools.length > 0 ? (
+                            borrowedTools.map((tool) => (
+                            <TableRow key={tool.id}>
+                                <TableCell className="font-medium">{tool.name}</TableCell>
+                                <TableCell>{tool.serialNumber}</TableCell>
+                                <TableCell>
+                                    {formatDate(tool.currentBorrowRecord?.dateBorrowed)}
+                                </TableCell>
+                                <TableCell>
+                                    {formatDate(tool.currentBorrowRecord?.dueDate)}
+                                </TableCell>
+                            </TableRow>
+                            ))
+                        ) : (
+                            <TableRow>
+                            <TableCell colSpan={4} className="h-24 text-center">
+                                You have not borrowed any tools.
+                            </TableCell>
+                            </TableRow>
+                        )}
+                        </TableBody>
+                    </Table>
+                )}
+
+                {modalContent === 'requests' && (
+                     <Table>
+                        <TableHeader>
+                        <TableRow>
+                            <TableHead>Tool</TableHead>
+                            <TableHead>Requested For</TableHead>
+                            <TableHead>For (Type)</TableHead>
+                            <TableHead>Booking Type</TableHead>
+                            <TableHead>Date Requested</TableHead>
+                            <TableHead>Status</TableHead>
+                        </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                        {loading ? (
+                            Array.from({ length: 3 }).map((_, i) => (
+                            <TableRow key={i}>
+                                <TableCell colSpan={6}>
+                                <Skeleton className="h-8 w-full" />
+                                </TableCell>
+                            </TableRow>
+                            ))
+                        ) : myRequests.length > 0 ? (
+                            myRequests.map((request) => (
+                            <TableRow key={request.id}>
+                                <TableCell className="font-medium">{request.toolName}</TableCell>
+                                <TableCell>{request.requestedForName}</TableCell>
+                                 <TableCell>
+                                    <Badge variant="outline" className="flex items-center gap-1 w-fit">
+                                        {getRequestorTypeName(request) === 'User' ? <UsersIcon className="w-3 h-3"/> : <Wrench className="w-3 h-3"/>}
+                                        {getRequestorTypeName(request)}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell>
+                                    <Badge variant="outline">{request.bookingType}</Badge>
+                                </TableCell>
+                                <TableCell>{formatDate(request.createdAt)}</TableCell>
+                                <TableCell>
+                                    <Badge variant={requestStatusVariant[request.status]}>
+                                        {request.status}
+                                    </Badge>
+                                </TableCell>
+                            </TableRow>
+                            ))
+                        ) : (
+                            <TableRow>
+                            <TableCell colSpan={6} className="h-24 text-center">
+                                You have not made any tool requests.
+                            </TableCell>
+                            </TableRow>
+                        )}
+                        </TableBody>
+                    </Table>
+                )}
+                </div>
+                 <DialogFooter>
+                    <DialogClose asChild>
+                        <Button type="button" variant="outline">Close</Button>
+                    </DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        </>
     );
 }
+
+    
