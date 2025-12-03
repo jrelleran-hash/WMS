@@ -287,9 +287,9 @@ export default function MyToolsPage() {
                         <TableRow>
                             <TableHead>Tool</TableHead>
                             <TableHead>Requested For</TableHead>
-                            <TableHead>For (Type)</TableHead>
                             <TableHead>Booking Type</TableHead>
-                            <TableHead>Date Requested</TableHead>
+                            <TableHead>Start Date</TableHead>
+                            <TableHead>Due Date</TableHead>
                             <TableHead>Status</TableHead>
                         </TableRow>
                         </TableHeader>
@@ -307,16 +307,11 @@ export default function MyToolsPage() {
                             <TableRow key={request.id}>
                                 <TableCell className="font-medium">{request.toolName}</TableCell>
                                 <TableCell>{request.requestedForName}</TableCell>
-                                 <TableCell>
-                                    <Badge variant="outline" className="flex items-center gap-1 w-fit">
-                                        {getRequestorTypeName(request) === 'User' ? <UsersIcon className="w-3 h-3"/> : <Wrench className="w-3 h-3"/>}
-                                        {getRequestorTypeName(request)}
-                                    </Badge>
-                                </TableCell>
                                 <TableCell>
                                     <Badge variant="outline">{request.bookingType}</Badge>
                                 </TableCell>
-                                <TableCell>{formatDate(request.createdAt)}</TableCell>
+                                <TableCell>{request.bookingType === 'Borrow' ? formatDate(request.startDate) : 'N/A'}</TableCell>
+                                <TableCell>{request.bookingType === 'Borrow' ? formatDate(request.endDate) : 'N/A'}</TableCell>
                                 <TableCell>
                                     <Badge variant={requestStatusVariant[request.status]}>
                                         {request.status}
@@ -345,5 +340,3 @@ export default function MyToolsPage() {
         </>
     );
 }
-
-    
