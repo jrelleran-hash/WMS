@@ -7,7 +7,6 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
 import { Input } from "../ui/input";
 import { Search, Wrench } from "lucide-react";
-import { GlobalSearch } from "../layout/global-search";
 
 export function WelcomeCard() {
   const { userProfile } = useAuth();
@@ -42,10 +41,7 @@ export function WelcomeCard() {
         </h1>
         <p className="text-muted-foreground">{currentDate}</p>
       </div>
-       <div className="flex items-center gap-2 w-full sm:w-auto sm:max-w-md flex-1">
-         <div className="flex-1">
-            <GlobalSearch />
-         </div>
+       <div className="flex items-center gap-2 w-full sm:w-auto sm:max-w-md flex-1 justify-end">
         <Link href="/tool-booking" className="flex-initial">
             <Button variant="outline" className="w-full sm:w-auto">
                 <Wrench className="mr-2 h-4 w-4" />
