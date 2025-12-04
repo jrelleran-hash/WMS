@@ -14,7 +14,7 @@ const unprotectedRoutes = ["/login", "/signup", "/verify-email"];
 export function AppContent({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   const pathname = usePathname();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   const isUnprotected = unprotectedRoutes.includes(pathname);
 
