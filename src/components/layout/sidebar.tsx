@@ -69,7 +69,6 @@ const warehouseNavItems: NavSectionItem[] = [
     {
         title: "Tools",
         items: [
-            { href: "/my-tools", label: "My Tools", icon: Wrench },
             { href: "/tool-wishlist", label: "Tool Wishlist", icon: Heart },
             { href: "/tools", label: "Tool Management", icon: Wrench },
             { href: "/tool-booking", label: "Tool Booking", icon: Book },
@@ -245,7 +244,7 @@ export function Sidebar({ className, inSheet, isCollapsed, setIsCollapsed }: Sid
         )}
 
         <div className="flex-1 overflow-auto py-2">
-          <nav className={cn("grid items-start text-sm font-medium", isCollapsed ? "px-2" : "px-4")}>
+          <nav className={cn("grid items-start text-sm font-medium", isCollapsed ? "px-2" : "p-4")}>
             {navItems.filter(item => canAccess(item.href as PagePermission)).map((item) => (
               <SidebarLink key={item.href} {...item} pathname={pathname} inSheet={inSheet} isCollapsed={isCollapsed}/>
             ))}

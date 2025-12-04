@@ -53,12 +53,6 @@ export function UserNav() {
               Profile
             </DropdownMenuItem>
           </Link>
-          <Link href="/my-tools">
-            <DropdownMenuItem>
-              <Wrench className="mr-2 h-4 w-4" />
-              My Tools
-            </DropdownMenuItem>
-          </Link>
           <Link href="/settings">
             <DropdownMenuItem>
               Settings
