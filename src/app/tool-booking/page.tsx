@@ -175,11 +175,6 @@ export default function ToolBookingPage() {
         </div>
          <div className="flex items-center gap-2">
             <Button variant="outline" asChild>
-                <Link href="/my-tools">
-                    <Wrench className="mr-2 h-4 w-4" /> My Tools
-                </Link>
-            </Button>
-            <Button variant="outline" asChild>
                 <Link href="/tool-wishlist">
                     <Heart className="mr-2 h-4 w-4" /> Tool Wishlist
                 </Link>

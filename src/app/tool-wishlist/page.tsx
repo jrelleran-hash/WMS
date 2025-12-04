@@ -164,11 +164,6 @@ export default function ToolWishlistPage() {
                             <Book className="mr-2 h-4 w-4" /> Tool Booking
                         </Link>
                     </Button>
-                    <Button variant="outline" asChild>
-                        <Link href="/my-tools">
-                            <UsersIcon className="mr-2 h-4 w-4" /> My Tools
-                        </Link>
-                    </Button>
                 </div>
             </div>
             <div className="grid md:grid-cols-3 gap-6">
