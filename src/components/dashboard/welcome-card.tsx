@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
 import { Input } from "../ui/input";
-import { Search } from "lucide-react";
+import { Search, Wrench } from "lucide-react";
 import { GlobalSearch } from "../layout/global-search";
 
 export function WelcomeCard() {
@@ -46,6 +46,12 @@ export function WelcomeCard() {
          <div className="flex-1">
             <GlobalSearch />
          </div>
+        <Link href="/tool-booking" className="flex-initial">
+            <Button variant="outline" className="w-full sm:w-auto">
+                <Wrench className="mr-2 h-4 w-4" />
+                Tool Booking
+            </Button>
+        </Link>
         <Link href="/analytics" className="flex-initial">
           <Button className="w-full sm:w-auto">View Analytics</Button>
         </Link>
