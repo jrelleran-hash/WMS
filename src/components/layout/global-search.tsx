@@ -9,6 +9,10 @@ import {
   User,
   Search,
   Building,
+  Wrench,
+  ListTodo,
+  Receipt,
+  FileText,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 
@@ -29,13 +33,13 @@ import type { PagePermission } from "@/types"
 export function GlobalSearch() {
   const [open, setOpen] = React.useState(false)
   const router = useRouter()
-  const { products, clients, orders, suppliers } = useData()
+  const { products, clients, orders, suppliers, tools, users, purchaseOrders, issuances, tasks } = useData()
   const { userProfile } = useAuth()
 
   const userPermissions = React.useMemo(() => {
     if (!userProfile) return [];
     if (userProfile.role === 'Admin' || userProfile.role === 'Manager') {
-        return ["/inventory", "/clients", "/orders", "/suppliers"] as PagePermission[];
+        return ["/inventory", "/clients", "/orders", "/suppliers", "/tools", "/settings", "/purchase-orders", "/issuance", "/tasks"] as PagePermission[];
     }
     return userProfile.permissions || [];
   }, [userProfile]);
@@ -84,7 +88,7 @@ export function GlobalSearch() {
             <CommandGroup heading="Products">
               {products.slice(0, 5).map((product) => (
                 <CommandItem
-                  key={product.id}
+                  key={`product-${product.id}`}
                   value={`Product ${product.name} ${product.sku}`}
                   onSelect={() => handleSelect(`/inventory?edit=${product.id}`)}
                 >
@@ -94,12 +98,27 @@ export function GlobalSearch() {
               ))}
             </CommandGroup>
           )}
+          
+          {canAccess('/tools') && (
+            <CommandGroup heading="Tools">
+              {tools.slice(0, 5).map((tool) => (
+                <CommandItem
+                  key={`tool-${tool.id}`}
+                  value={`Tool ${tool.name} ${tool.serialNumber}`}
+                  onSelect={() => handleSelect(`/tools`)}
+                >
+                  <Wrench className="mr-2 h-4 w-4" />
+                  <span>{tool.name}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
 
           {canAccess('/clients') && (
             <CommandGroup heading="Clients">
               {clients.slice(0, 5).map((client) => (
                 <CommandItem
-                  key={client.id}
+                  key={`client-${client.id}`}
                   value={`Client ${client.clientName} ${client.projectName}`}
                   onSelect={() => handleSelect(`/clients`)}
                 >
@@ -109,12 +128,27 @@ export function GlobalSearch() {
               ))}
             </CommandGroup>
           )}
+          
+           {canAccess('/settings') && (
+            <CommandGroup heading="Users">
+              {users.slice(0, 5).map((user) => (
+                <CommandItem
+                  key={`user-${user.uid}`}
+                  value={`User ${user.firstName} ${user.lastName} ${user.email}`}
+                  onSelect={() => handleSelect(`/settings?tab=users`)}
+                >
+                  <User className="mr-2 h-4 w-4" />
+                  <span>{user.firstName} {user.lastName} - <span className="text-muted-foreground">{user.role}</span></span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
 
           {canAccess('/orders') && (
-            <CommandGroup heading="Orders">
+            <CommandGroup heading="Client Orders">
               {orders.slice(0, 5).map((order) => (
                 <CommandItem
-                  key={order.id}
+                  key={`order-${order.id}`}
                   value={`Order ${order.id} ${order.client.clientName}`}
                   onSelect={() => handleSelect(`/orders`)}
                 >
@@ -125,16 +159,61 @@ export function GlobalSearch() {
             </CommandGroup>
           )}
           
+          {canAccess('/purchase-orders') && (
+            <CommandGroup heading="Purchase Orders">
+              {purchaseOrders.slice(0, 5).map((po) => (
+                <CommandItem
+                  key={`po-${po.id}`}
+                  value={`PO ${po.poNumber} ${po.supplier.name}`}
+                  onSelect={() => handleSelect(`/purchase-orders`)}
+                >
+                  <Receipt className="mr-2 h-4 w-4" />
+                  <span>{po.poNumber} - <span className="text-muted-foreground">{po.supplier.name}</span></span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+          
+          {canAccess('/issuance') && (
+            <CommandGroup heading="Issuances">
+              {issuances.slice(0, 5).map((issuance) => (
+                <CommandItem
+                  key={`issuance-${issuance.id}`}
+                  value={`Issuance ${issuance.issuanceNumber} ${issuance.client.clientName}`}
+                  onSelect={() => handleSelect(`/issuance?id=${issuance.id}`)}
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  <span>{issuance.issuanceNumber} - <span className="text-muted-foreground">{issuance.client.clientName}</span></span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+          
           {canAccess('/suppliers') && (
             <CommandGroup heading="Suppliers">
               {suppliers.slice(0, 5).map((supplier) => (
                 <CommandItem
-                  key={supplier.id}
+                  key={`supplier-${supplier.id}`}
                   value={`Supplier ${supplier.name}`}
                   onSelect={() => handleSelect(`/suppliers`)}
                 >
                   <Building className="mr-2 h-4 w-4" />
                   <span>{supplier.name}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+          
+           {canAccess('/tasks') && (
+            <CommandGroup heading="Tasks">
+              {tasks.slice(0, 5).map((task) => (
+                <CommandItem
+                  key={`task-${task.id}`}
+                  value={`Task ${task.title} ${task.assignedToName}`}
+                  onSelect={() => handleSelect(`/tasks`)}
+                >
+                  <ListTodo className="mr-2 h-4 w-4" />
+                  <span>{task.title} - <span className="text-muted-foreground">{task.assignedToName}</span></span>
                 </CommandItem>
               ))}
             </CommandGroup>

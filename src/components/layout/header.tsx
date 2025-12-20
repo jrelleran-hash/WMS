@@ -42,15 +42,13 @@ export function Header() {
                 <SheetTitle>Navigation Menu</SheetTitle>
                 <SheetDescription>Main navigation links for the application.</SheetDescription>
               </SheetHeader>
-              <Sidebar className="flex" inSheet />
+              <Sidebar className="flex" isCollapsed={false} setIsCollapsed={() => {}} inSheet />
             </SheetContent>
           </Sheet>
       </div>
       
       <div className="w-full flex-1">
-        <div className="hidden md:block">
-            <GlobalSearch />
-        </div>
+        <GlobalSearch />
       </div>
 
       <div className="flex items-center gap-4">
