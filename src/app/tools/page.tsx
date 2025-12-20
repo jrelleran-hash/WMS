@@ -62,6 +62,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CURRENCY_CONFIG } from "@/config/currency";
 import { formatCurrency } from "@/lib/currency";
 import { toolSchema, type ToolFormValues } from "@/lib/schemas";
+import { useAuthorization } from "@/hooks/use-authorization";
 
 
 const borrowSchema = z.object({
@@ -113,6 +114,7 @@ const requestStatusVariant: { [key: string]: "default" | "secondary" | "destruct
 export default function ToolManagementPage() {
   const { tools, users, toolBookingRequests, loading, refetchData } = useData();
   const { userProfile } = useAuth();
+  const { canView } = useAuthorization({ page: '/tools' });
   const { toast } = useToast();
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -150,7 +152,6 @@ export default function ToolManagementPage() {
   const assignForm = useForm<AssignFormValues>();
   const recallForm = useForm<RecallFormValues>();
   
-  const canManage = userProfile?.role === 'Admin' || userProfile?.role === 'Manager';
   const isAdmin = userProfile?.role === 'Admin';
   const [activeTab, setActiveTab] = useState('inventory');
 
@@ -517,9 +518,9 @@ export default function ToolManagementPage() {
         </div>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="pt-4">
             <TabsList>
-                {canManage && <TabsTrigger value="inventory">Tool Inventory</TabsTrigger>}
-                {canManage && <TabsTrigger value="requests">Request Queue <Badge variant="secondary" className="ml-2">{pendingRequests.length}</Badge></TabsTrigger>}
-                {canManage && <TabsTrigger value="history">Tools History</TabsTrigger>}
+                {canView && <TabsTrigger value="inventory">Tool Inventory</TabsTrigger>}
+                {canView && <TabsTrigger value="requests">Request Queue <Badge variant="secondary" className="ml-2">{pendingRequests.length}</Badge></TabsTrigger>}
+                {canView && <TabsTrigger value="history">Tools History</TabsTrigger>}
             </TabsList>
         </Tabs>
       </div>
@@ -1193,5 +1194,6 @@ export default function ToolManagementPage() {
 
 
     
+
 
 
