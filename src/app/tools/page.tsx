@@ -6,7 +6,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { PlusCircle, MoreHorizontal, Calendar as CalendarIcon, History, ArrowUpRight, UserCheck, Check, X, RefreshCcw, Search, Wrench as WrenchIcon } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Calendar as CalendarIcon, History, ArrowUpRight, UserCheck, Check, X, RefreshCcw, Search, Wrench as WrenchIcon, SlidersHorizontal } from "lucide-react";
 import { Timestamp } from "firebase/firestore";
 import { format } from "date-fns";
 
@@ -23,6 +23,8 @@ import {
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog,
@@ -142,6 +144,10 @@ export default function ToolManagementPage() {
   const [verificationInput, setVerificationInput] = useState("");
   const [historySearchQuery, setHistorySearchQuery] = useState("");
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<Tool['status'] | 'all'>('all');
+  const [conditionFilter, setConditionFilter] = useState<Tool['condition'] | 'all'>('all');
+
   const form = useForm<ToolFormValues>({
     resolver: zodResolver(toolSchema),
     defaultValues: { condition: "Good" },
@@ -154,6 +160,17 @@ export default function ToolManagementPage() {
   
   const isAdmin = userProfile?.role === 'Admin';
   const [activeTab, setActiveTab] = useState('inventory');
+
+  const filteredTools = useMemo(() => {
+    return tools.filter(tool => {
+        const statusMatch = statusFilter === 'all' || tool.status === statusFilter;
+        const conditionMatch = conditionFilter === 'all' || tool.condition === conditionFilter;
+        const searchMatch = !searchQuery ||
+            tool.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            tool.serialNumber.toLowerCase().includes(searchQuery.toLowerCase());
+        return statusMatch && conditionMatch && searchMatch;
+    });
+  }, [tools, searchQuery, statusFilter, conditionFilter]);
 
   const assignedTools = useMemo(() => tools.filter(t => t.status === "Assigned"), [tools]);
   const borrowedTools = useMemo(() => tools.filter(t => t.status === "In Use"), [tools]);
@@ -527,7 +544,60 @@ export default function ToolManagementPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsContent value="inventory" className="mt-0">
             <Card>
-                <CardContent className="pt-6">
+                <CardHeader>
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div>
+                            <CardTitle>Tool Inventory</CardTitle>
+                            <CardDescription>All tools in your inventory.</CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="relative flex-1 md:flex-initial">
+                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                type="search"
+                                placeholder="Search name or serial..."
+                                className="pl-8 sm:w-[300px]"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" size="sm" className="gap-2 capitalize">
+                                        <SlidersHorizontal />
+                                        Status: {statusFilter}
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                    <DropdownMenuRadioGroup value={statusFilter} onValueChange={(value) => setStatusFilter(value as Tool['status'] | 'all')}>
+                                        <DropdownMenuRadioItem value="all">All</DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="Available">Available</DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="In Use">In Use</DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="Assigned">Assigned</DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="Under Maintenance">Under Maintenance</DropdownMenuRadioItem>
+                                    </DropdownMenuRadioGroup>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                             <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" size="sm" className="gap-2 capitalize">
+                                        <SlidersHorizontal />
+                                        Condition: {conditionFilter}
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                    <DropdownMenuRadioGroup value={conditionFilter} onValueChange={(value) => setConditionFilter(value as Tool['condition'] | 'all')}>
+                                        <DropdownMenuRadioItem value="all">All</DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="Good">Good</DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="Needs Repair">Needs Repair</DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="Damaged">Damaged</DropdownMenuRadioItem>
+                                    </DropdownMenuRadioGroup>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="pt-0">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -555,7 +625,7 @@ export default function ToolManagementPage() {
                                         <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                                     </TableRow>
                                 ))
-                            ) : tools.map((tool) => {
+                            ) : filteredTools.map((tool) => {
                             const user = getCurrentUser(tool);
                             return (
                             <TableRow key={tool.id} className="cursor-pointer" onClick={() => setEditingTool(tool)}>
@@ -621,7 +691,7 @@ export default function ToolManagementPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Tool</TableHead>
-                                <TableHead>Requested By</TableHead>
+                                <TableHead>Requested For</TableHead>
                                 <TableHead>Dates</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
@@ -634,7 +704,7 @@ export default function ToolManagementPage() {
                                 pendingRequests.map(request => (
                                     <TableRow key={request.id}>
                                         <TableCell>{request.toolName}</TableCell>
-                                        <TableCell>{request.requestedByName}</TableCell>
+                                        <TableCell>{request.requestedForName}</TableCell>
                                         <TableCell>{formatDate(request.startDate)} - {formatDate(request.endDate)}</TableCell>
                                         <TableCell><Badge variant={requestStatusVariant[request.status]}>{request.status}</Badge></TableCell>
                                         <TableCell className="text-right">
@@ -1194,6 +1264,7 @@ export default function ToolManagementPage() {
 
 
     
+
 
 
 
