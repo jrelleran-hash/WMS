@@ -683,9 +683,9 @@ export default function ToolManagementPage() {
                                         <TableHead>Booking #</TableHead>
                                         <TableHead>Tool</TableHead>
                                         <TableHead>Issued To</TableHead>
-                                        <TableHead>Requested By</TableHead>
                                         <TableHead>Type</TableHead>
-                                        <TableHead>Date Approved</TableHead>
+                                        <TableHead>Start Date</TableHead>
+                                        <TableHead>Due Date</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -699,9 +699,9 @@ export default function ToolManagementPage() {
                                                     <TableCell className="font-mono">{request.bookingNumber}</TableCell>
                                                     <TableCell>{request.toolName}</TableCell>
                                                     <TableCell>{request.requestedForName}</TableCell>
-                                                    <TableCell>{users.find(u => u.uid === request.createdById)?.firstName} {users.find(u => u.uid === request.createdById)?.lastName}</TableCell>
                                                     <TableCell><Badge variant="outline">{request.bookingType}</Badge></TableCell>
-                                                    <TableCell>{formatDate(request.approvedAt)}</TableCell>
+                                                    <TableCell>{formatDate(request.startDate)}</TableCell>
+                                                    <TableCell>{formatDate(request.endDate)}</TableCell>
                                                 </TableRow>
                                             )
                                         })
@@ -1190,3 +1190,4 @@ export default function ToolManagementPage() {
 
 
     
+
