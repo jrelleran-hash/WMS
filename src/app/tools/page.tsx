@@ -686,14 +686,16 @@ export default function ToolManagementPage() {
                                         <TableHead>Type</TableHead>
                                         <TableHead>Start Date</TableHead>
                                         <TableHead>Due Date</TableHead>
+                                        <TableHead>Date Returned</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {loading ? (
-                                        <TableRow><TableCell colSpan={6}><Skeleton className="h-8" /></TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={7}><Skeleton className="h-8" /></TableCell></TableRow>
                                     ) : filteredApprovedRequests.length > 0 ? (
                                         filteredApprovedRequests.map(request => {
                                             const tool = tools.find(t => t.id === request.toolId);
+                                            const borrowRecord = tool?.history?.find(h => h.dateBorrowed && request.startDate && h.dateBorrowed.toDate().getTime() === request.startDate.getTime());
                                             return (
                                                 <TableRow key={request.id}>
                                                     <TableCell className="font-mono">{request.bookingNumber}</TableCell>
@@ -702,11 +704,12 @@ export default function ToolManagementPage() {
                                                     <TableCell><Badge variant="outline">{request.bookingType}</Badge></TableCell>
                                                     <TableCell>{formatDate(request.startDate)}</TableCell>
                                                     <TableCell>{formatDate(request.endDate)}</TableCell>
+                                                    <TableCell>{borrowRecord?.dateReturned ? formatDate(borrowRecord.dateReturned) : 'N/A'}</TableCell>
                                                 </TableRow>
                                             )
                                         })
                                     ) : (
-                                        <TableRow><TableCell colSpan={6} className="h-24 text-center">No approved requests found.</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={7} className="h-24 text-center">No approved requests found.</TableCell></TableRow>
                                     )}
                                 </TableBody>
                             </Table>
@@ -1190,4 +1193,5 @@ export default function ToolManagementPage() {
 
 
     
+
 
